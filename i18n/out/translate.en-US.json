@@ -1,0 +1,27 @@
+{
+  "root-command-config-file-usage": {
+    "description": "root command config flag usage",
+    "hash": "sha1-60ec091d99ab2286a4bb4a1e1733c155bca95a9f",
+    "other": "config file (default is $HOME/{{.ConfigFileName}}.yml)"
+  },
+  "root-command-language-usage": {
+    "description": "root command lang usage",
+    "hash": "sha1-13eee706e037f33844c76f1dcdac5786b4089a00",
+    "other": "'lang' defines the language according to IETF BCP 47"
+  },
+  "root-command-long-description": {
+    "description": "long description for the root command",
+    "hash": "sha1-9122dfb1f95d2d00501ca67449df1dcf695f2cc2",
+    "other": "A longer description that spans multiple lines and likely contains\n\t\texamples and usage of using your application. For example:\n\t\t\n\t\tCobra is a CLI library for Go that empowers applications.\n\t\tThis application is a tool to generate the needed files\n\t\tto quickly create a Cobra application."
+  },
+  "root-command-short-description": {
+    "description": "short description for the root command",
+    "hash": "sha1-a88cc9526d5e47f670ce9b089390e65415ab26cc",
+    "other": "A brief description of your application"
+  },
+  "using-config-file": {
+    "description": "Message to indicate which config is being used",
+    "hash": "sha1-06fd9528f8226d1501ea09bc5d629f4922b4f3c6",
+    "other": "Using config file: {{.ConfigFileName}}"
+  }
+}

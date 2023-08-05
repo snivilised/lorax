@@ -1,0 +1,7 @@
+{
+  "pavement-graffiti-report.graffico.unit-test": {
+    "description": "Report of graffiti found on a pavement",
+    "hash": "sha1-69c428d6be2dc281d00f095218e1ed7671d1c984",
+    "other": "Found graffiti on sidewalk; primary color: '{{.Primary}}'"
+  }
+}

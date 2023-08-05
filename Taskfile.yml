@@ -1,0 +1,158 @@
+---
+# dependencies:
+# - ginkgo
+# - goi18n
+# - golangci-lint
+# - goveralls
+# - yamllint
+
+version: "3"
+silent: true
+
+dotenv: [".env"]
+
+tasks:
+  # === build ================================================
+
+  b:
+    cmds:
+      - go build ./...
+
+  # === test =================================================
+
+  t:
+    cmds:
+      - go test ./...
+
+  ti:
+    cmds:
+      - go test ./i18n
+
+  dry:
+    cmds:
+      - ginkgo -v --dry-run ./...
+
+  # === ginkgo ================================================
+
+  # initialise a test suite for a package. (only 1 per package)
+  boot:
+    cmds:
+      - ginkgo bootstrap
+
+  # run tests suites recursive
+  g:
+    cmds:
+      - ginkgo -r
+
+  # invoke as task gen -- <item>
+  gl:
+    cmds:
+      - ginkgo -r --label-filter={{.CLI_ARGS}}
+
+  # run tests suites recursive with verbose
+  gv:
+    cmds:
+      - ginkgo -r -v
+
+  # generate a test file for the item provided (item_test.go)
+  # invoke as task gen -- <item>
+  gen:
+    cmds:
+      - ginkgo generate {{.CLI_ARGS}}
+
+  # === watch ================================================
+
+  watchv:
+    cmds:
+      - ginkgo watch -v -r -p ./...
+
+  watchvc:
+    cmds:
+      - ginkgo watch -v -r -p ./collections
+
+  watchvi:
+    cmds:
+      - ginkgo watch -v -r -p ./i18n
+
+  watch:
+    cmds:
+      - ginkgo watch -r -p ./...
+
+  # === lint =================================================
+
+  lint:
+    cmds:
+      - golangci-lint run
+
+  linty:
+    cmds:
+      - yamllint *.y*ml
+
+  # === coverage =============================================
+
+  publish-cover:
+    cmds:
+      - goveralls -repotoken {{.COVERALLS_TOKEN}}
+
+  cover:
+    cmds:
+      - ginkgo --json-report
+        ./ginkgo.report
+        -coverpkg=./...
+        -coverprofile=./coverage/coverage.out -r
+
+  # === i18n =================================================
+
+  clear:
+    cmds:
+      - rm ./i18n/out/* --recursive
+
+  # extract i18m messages
+  extract:
+    cmds:
+      - goi18n extract
+        -format json
+        -sourceLanguage "en-GB"
+        -outdir ./i18n/out/l10n
+
+  # new translation
+  newt:
+    deps: [extract]
+    cmds:
+      - touch ./i18n/out/l10n/translate.en-US.json
+
+  # derive a translation from the default
+  merge:
+    cmds:
+      - goi18n merge
+        -format json
+        -sourceLanguage "en-GB"
+        -outdir ./i18n/out
+        ./i18n/out/active.en-GB.json ./i18n/out/l10n/translate.en-US.json
+
+  # update existing translations
+  # after running this task, the translation file generated will
+  # contain only the new translations. Update the active file,
+  # with the new translations. Also, need to copy the default
+  # file (active.en-GB.json) back into ./i18n/default
+  update:
+    deps: [extract]
+    cmds:
+      - goi18n merge
+        -format json
+        -sourceLanguage "en-GB"
+        -outdir ./i18n/out
+        ./i18n/out/active.en-GB.json ./i18n/deploy/active.en-US.json
+
+  # run this after manual translation has occurred to integrate it
+  # back into the translation file. Unfortunately, this task doesn't
+  # work properly, because it does not include the hashes. Without
+  # this task, the new translations must be manually added to the active
+  # translation file (active.en-US.json).
+  accept:
+    cmds:
+      - goi18n merge
+        -format json
+        -sourceLanguage "en-US"
+        -outdir ./i18n/temp
+        ./i18n/out/translate.en-US.json ./i18n/deploy/active.en-US.json
