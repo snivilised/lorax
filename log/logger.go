@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/snivilised/astrolib/internal/log"
+	"github.com/snivilised/lorax/internal/log"
 )
 
 type Logger interface {

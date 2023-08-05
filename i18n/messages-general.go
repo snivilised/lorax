@@ -5,7 +5,7 @@ import (
 )
 
 type UsingConfigFileTemplData struct {
-	astrolibTemplData
+	loraxTemplData
 	ConfigFileName string
 }
 

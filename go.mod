@@ -1,4 +1,4 @@
-module github.com/snivilised/astrolib
+module github.com/snivilised/lorax
 
 go 1.19
 
