@@ -22,7 +22,7 @@ tasks:
 
   t:
     cmds:
-      - go test ./...
+      - ginkgo -p ./...
 
   ti:
     cmds:
@@ -42,17 +42,17 @@ tasks:
   # run tests suites recursive
   g:
     cmds:
-      - ginkgo -r
+      - ginkgo -p -r
 
   # invoke as task gen -- <item>
   gl:
     cmds:
-      - ginkgo -r --label-filter={{.CLI_ARGS}}
+      - ginkgo -p -r --label-filter={{.CLI_ARGS}}
 
   # run tests suites recursive with verbose
   gv:
     cmds:
-      - ginkgo -r -v
+      - ginkgo -p -r -v
 
   # generate a test file for the item provided (item_test.go)
   # invoke as task gen -- <item>
