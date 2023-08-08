@@ -4,45 +4,53 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/snivilised/lorax/async"
 )
 
 type Consumer[R any] struct {
-	ResultsCh <-chan R
+	ResultsCh <-chan async.JobResult[R]
 	quit      *sync.WaitGroup
 	Count     int
 }
 
-func NewConsumer[R any](ctx context.Context, wg *sync.WaitGroup, resultsCh <-chan R) *Consumer[R] {
+func StartConsumer[R any](
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	resultsCh <-chan async.JobResult[R],
+) *Consumer[R] {
 	consumer := &Consumer[R]{
 		ResultsCh: resultsCh,
 		quit:      wg,
 	}
-	go consumer.start(ctx)
+	go consumer.run(ctx)
 
 	return consumer
 }
 
-func (c *Consumer[R]) start(ctx context.Context) {
+func (c *Consumer[R]) run(ctx context.Context) {
 	defer func() {
-		fmt.Printf("===> consumer finished (Quit). 💠💠💠 \n")
 		c.quit.Done()
+		fmt.Printf("<<<< consumer.run - finished (QUIT). 💠💠💠 \n")
 	}()
-	fmt.Printf("===> 💠 consumer.start ...\n")
+	fmt.Printf("<<<< 💠 consumer.run ...\n")
 
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
-			fmt.Println("---> 💠 consumer.start - done received 💔💔💔")
-
 			running = false
+
+			fmt.Println("<<<< 💠 consumer.run - done received 💔💔💔")
 
 		case result, ok := <-c.ResultsCh:
 			if ok {
 				c.Count++
-				fmt.Printf("---> 💠 consumer.start new result arrived(#%v): '%+v' \n", c.Count, result)
+				fmt.Printf("<<<< 💠 consumer.run - new result arrived(#%v): '%+v' \n",
+					c.Count, result.Payload,
+				)
 			} else {
 				running = false
-				fmt.Printf("---> 💠 consumer.start no more results available (running: %+v)\n", running)
+				fmt.Printf("<<<< 💠 consumer.run - no more results available (running: %+v)\n", running)
 			}
 		}
 	}
