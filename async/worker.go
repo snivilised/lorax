@@ -6,19 +6,15 @@ import (
 )
 
 type worker[I any, R any] struct {
-	id WorkerID
-
-	// TODO: there is still no benefit on using an interface rather than a function,
-	// might have to change this back to a function
-	//
-	fn            Executive[I, R]
-	jobsInCh      <-chan Job[I]
+	id            WorkerID
+	exec          ExecutiveFunc[I, R]
+	jobsInCh      JobStreamIn[I]
 	resultsOutCh  ResultStreamOut[R]
 	finishedChOut FinishedStreamOut
 
 	// this might be better replaced with a broadcast mechanism such as sync.Cond
 	//
-	cancelChIn <-chan CancelWorkSignal
+	cancelChIn CancelStreamIn
 }
 
 func (w *worker[I, R]) run(ctx context.Context) {
@@ -47,7 +43,7 @@ func (w *worker[I, R]) run(ctx context.Context) {
 }
 
 func (w *worker[I, R]) invoke(ctx context.Context, job Job[I]) {
-	result, _ := w.fn.Invoke(job)
+	result, _ := w.exec(job)
 
 	select {
 	case <-ctx.Done():
