@@ -1,5 +1,9 @@
 package async
 
+const (
+	MaxWorkers = 100
+)
+
 // Job, this definition is very rudimentary and bears no resemblance to the final
 // version. The job definition should be data driven not functionally driven. We
 // could have a bind function/method that would bind data to the job fn.
@@ -11,6 +15,7 @@ package async
 //
 
 type Job[I any] struct {
+	ID    string
 	Input I
 }
 
@@ -39,3 +44,8 @@ type WorkerID string
 type FinishedStream = chan WorkerID
 type FinishedStreamIn = <-chan WorkerID
 type FinishedStreamOut = chan<- WorkerID
+
+// joinChannelsFunc allows reader channel to be joined to the writer channel. This
+// function is called when entry is found on the input and forwarded to the
+// output.
+type JoinChannelsFunc[T any] func(inCh <-chan T, outCh chan<- T)

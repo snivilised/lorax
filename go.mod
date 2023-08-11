@@ -11,6 +11,8 @@ require (
 	go.uber.org/zap v1.25.0
 )
 
+require github.com/fortytw2/leaktest v1.3.0
+
 require (
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
