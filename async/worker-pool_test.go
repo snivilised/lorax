@@ -170,6 +170,10 @@ var _ = Describe("WorkerPool", func() {
 		})
 
 		Context("and: Cancelled", func() {
+			It("should test something", func() { // It is ginkgo test case function
+				Expect(audience).To(HaveLen(14))
+			})
+
 			It("🧪 should: handle cancellation and shutdown cleanly", func(_ SpecContext) {
 
 			})

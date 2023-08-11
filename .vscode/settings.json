@@ -16,6 +16,7 @@
     "exportloopref",
     "extendio",
     "fieldalignment",
+    "ginkgolinter",
     "gobby",
     "goconst",
     "gocritic",
