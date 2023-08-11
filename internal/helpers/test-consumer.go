@@ -33,7 +33,7 @@ func (c *Consumer[R]) run(ctx context.Context) {
 		c.quit.Done()
 		fmt.Printf("<<<< consumer.run - finished (QUIT). 💠💠💠 \n")
 	}()
-	fmt.Printf("<<<< 💠 consumer.run ...\n")
+	fmt.Printf("<<<< 💠 consumer.run ...(ctx:%+v)\n", ctx)
 
 	for running := true; running; {
 		select {

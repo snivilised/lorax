@@ -110,13 +110,12 @@ func (p *WorkerPool[I, R]) run(
 		p.Quit.Done()
 		fmt.Printf("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
 	}()
-	fmt.Println("===> 🧊 WorkerPool.run")
+	fmt.Printf("===> 🧊 WorkerPool.run ...(ctx:%+v)\n", ctx)
 
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
 			fmt.Println("===> 🧊 WorkerPool.run - done received ☢️☢️☢️")
-			p.cancelWorkers()
 
 			running = false
 
@@ -163,7 +162,7 @@ func (p *WorkerPool[I, R]) run(
 
 func (p *WorkerPool[I, R]) spawn(
 	ctx context.Context,
-	jobsInCh JobStreamIn[I],
+	jobsChIn JobStreamIn[I],
 	resultsChOut ResultStreamOut[R],
 	finishedChOut FinishedStreamOut,
 ) {
@@ -173,8 +172,8 @@ func (p *WorkerPool[I, R]) spawn(
 		core: &worker[I, R]{
 			id:            p.composeID(),
 			exec:          p.exec,
-			jobsInCh:      jobsInCh,
-			resultsOutCh:  resultsChOut,
+			jobsChIn:      jobsChIn,
+			resultsChOut:  resultsChOut,
 			finishedChOut: finishedChOut,
 			cancelChIn:    cancelCh,
 		},
