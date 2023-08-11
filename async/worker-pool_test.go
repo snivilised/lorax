@@ -52,10 +52,7 @@ func (i TestJobInput) SequenceNo() int {
 type TestJobResult = string
 type TestResultStream chan async.JobResult[TestJobResult]
 
-type exec struct {
-}
-
-func (e *exec) Invoke(j async.Job[TestJobInput]) (async.JobResult[TestJobResult], error) {
+var greeter = func(j async.Job[TestJobInput]) (async.JobResult[TestJobResult], error) {
 	r := rand.Intn(1000) + 1 //nolint:gosec // trivial
 	delay := time.Millisecond * time.Duration(r)
 	time.Sleep(delay)
@@ -101,7 +98,7 @@ func (p *pipeline[I, R]) startProducer(ctx context.Context, provider helpers.Pro
 	p.wg.Add(1)
 }
 
-func (p *pipeline[I, R]) startPool(ctx context.Context, executive async.Executive[I, R]) {
+func (p *pipeline[I, R]) startPool(ctx context.Context, executive async.ExecutiveFunc[I, R]) {
 	p.pool = async.NewWorkerPool[I, R](
 		&async.NewWorkerPoolParams[I, R]{
 			NoWorkers: 5,
@@ -152,7 +149,7 @@ var _ = Describe("WorkerPool", func() {
 				})
 
 				By("👾 WAIT-GROUP ADD(worker-pool)\n")
-				pipe.startPool(ctx, &exec{})
+				pipe.startPool(ctx, greeter)
 
 				By("👾 WAIT-GROUP ADD(consumer)")
 				pipe.startConsumer(ctx)

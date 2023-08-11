@@ -19,8 +19,10 @@ type Job[I any] struct {
 	Input I
 }
 
-type Executive[I, R any] interface {
-	Invoke(j Job[I]) (JobResult[R], error)
+type ExecutiveFunc[I, R any] func(j Job[I]) (JobResult[R], error)
+
+func (f ExecutiveFunc[I, R]) Invoke(j Job[I]) (JobResult[R], error) {
+	return f(j)
 }
 
 type JobResult[R any] struct {
@@ -44,8 +46,3 @@ type WorkerID string
 type FinishedStream = chan WorkerID
 type FinishedStreamIn = <-chan WorkerID
 type FinishedStreamOut = chan<- WorkerID
-
-// joinChannelsFunc allows reader channel to be joined to the writer channel. This
-// function is called when entry is found on the input and forwarded to the
-// output.
-type JoinChannelsFunc[T any] func(inCh <-chan T, outCh chan<- T)
