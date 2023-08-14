@@ -217,6 +217,11 @@ var _ = Describe("WorkerPool", func() {
 
 				By("👾 NOW AWAITING TERMINATION")
 				pipe.cancel.After(ctxCancel, time.Second/5, cancellations...)
+			It("should test something", func() { // It is ginkgo test case function
+				Expect(audience).To(HaveLen(14))
+			})
+
+			It("🧪 should: handle cancellation and shutdown cleanly", func(_ SpecContext) {
 
 				pipe.wg.Wait()
 
