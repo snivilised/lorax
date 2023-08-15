@@ -33,30 +33,29 @@ const (
 	Delay        = 750
 )
 
-var audience = []string{
-	"👻 caspar",
-	"🧙 gandalf",
-	"😺 garfield",
-	"👺 gobby",
-	"👿 nick",
-	"👹 ogre",
-	"👽 paul",
-	"🦄 pegasus",
-	"💩 poo",
-	"🤖 rusty",
-	"💀 skeletor",
-	"🐉 smaug",
-	"🧛‍♀️ vampire",
-	"👾 xenomorph",
-}
+var (
+	audience = []string{
+		"👻 caspar",
+		"🧙 gandalf",
+		"😺 garfield",
+		"👺 gobby",
+		"👿 nick",
+		"👹 ogre",
+		"👽 paul",
+		"🦄 pegasus",
+		"💩 poo",
+		"🤖 rusty",
+		"💀 skeletor",
+		"🐉 smaug",
+		"🧛‍♀️ vampire",
+		"👾 xenomorph",
+	}
+
+	noOp = func(_ context.Context, _ time.Duration, _ ...context.CancelFunc) {}
+)
 
 type TestJobInput struct {
-	sequenceNo int // allocated by observer
-	Recipient  string
-}
-
-func (i TestJobInput) SequenceNo() int {
-	return i.sequenceNo
+	Recipient string
 }
 
 type TestJobResult = string
@@ -69,7 +68,7 @@ var greeter = func(j async.Job[TestJobInput]) (async.JobResult[TestJobResult], e
 
 	result := async.JobResult[TestJobResult]{
 		Payload: fmt.Sprintf("			---> 🍉🍉🍉 [Seq: %v] Hello: '%v'",
-			j.Input.SequenceNo(), j.Input.Recipient,
+			j.SequenceNo, j.Input.Recipient,
 		),
 	}
 
@@ -91,12 +90,8 @@ type pipeline[I, R any] struct {
 func start[I, R any]() *pipeline[I, R] {
 	pipe := &pipeline[I, R]{
 		resultsCh: make(chan async.JobResult[R], ResultChSize),
-		stop: func(_ context.Context, _ time.Duration, _ ...context.CancelFunc) {
-			// no-op
-		},
-		cancel: func(_ context.Context, _ time.Duration, _ ...context.CancelFunc) {
-			// no-op
-		},
+		stop:      noOp,
+		cancel:    noOp,
 	}
 
 	return pipe
@@ -160,13 +155,10 @@ var _ = Describe("WorkerPool", func() {
 				pipe := start[TestJobInput, TestJobResult]()
 
 				By("👾 WAIT-GROUP ADD(producer)")
-				sequence := 0
 				pipe.produce(ctx, func() TestJobInput {
 					recipient := rand.Intn(len(audience)) //nolint:gosec // trivial
-					sequence++
 					return TestJobInput{
-						sequenceNo: sequence,
-						Recipient:  audience[recipient],
+						Recipient: audience[recipient],
 					}
 				})
 
@@ -200,13 +192,11 @@ var _ = Describe("WorkerPool", func() {
 				cancellations := []context.CancelFunc{cancel}
 
 				By("👾 WAIT-GROUP ADD(producer)")
-				sequence := 0
 				pipe.produce(ctxCancel, func() TestJobInput {
 					recipient := rand.Intn(len(audience)) //nolint:gosec // trivial
-					sequence++
+
 					return TestJobInput{
-						sequenceNo: sequence,
-						Recipient:  audience[recipient],
+						Recipient: audience[recipient],
 					}
 				})
 

@@ -130,7 +130,10 @@ func (p *WorkerPool[I, R]) run(
 				}
 				select {
 				case forwardChOut <- job:
-					fmt.Printf("===> 🧊 WorkerPool.run - forwarded job 🧿🧿🧿(%v)\n", job.ID)
+					fmt.Printf("===> 🧊 WorkerPool.run - forwarded job 🧿🧿🧿(%v) [Seq: %v]\n",
+						job.ID,
+						job.SequenceNo,
+					)
 				case <-ctx.Done(): // ☣️☣️☣️ CHECK THIS, IT MIGHT BE INVALID
 					fmt.Printf("===> 🧊 (#workers: '%v') WorkerPool.run - done received ☢️☢️☢️\n",
 						len(p.private.pool),

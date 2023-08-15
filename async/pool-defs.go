@@ -15,8 +15,9 @@ const (
 //
 
 type Job[I any] struct {
-	ID    string
-	Input I
+	ID         string
+	Input      I
+	SequenceNo int
 }
 
 type ExecutiveFunc[I, R any] func(j Job[I]) (JobResult[R], error)
