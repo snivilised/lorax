@@ -79,11 +79,15 @@ func (p *Producer[I, R]) run(ctx context.Context) {
 }
 
 func (p *Producer[I, R]) item(ctx context.Context) bool {
+	p.sequenceNo++
+	p.Count++
+
 	result := true
 	i := p.provider()
 	j := async.Job[I]{
-		ID:    fmt.Sprintf("JOB-ID:%v", uuid.NewString()),
-		Input: i,
+		ID:         fmt.Sprintf("JOB-ID:%v", uuid.NewString()),
+		Input:      i,
+		SequenceNo: p.sequenceNo,
 	}
 
 	fmt.Printf(">>>> ✨ producer.item, 🟠 waiting to post item: '%+v'\n", i)
@@ -96,7 +100,6 @@ func (p *Producer[I, R]) item(ctx context.Context) bool {
 
 	case p.JobsCh <- j:
 	}
-	p.Count++
 
 	if result {
 		fmt.Printf(">>>> ✨ producer.item, 🟢 posted item: '%+v'\n", i)
