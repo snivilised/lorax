@@ -10,14 +10,14 @@ import (
 	"github.com/snivilised/lorax/async"
 )
 
-type ProviderFn[I any] func() I
+type ProviderFunc[I any] func() I
 
 type Producer[I, R any] struct {
 	sequenceNo  int
 	JobsCh      async.JobStream[I]
 	quit        *sync.WaitGroup
 	Count       int
-	provider    ProviderFn[I]
+	provider    ProviderFunc[I]
 	delay       int
 	terminateCh chan string
 }
@@ -29,7 +29,7 @@ func StartProducer[I, R any](
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	capacity int,
-	provider ProviderFn[I],
+	provider ProviderFunc[I],
 	delay int,
 ) *Producer[I, R] {
 	if delay == 0 {
@@ -55,7 +55,7 @@ func (p *Producer[I, R]) run(ctx context.Context) {
 		fmt.Printf(">>>> producer.run - finished (QUIT). ✨✨✨ \n")
 	}()
 
-	fmt.Printf(">>>> ✨ producer.run ...\n")
+	fmt.Printf(">>>> ✨ producer.run ...(ctx:%+v)\n", ctx)
 
 	for running := true; running; {
 		select {
@@ -70,21 +70,41 @@ func (p *Producer[I, R]) run(ctx context.Context) {
 
 		case <-time.After(time.Second / time.Duration(p.delay)):
 			fmt.Printf(">>>> ✨ producer.run - default (running: %v) ...\n", running)
-			p.item()
+
+			if !p.item(ctx) {
+				running = false
+			}
 		}
 	}
 }
 
-func (p *Producer[I, R]) item() {
+func (p *Producer[I, R]) item(ctx context.Context) bool {
+	result := true
 	i := p.provider()
 	j := async.Job[I]{
 		ID:    fmt.Sprintf("JOB-ID:%v", uuid.NewString()),
 		Input: i,
 	}
-	p.JobsCh <- j
+
+	fmt.Printf(">>>> ✨ producer.item, 🟠 waiting to post item: '%+v'\n", i)
+
+	select {
+	case <-ctx.Done():
+		fmt.Println(">>>> 💠 producer.item - done received ⛔⛔⛔")
+
+		result = false
+
+	case p.JobsCh <- j:
+	}
 	p.Count++
 
-	fmt.Printf(">>>> ✨ producer.item, posted item: '%+v'\n", i)
+	if result {
+		fmt.Printf(">>>> ✨ producer.item, 🟢 posted item: '%+v'\n", i)
+	} else {
+		fmt.Printf(">>>> ✨ producer.item, 🔴 item NOT posted: '%+v'\n", i)
+	}
+
+	return result
 }
 
 func (p *Producer[I, R]) Stop() {
@@ -99,12 +119,33 @@ func StopProducerAfter[I, R any](
 	producer *Producer[I, R],
 	delay time.Duration,
 ) {
-	fmt.Printf("		>>> 💤 Sleeping before requesting stop (%v) ...\n", delay)
+	fmt.Printf("		>>> 💤 StopAfter - Sleeping before requesting stop (%v) ...\n", delay)
 	select {
 	case <-ctx.Done():
 	case <-time.After(delay):
 	}
 
 	producer.Stop()
-	fmt.Printf("		>>> 🍧🍧🍧 stop submitted.\n")
+	fmt.Printf("		>>> StopAfter - 🍧🍧🍧 stop submitted.\n")
+}
+
+func CancelProducerAfter[I, R any](
+	delay time.Duration,
+	cancellation ...context.CancelFunc,
+) {
+	fmt.Printf("		>>> 💤 CancelAfter - Sleeping before requesting cancellation (%v) ...\n", delay)
+	<-time.After(delay)
+
+	// we should always expect to get a cancel function back, even if we don't
+	// ever use it, so it is still relevant to get it in the stop test case
+	//
+	if len(cancellation) > 0 {
+		cancel := cancellation[0]
+
+		fmt.Printf("		>>> CancelAfter - 🛑🛑🛑 cancellation submitted.\n")
+		cancel()
+		fmt.Printf("		>>> CancelAfter - ➖➖➖ CANCELLED\n")
+	} else {
+		fmt.Printf("		>>> CancelAfter(noc) - ✖️✖️✖️ cancellation attempt benign.\n")
+	}
 }

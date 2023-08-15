@@ -110,13 +110,12 @@ func (p *WorkerPool[I, R]) run(
 		p.Quit.Done()
 		fmt.Printf("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
 	}()
-	fmt.Println("===> 🧊 WorkerPool.run")
+	fmt.Printf("===> 🧊 WorkerPool.run ...(ctx:%+v)\n", ctx)
 
 	for running := true; running; {
 		select {
 		case <-ctx.Done():
 			fmt.Println("===> 🧊 WorkerPool.run - done received ☢️☢️☢️")
-			p.cancelWorkers()
 
 			running = false
 
@@ -163,7 +162,7 @@ func (p *WorkerPool[I, R]) run(
 
 func (p *WorkerPool[I, R]) spawn(
 	ctx context.Context,
-	jobsInCh JobStreamIn[I],
+	jobsChIn JobStreamIn[I],
 	resultsChOut ResultStreamOut[R],
 	finishedChOut FinishedStreamOut,
 ) {
@@ -173,8 +172,8 @@ func (p *WorkerPool[I, R]) spawn(
 		core: &worker[I, R]{
 			id:            p.composeID(),
 			exec:          p.exec,
-			jobsInCh:      jobsInCh,
-			resultsOutCh:  resultsChOut,
+			jobsChIn:      jobsChIn,
+			resultsChOut:  resultsChOut,
 			finishedChOut: finishedChOut,
 			cancelChIn:    cancelCh,
 		},
@@ -196,9 +195,9 @@ func (p *WorkerPool[I, R]) drain(finishedChIn FinishedStreamIn) {
 		// 📍 Here, we don't access the finishedChIn channel in a pre-emptive way via
 		// the ctx.Done() channel. This is because in a unit test, we define a timeout as
 		// part of the test spec using SpecTimeout. When this fires, this is handled by the
-		// run loop, which ends that loop then enters drain. When this happens, you can't
-		// reuse that same done channel as it will immediately return the value already
-		// handled. This has the effect of short-circuiting this loop meaning that
+		// run loop, which ends that loop then enters drain the phase. When this happens,
+		// you can't reuse that same done channel as it will immediately return the value
+		// already handled. This has the effect of short-circuiting this loop meaning that
 		// workerID := <-finishedChIn never has a chance to be selected and the drain loop
 		// exits early. The end result of which means that the p.private.pool collection is
 		// never depleted.

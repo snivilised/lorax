@@ -9,19 +9,19 @@ import (
 )
 
 type Consumer[R any] struct {
-	ResultsCh <-chan async.JobResult[R]
-	quit      *sync.WaitGroup
-	Count     int
+	ResultsChIn async.ResultStreamIn[R]
+	quit        *sync.WaitGroup
+	Count       int
 }
 
 func StartConsumer[R any](
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	resultsCh <-chan async.JobResult[R],
+	resultsChIn async.ResultStreamIn[R],
 ) *Consumer[R] {
 	consumer := &Consumer[R]{
-		ResultsCh: resultsCh,
-		quit:      wg,
+		ResultsChIn: resultsChIn,
+		quit:        wg,
 	}
 	go consumer.run(ctx)
 
@@ -33,7 +33,7 @@ func (c *Consumer[R]) run(ctx context.Context) {
 		c.quit.Done()
 		fmt.Printf("<<<< consumer.run - finished (QUIT). 💠💠💠 \n")
 	}()
-	fmt.Printf("<<<< 💠 consumer.run ...\n")
+	fmt.Printf("<<<< 💠 consumer.run ...(ctx:%+v)\n", ctx)
 
 	for running := true; running; {
 		select {
@@ -42,7 +42,7 @@ func (c *Consumer[R]) run(ctx context.Context) {
 
 			fmt.Println("<<<< 💠 consumer.run - done received 💔💔💔")
 
-		case result, ok := <-c.ResultsCh:
+		case result, ok := <-c.ResultsChIn:
 			if ok {
 				c.Count++
 				fmt.Printf("<<<< 💠 consumer.run - new result arrived(#%v): '%+v' \n",
