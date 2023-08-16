@@ -13,6 +13,7 @@ builds:
       - windows
       - darwin
     no_main_check: true
+    skip: true
 
 archives:
   - format: tar.gz
