@@ -1,4 +1,4 @@
-name: Astrolib Continuous Integration
+name: Lorax Continuous Integration
 on:
   push:
 

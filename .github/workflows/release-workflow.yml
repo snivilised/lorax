@@ -1,4 +1,4 @@
-name: Astrolib Release
+name: Lorax Release
 
 on:
   push:
