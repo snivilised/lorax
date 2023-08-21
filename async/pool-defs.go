@@ -20,30 +20,30 @@ type Job[I any] struct {
 	SequenceNo int
 }
 
-type ExecutiveFunc[I, R any] func(j Job[I]) (JobResult[R], error)
+type ExecutiveFunc[I, O any] func(j Job[I]) (JobOutput[O], error)
 
-func (f ExecutiveFunc[I, R]) Invoke(j Job[I]) (JobResult[R], error) {
+func (f ExecutiveFunc[I, O]) Invoke(j Job[I]) (JobOutput[O], error) {
 	return f(j)
 }
 
-type JobResult[R any] struct {
-	Payload R
+type JobOutput[O any] struct {
+	Payload O
 }
 
 type JobStream[I any] chan Job[I]
-type JobStreamIn[I any] <-chan Job[I]
-type JobStreamOut[I any] chan<- Job[I]
+type JobStreamR[I any] <-chan Job[I]
+type JobStreamW[I any] chan<- Job[I]
 
-type ResultStream[R any] chan JobResult[R]
-type ResultStreamIn[R any] <-chan JobResult[R]
-type ResultStreamOut[R any] chan<- JobResult[R]
+type OutputStream[O any] chan JobOutput[O]
+type OutputStreamR[O any] <-chan JobOutput[O]
+type OutputStreamW[O any] chan<- JobOutput[O]
 
 type CancelWorkSignal struct{}
 type CancelStream = chan CancelWorkSignal
-type CancelStreamIn = <-chan CancelWorkSignal
-type CancelStreamOut = chan<- CancelWorkSignal
+type CancelStreamR = <-chan CancelWorkSignal
+type CancelStreamW = chan<- CancelWorkSignal
 
 type WorkerID string
 type FinishedStream = chan WorkerID
-type FinishedStreamIn = <-chan WorkerID
-type FinishedStreamOut = chan<- WorkerID
+type FinishedStreamR = <-chan WorkerID
+type FinishedStreamW = chan<- WorkerID

@@ -7,9 +7,9 @@ const (
 	DefaultChSize = 100
 )
 
-type workerWrapper[I any, R any] struct {
+type workerWrapper[I any, O any] struct {
 	cancelChOut chan<- CancelWorkSignal
-	core        *worker[I, R]
+	core        *worker[I, O]
 }
 
-type workersCollection[I, R any] map[WorkerID]*workerWrapper[I, R]
+type workersCollection[I, O any] map[WorkerID]*workerWrapper[I, O]

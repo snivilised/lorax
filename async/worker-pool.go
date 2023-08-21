@@ -30,8 +30,8 @@ import (
 // that any channel defined in privateWpInfo should never to accessed directly (other
 // than for passing it to another method). This is an experimental convention that
 // I'm establishing for all snivilised projects.
-type privateWpInfo[I, R any] struct {
-	pool          workersCollection[I, R]
+type privateWpInfo[I, O any] struct {
+	pool          workersCollection[I, O]
 	workersJobsCh chan Job[I]
 	finishedCh    FinishedStream
 	cancelCh      CancelStream
@@ -40,32 +40,32 @@ type privateWpInfo[I, R any] struct {
 // WorkerPool owns the resultOut channel, because it is the only entity that knows
 // when all workers have completed their work due to the finished channel, which it also
 // owns.
-type WorkerPool[I, R any] struct {
-	private        privateWpInfo[I, R]
-	exec           ExecutiveFunc[I, R]
+type WorkerPool[I, O any] struct {
+	private        privateWpInfo[I, O]
+	exec           ExecutiveFunc[I, O]
 	noWorkers      int
-	SourceJobsChIn JobStreamIn[I]
+	SourceJobsChIn JobStreamR[I]
 
 	Quit *sync.WaitGroup
 }
 
-type NewWorkerPoolParams[I, R any] struct {
+type NewWorkerPoolParams[I, O any] struct {
 	NoWorkers int
-	Exec      ExecutiveFunc[I, R]
+	Exec      ExecutiveFunc[I, O]
 	JobsCh    chan Job[I]
 	CancelCh  CancelStream
 	Quit      *sync.WaitGroup
 }
 
-func NewWorkerPool[I, R any](params *NewWorkerPoolParams[I, R]) *WorkerPool[I, R] {
+func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O] {
 	noWorkers := runtime.NumCPU()
 	if params.NoWorkers > 1 && params.NoWorkers <= MaxWorkers {
 		noWorkers = params.NoWorkers
 	}
 
-	wp := &WorkerPool[I, R]{
-		private: privateWpInfo[I, R]{
-			pool:          make(workersCollection[I, R], noWorkers),
+	wp := &WorkerPool[I, O]{
+		private: privateWpInfo[I, O]{
+			pool:          make(workersCollection[I, O], noWorkers),
 			workersJobsCh: make(chan Job[I], noWorkers),
 			finishedCh:    make(FinishedStream, noWorkers),
 			cancelCh:      params.CancelCh,
@@ -86,27 +86,27 @@ var eyeballs = []string{
 	"❤️", "💙", "💚", "💜", "💛", "🤍", "💖", "💗", "💝",
 }
 
-func (p *WorkerPool[I, R]) composeID() WorkerID {
+func (p *WorkerPool[I, O]) composeID() WorkerID {
 	n := len(p.private.pool) + 1
 	emoji := eyeballs[(n-1)%p.noWorkers]
 
 	return WorkerID(fmt.Sprintf("(%v)WORKER-ID-%v:%v", emoji, n, uuid.NewString()))
 }
 
-func (p *WorkerPool[I, R]) Start(
+func (p *WorkerPool[I, O]) Start(
 	ctx context.Context,
-	resultsChOut ResultStreamOut[R],
+	outputsChOut OutputStreamW[O],
 ) {
-	p.run(ctx, p.private.workersJobsCh, resultsChOut)
+	p.run(ctx, p.private.workersJobsCh, outputsChOut)
 }
 
-func (p *WorkerPool[I, R]) run(
+func (p *WorkerPool[I, O]) run(
 	ctx context.Context,
-	forwardChOut chan<- Job[I],
-	resultsChOut ResultStreamOut[R],
+	forwardChOut JobStreamW[I],
+	outputsChOut OutputStreamW[O],
 ) {
 	defer func() {
-		close(resultsChOut)
+		close(outputsChOut)
 		p.Quit.Done()
 		fmt.Printf("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
 	}()
@@ -126,7 +126,7 @@ func (p *WorkerPool[I, R]) run(
 				)
 
 				if len(p.private.pool) < p.noWorkers {
-					p.spawn(ctx, p.private.workersJobsCh, resultsChOut, p.private.finishedCh)
+					p.spawn(ctx, p.private.workersJobsCh, outputsChOut, p.private.finishedCh)
 				}
 				select {
 				case forwardChOut <- job:
@@ -163,20 +163,20 @@ func (p *WorkerPool[I, R]) run(
 	)
 }
 
-func (p *WorkerPool[I, R]) spawn(
+func (p *WorkerPool[I, O]) spawn(
 	ctx context.Context,
-	jobsChIn JobStreamIn[I],
-	resultsChOut ResultStreamOut[R],
-	finishedChOut FinishedStreamOut,
+	jobsChIn JobStreamR[I],
+	outputsChOut OutputStreamW[O],
+	finishedChOut FinishedStreamW,
 ) {
-	cancelCh := make(chan CancelWorkSignal, 1)
+	cancelCh := make(CancelStream, 1)
 
-	w := &workerWrapper[I, R]{
-		core: &worker[I, R]{
+	w := &workerWrapper[I, O]{
+		core: &worker[I, O]{
 			id:            p.composeID(),
 			exec:          p.exec,
 			jobsChIn:      jobsChIn,
-			resultsChOut:  resultsChOut,
+			outputsChOut:  outputsChOut,
 			finishedChOut: finishedChOut,
 			cancelChIn:    cancelCh,
 		},
@@ -188,7 +188,7 @@ func (p *WorkerPool[I, R]) spawn(
 	fmt.Printf("===> 🧊 WorkerPool.spawned new worker: '%v' 🎀🎀🎀\n", w.core.id)
 }
 
-func (p *WorkerPool[I, R]) drain(finishedChIn FinishedStreamIn) {
+func (p *WorkerPool[I, O]) drain(finishedChIn FinishedStreamR) {
 	fmt.Printf(
 		"!!!! 🧊 WorkerPool.drain - waiting for remaining workers: %v (#GRs: %v); 🧊🧊🧊 \n",
 		len(p.private.pool), runtime.NumGoroutine(),
@@ -246,7 +246,7 @@ func (p *WorkerPool[I, R]) drain(finishedChIn FinishedStreamIn) {
 	}
 }
 
-func (p *WorkerPool[I, R]) cancelWorkers() {
+func (p *WorkerPool[I, O]) cancelWorkers() {
 	// perhaps, we can replace this with another broadcast mechanism such as sync.Cond
 	//
 	n := len(p.private.pool)

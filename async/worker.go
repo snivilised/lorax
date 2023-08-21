@@ -5,19 +5,19 @@ import (
 	"fmt"
 )
 
-type worker[I any, R any] struct {
+type worker[I any, O any] struct {
 	id            WorkerID
-	exec          ExecutiveFunc[I, R]
-	jobsChIn      JobStreamIn[I]
-	resultsChOut  ResultStreamOut[R]
-	finishedChOut FinishedStreamOut
+	exec          ExecutiveFunc[I, O]
+	jobsChIn      JobStreamR[I]
+	outputsChOut  OutputStreamW[O]
+	finishedChOut FinishedStreamW
 
 	// this might be better replaced with a broadcast mechanism such as sync.Cond
 	//
-	cancelChIn CancelStreamIn
+	cancelChIn CancelStreamR
 }
 
-func (w *worker[I, R]) run(ctx context.Context) {
+func (w *worker[I, O]) run(ctx context.Context) {
 	defer func() {
 		w.finishedChOut <- w.id // ⚠️ non-pre-emptive send, but this should be ok
 		fmt.Printf("	<--- 🚀 worker.run(%v) (SENT FINISHED). 🚀🚀🚀\n", w.id)
@@ -43,13 +43,13 @@ func (w *worker[I, R]) run(ctx context.Context) {
 	}
 }
 
-func (w *worker[I, R]) invoke(ctx context.Context, job Job[I]) {
+func (w *worker[I, O]) invoke(ctx context.Context, job Job[I]) {
 	result, _ := w.exec(job)
 
 	select {
 	case <-ctx.Done():
 		fmt.Printf("	---> 🚀 worker.invoke(%v)(cancel) - done received 💥💥💥\n", w.id)
 
-	case w.resultsChOut <- result:
+	case w.outputsChOut <- result:
 	}
 }

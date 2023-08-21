@@ -10,45 +10,48 @@ import (
 	"github.com/snivilised/lorax/async"
 )
 
+type termination string
+type terminationStream chan termination
+
 type ProviderFunc[I any] func() I
 
-type Producer[I, R any] struct {
-	sequenceNo  int
-	JobsCh      async.JobStream[I]
+type Producer[I, O any] struct {
 	quit        *sync.WaitGroup
-	Count       int
+	sequenceNo  int
 	provider    ProviderFunc[I]
 	delay       int
-	terminateCh chan string
+	terminateCh terminationStream
+	JobsCh      async.JobStream[I]
+	Count       int
 }
 
 // The producer owns the Jobs channel as it knows when to close it. This producer is
 // a fake producer and exposes a stop method that the client go routing can call to
 // indicate end of the work load.
-func StartProducer[I, R any](
+func StartProducer[I, O any](
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	capacity int,
 	provider ProviderFunc[I],
 	delay int,
-) *Producer[I, R] {
+) *Producer[I, O] {
 	if delay == 0 {
 		panic(fmt.Sprintf("Invalid delay requested: '%v'", delay))
 	}
 
-	producer := Producer[I, R]{
-		JobsCh:      make(async.JobStream[I], capacity),
+	producer := Producer[I, O]{
 		quit:        wg,
 		provider:    provider,
 		delay:       delay,
-		terminateCh: make(chan string),
+		terminateCh: make(terminationStream),
+		JobsCh:      make(async.JobStream[I], capacity),
 	}
 	go producer.run(ctx)
 
 	return &producer
 }
 
-func (p *Producer[I, R]) run(ctx context.Context) {
+func (p *Producer[I, O]) run(ctx context.Context) {
 	defer func() {
 		close(p.JobsCh)
 		p.quit.Done()
@@ -78,7 +81,7 @@ func (p *Producer[I, R]) run(ctx context.Context) {
 	}
 }
 
-func (p *Producer[I, R]) item(ctx context.Context) bool {
+func (p *Producer[I, O]) item(ctx context.Context) bool {
 	p.sequenceNo++
 	p.Count++
 
@@ -110,16 +113,16 @@ func (p *Producer[I, R]) item(ctx context.Context) bool {
 	return result
 }
 
-func (p *Producer[I, R]) Stop() {
+func (p *Producer[I, O]) Stop() {
 	fmt.Println(">>>> 🧲 producer terminating ...")
-	p.terminateCh <- "done"
+	p.terminateCh <- termination("done")
 	close(p.terminateCh)
 }
 
 // StopProducerAfter, run in a new go routine
-func StopProducerAfter[I, R any](
+func StopProducerAfter[I, O any](
 	ctx context.Context,
-	producer *Producer[I, R],
+	producer *Producer[I, O],
 	delay time.Duration,
 ) {
 	fmt.Printf("		>>> 💤 StopAfter - Sleeping before requesting stop (%v) ...\n", delay)
@@ -132,7 +135,7 @@ func StopProducerAfter[I, R any](
 	fmt.Printf("		>>> StopAfter - 🍧🍧🍧 stop submitted.\n")
 }
 
-func CancelProducerAfter[I, R any](
+func CancelProducerAfter[I, O any](
 	delay time.Duration,
 	cancellation ...context.CancelFunc,
 ) {
