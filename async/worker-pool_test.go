@@ -21,16 +21,16 @@ func init() { rand.Seed(time.Now().Unix()) }
 
 // TerminatorFunc brings the work pool processing to an end, eg
 // by stopping or cancellation after the requested amount of time.
-type TerminatorFunc[I, R any] func(ctx context.Context, delay time.Duration, funcs ...context.CancelFunc)
+type TerminatorFunc[I, O any] func(ctx context.Context, delay time.Duration, funcs ...context.CancelFunc)
 
-func (f TerminatorFunc[I, R]) After(ctx context.Context, delay time.Duration, funcs ...context.CancelFunc) {
+func (f TerminatorFunc[I, O]) After(ctx context.Context, delay time.Duration, funcs ...context.CancelFunc) {
 	f(ctx, delay, funcs...)
 }
 
 const (
-	JobChSize    = 10
-	ResultChSize = 10
-	Delay        = 750
+	JobChSize     = 10
+	OutputsChSize = 10
+	Delay         = 750
 )
 
 var (
@@ -58,15 +58,15 @@ type TestJobInput struct {
 	Recipient string
 }
 
-type TestJobResult = string
-type TestResultStream chan async.JobResult[TestJobResult]
+type TestJobOutput = string
+type TestOutputStream chan async.JobOutput[TestJobOutput]
 
-var greeter = func(j async.Job[TestJobInput]) (async.JobResult[TestJobResult], error) {
+var greeter = func(j async.Job[TestJobInput]) (async.JobOutput[TestJobOutput], error) {
 	r := rand.Intn(1000) + 1 //nolint:gosec // trivial
 	delay := time.Millisecond * time.Duration(r)
 	time.Sleep(delay)
 
-	result := async.JobResult[TestJobResult]{
+	result := async.JobOutput[TestJobOutput]{
 		Payload: fmt.Sprintf("			---> 🍉🍉🍉 [Seq: %v] Hello: '%v'",
 			j.SequenceNo, j.Input.Recipient,
 		),
@@ -75,21 +75,21 @@ var greeter = func(j async.Job[TestJobInput]) (async.JobResult[TestJobResult], e
 	return result, nil
 }
 
-type pipeline[I, R any] struct {
+type pipeline[I, O any] struct {
 	wg        sync.WaitGroup
 	sequence  int
-	resultsCh chan async.JobResult[R]
+	outputsCh chan async.JobOutput[O]
 	provider  helpers.ProviderFunc[I]
-	producer  *helpers.Producer[I, R]
-	pool      *async.WorkerPool[I, R]
-	consumer  *helpers.Consumer[R]
-	cancel    TerminatorFunc[I, R]
-	stop      TerminatorFunc[I, R]
+	producer  *helpers.Producer[I, O]
+	pool      *async.WorkerPool[I, O]
+	consumer  *helpers.Consumer[O]
+	cancel    TerminatorFunc[I, O]
+	stop      TerminatorFunc[I, O]
 }
 
-func start[I, R any]() *pipeline[I, R] {
-	pipe := &pipeline[I, R]{
-		resultsCh: make(chan async.JobResult[R], ResultChSize),
+func start[I, O any]() *pipeline[I, O] {
+	pipe := &pipeline[I, O]{
+		outputsCh: make(chan async.JobOutput[O], OutputsChSize),
 		stop:      noOp,
 		cancel:    noOp,
 	}
@@ -97,9 +97,9 @@ func start[I, R any]() *pipeline[I, R] {
 	return pipe
 }
 
-func (p *pipeline[I, R]) produce(ctx context.Context, provider helpers.ProviderFunc[I]) {
+func (p *pipeline[I, O]) produce(ctx context.Context, provider helpers.ProviderFunc[I]) {
 	p.cancel = func(ctx context.Context, delay time.Duration, cancellations ...context.CancelFunc) {
-		go helpers.CancelProducerAfter[I, R](
+		go helpers.CancelProducerAfter[I, O](
 			delay,
 			cancellations...,
 		)
@@ -112,7 +112,7 @@ func (p *pipeline[I, R]) produce(ctx context.Context, provider helpers.ProviderF
 		)
 	}
 
-	p.producer = helpers.StartProducer[I, R](
+	p.producer = helpers.StartProducer[I, O](
 		ctx,
 		&p.wg,
 		JobChSize,
@@ -123,9 +123,9 @@ func (p *pipeline[I, R]) produce(ctx context.Context, provider helpers.ProviderF
 	p.wg.Add(1)
 }
 
-func (p *pipeline[I, R]) process(ctx context.Context, noWorkers int, executive async.ExecutiveFunc[I, R]) {
-	p.pool = async.NewWorkerPool[I, R](
-		&async.NewWorkerPoolParams[I, R]{
+func (p *pipeline[I, O]) process(ctx context.Context, noWorkers int, executive async.ExecutiveFunc[I, O]) {
+	p.pool = async.NewWorkerPool[I, O](
+		&async.NewWorkerPoolParams[I, O]{
 			NoWorkers: noWorkers,
 			Exec:      executive,
 			JobsCh:    p.producer.JobsCh,
@@ -133,15 +133,15 @@ func (p *pipeline[I, R]) process(ctx context.Context, noWorkers int, executive a
 			Quit:      &p.wg,
 		})
 
-	go p.pool.Start(ctx, p.resultsCh)
+	go p.pool.Start(ctx, p.outputsCh)
 
 	p.wg.Add(1)
 }
 
-func (p *pipeline[I, R]) consume(ctx context.Context) {
+func (p *pipeline[I, O]) consume(ctx context.Context) {
 	p.consumer = helpers.StartConsumer(ctx,
 		&p.wg,
-		p.resultsCh,
+		p.outputsCh,
 	)
 
 	p.wg.Add(1)
@@ -152,7 +152,7 @@ var _ = Describe("WorkerPool", func() {
 		Context("and: Stopped", func() {
 			It("🧪 should: receive and process all", func(ctx SpecContext) {
 				defer leaktest.Check(GinkgoT())()
-				pipe := start[TestJobInput, TestJobResult]()
+				pipe := start[TestJobInput, TestJobOutput]()
 
 				By("👾 WAIT-GROUP ADD(producer)")
 				pipe.produce(ctx, func() TestJobInput {
@@ -178,7 +178,7 @@ var _ = Describe("WorkerPool", func() {
 				)
 
 				Expect(pipe.producer.Count).To(Equal(pipe.consumer.Count))
-				Eventually(ctx, pipe.resultsCh).WithTimeout(time.Second * 5).Should(BeClosed())
+				Eventually(ctx, pipe.outputsCh).WithTimeout(time.Second * 5).Should(BeClosed())
 				Eventually(ctx, pipe.producer.JobsCh).WithTimeout(time.Second * 5).Should(BeClosed())
 			}, SpecTimeout(time.Second*5))
 		})
@@ -186,7 +186,7 @@ var _ = Describe("WorkerPool", func() {
 		Context("and: Cancelled", func() {
 			It("🧪 should: handle cancellation and shutdown cleanly", func(ctxSpec SpecContext) {
 				defer leaktest.Check(GinkgoT())()
-				pipe := start[TestJobInput, TestJobResult]()
+				pipe := start[TestJobInput, TestJobOutput]()
 
 				ctxCancel, cancel := context.WithCancel(ctxSpec)
 				cancellations := []context.CancelFunc{cancel}
@@ -221,7 +221,7 @@ var _ = Describe("WorkerPool", func() {
 				// which jobs were not processed, each indicated with their corresponding Input
 				// value.
 
-				// Eventually(ctxCancel, pipe.resultsCh).WithTimeout(time.Second * 5).Should(BeClosed())
+				// Eventually(ctxCancel, pipe.outputsCh).WithTimeout(time.Second * 5).Should(BeClosed())
 				// Eventually(ctxCancel, pipe.producer.JobsCh).WithTimeout(time.Second * 5).Should(BeClosed())
 
 			}, SpecTimeout(time.Second*5))
