@@ -3,7 +3,6 @@ package helpers
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,7 +15,8 @@ type terminationStream chan termination
 type ProviderFunc[I any] func() I
 
 type Producer[I, O any] struct {
-	quit        *sync.WaitGroup
+	quitter     async.AssistedQuitter
+	RoutineName async.GoRoutineName
 	sequenceNo  int
 	provider    ProviderFunc[I]
 	delay       int
@@ -30,7 +30,7 @@ type Producer[I, O any] struct {
 // indicate end of the work load.
 func StartProducer[I, O any](
 	ctx context.Context,
-	wg *sync.WaitGroup,
+	quitter async.AssistedQuitter,
 	capacity int,
 	provider ProviderFunc[I],
 	delay int,
@@ -40,7 +40,8 @@ func StartProducer[I, O any](
 	}
 
 	producer := Producer[I, O]{
-		quit:        wg,
+		quitter:     quitter,
+		RoutineName: async.GoRoutineName("✨ producer"),
 		provider:    provider,
 		delay:       delay,
 		terminateCh: make(terminationStream),
@@ -54,7 +55,7 @@ func StartProducer[I, O any](
 func (p *Producer[I, O]) run(ctx context.Context) {
 	defer func() {
 		close(p.JobsCh)
-		p.quit.Done()
+		p.quitter.Done(p.RoutineName)
 		fmt.Printf(">>>> producer.run - finished (QUIT). ✨✨✨ \n")
 	}()
 
@@ -65,7 +66,7 @@ func (p *Producer[I, O]) run(ctx context.Context) {
 		case <-ctx.Done():
 			running = false
 
-			fmt.Println(">>>> 💠 producer.run - done received ⛔⛔⛔")
+			fmt.Println(">>>> ✨ producer.run - done received ⛔⛔⛔")
 
 		case <-p.terminateCh:
 			running = false

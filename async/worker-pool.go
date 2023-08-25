@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"sync"
 
 	"github.com/google/uuid"
 )
@@ -43,10 +42,11 @@ type privateWpInfo[I, O any] struct {
 type WorkerPool[I, O any] struct {
 	private        privateWpInfo[I, O]
 	exec           ExecutiveFunc[I, O]
+	RoutineName    GoRoutineName
 	noWorkers      int
 	SourceJobsChIn JobStreamR[I]
 
-	Quit *sync.WaitGroup
+	Quitter AssistedQuitter
 }
 
 type NewWorkerPoolParams[I, O any] struct {
@@ -54,7 +54,7 @@ type NewWorkerPoolParams[I, O any] struct {
 	Exec      ExecutiveFunc[I, O]
 	JobsCh    chan Job[I]
 	CancelCh  CancelStream
-	Quit      *sync.WaitGroup
+	Quitter   AssistedQuitter
 }
 
 func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O] {
@@ -71,10 +71,11 @@ func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O
 			cancelCh:      params.CancelCh,
 		},
 		exec:           params.Exec,
+		RoutineName:    GoRoutineName("🧊 worker pool"),
 		noWorkers:      noWorkers,
 		SourceJobsChIn: params.JobsCh,
 
-		Quit: params.Quit,
+		Quitter: params.Quitter,
 	}
 
 	return wp
@@ -107,7 +108,7 @@ func (p *WorkerPool[I, O]) run(
 ) {
 	defer func() {
 		close(outputsChOut)
-		p.Quit.Done()
+		p.Quitter.Done(p.RoutineName)
 		fmt.Printf("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
 	}()
 	fmt.Printf("===> 🧊 WorkerPool.run ...(ctx:%+v)\n", ctx)
