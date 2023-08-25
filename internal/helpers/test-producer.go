@@ -56,7 +56,7 @@ func (p *Producer[I, O]) run(ctx context.Context) {
 	defer func() {
 		close(p.JobsCh)
 		p.quitter.Done(p.RoutineName)
-		fmt.Printf(">>>> producer.run - finished (QUIT). ✨✨✨ \n")
+		fmt.Printf(">>>> ✨ producer.run - finished (QUIT). ✨✨✨ \n")
 	}()
 
 	fmt.Printf(">>>> ✨ producer.run ...(ctx:%+v)\n", ctx)
@@ -98,7 +98,7 @@ func (p *Producer[I, O]) item(ctx context.Context) bool {
 
 	select {
 	case <-ctx.Done():
-		fmt.Println(">>>> 💠 producer.item - done received ⛔⛔⛔")
+		fmt.Println(">>>> ✨ producer.item - done received ⛔⛔⛔")
 
 		result = false
 
