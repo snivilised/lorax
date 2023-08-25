@@ -90,7 +90,7 @@ type pipeline[I, O any] struct {
 
 func start[I, O any]() *pipeline[I, O] {
 	pipe := &pipeline[I, O]{
-		wgex:      async.NewAnnotatedWaitGroup("pipeline"),
+		wgex:      async.NewAnnotatedWaitGroup("🍂 pipeline"),
 		outputsCh: make(chan async.JobOutput[O], OutputsChSize),
 		stop:      noOp,
 		cancel:    noOp,
@@ -159,7 +159,7 @@ var _ = Describe("WorkerPool", func() {
 
 				defer func() {
 					if counter, ok := (pipe.wgex).(async.AssistedCounter); ok {
-						fmt.Printf("🎈🎈🎈🎈remaining count: '%v'\n", counter.Count())
+						fmt.Printf("🎈🎈🎈🎈 remaining count: '%v'\n", counter.Count())
 					}
 				}()
 
