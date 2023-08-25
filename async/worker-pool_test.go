@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/fortytw2/leaktest"
@@ -52,6 +51,8 @@ var (
 	}
 
 	noOp = func(_ context.Context, _ time.Duration, _ ...context.CancelFunc) {}
+
+	testMain = async.GoRoutineName("👾 test-main")
 )
 
 type TestJobInput struct {
@@ -76,7 +77,7 @@ var greeter = func(j async.Job[TestJobInput]) (async.JobOutput[TestJobOutput], e
 }
 
 type pipeline[I, O any] struct {
-	wg        sync.WaitGroup
+	wgex      async.WaitGroupEx
 	sequence  int
 	outputsCh chan async.JobOutput[O]
 	provider  helpers.ProviderFunc[I]
@@ -89,6 +90,7 @@ type pipeline[I, O any] struct {
 
 func start[I, O any]() *pipeline[I, O] {
 	pipe := &pipeline[I, O]{
+		wgex:      async.NewAnnotatedWaitGroup("pipeline"),
 		outputsCh: make(chan async.JobOutput[O], OutputsChSize),
 		stop:      noOp,
 		cancel:    noOp,
@@ -114,13 +116,13 @@ func (p *pipeline[I, O]) produce(ctx context.Context, provider helpers.ProviderF
 
 	p.producer = helpers.StartProducer[I, O](
 		ctx,
-		&p.wg,
+		p.wgex,
 		JobChSize,
 		provider,
 		Delay,
 	)
 
-	p.wg.Add(1)
+	p.wgex.Add(1, p.producer.RoutineName)
 }
 
 func (p *pipeline[I, O]) process(ctx context.Context, noWorkers int, executive async.ExecutiveFunc[I, O]) {
@@ -130,21 +132,21 @@ func (p *pipeline[I, O]) process(ctx context.Context, noWorkers int, executive a
 			Exec:      executive,
 			JobsCh:    p.producer.JobsCh,
 			CancelCh:  make(async.CancelStream),
-			Quit:      &p.wg,
+			Quitter:   p.wgex,
 		})
 
 	go p.pool.Start(ctx, p.outputsCh)
 
-	p.wg.Add(1)
+	p.wgex.Add(1, p.pool.RoutineName)
 }
 
 func (p *pipeline[I, O]) consume(ctx context.Context) {
 	p.consumer = helpers.StartConsumer(ctx,
-		&p.wg,
+		p.wgex,
 		p.outputsCh,
 	)
 
-	p.wg.Add(1)
+	p.wgex.Add(1, p.consumer.RoutineName)
 }
 
 var _ = Describe("WorkerPool", func() {
@@ -152,15 +154,23 @@ var _ = Describe("WorkerPool", func() {
 		Context("and: Stopped", func() {
 			It("🧪 should: receive and process all", func(ctx SpecContext) {
 				defer leaktest.Check(GinkgoT())()
+
 				pipe := start[TestJobInput, TestJobOutput]()
 
+				defer func() {
+					if counter, ok := (pipe.wgex).(async.AssistedCounter); ok {
+						fmt.Printf("🎈🎈🎈🎈remaining count: '%v'\n", counter.Count())
+					}
+				}()
+
 				By("👾 WAIT-GROUP ADD(producer)")
-				pipe.produce(ctx, func() TestJobInput {
+				provider := func() TestJobInput {
 					recipient := rand.Intn(len(audience)) //nolint:gosec // trivial
 					return TestJobInput{
 						Recipient: audience[recipient],
 					}
-				})
+				}
+				pipe.produce(ctx, provider)
 
 				By("👾 WAIT-GROUP ADD(worker-pool)\n")
 				pipe.process(ctx, DefaultNoWorkers, greeter)
@@ -170,7 +180,7 @@ var _ = Describe("WorkerPool", func() {
 
 				By("👾 NOW AWAITING TERMINATION")
 				pipe.stop.After(ctx, time.Second/5)
-				pipe.wg.Wait()
+				pipe.wgex.Wait(async.GoRoutineName("👾 test-main"))
 
 				fmt.Printf("<--- orpheus(alpha) finished Counts >>> (Producer: '%v', Consumer: '%v'). 🎯🎯🎯\n",
 					pipe.producer.Count,
@@ -209,7 +219,7 @@ var _ = Describe("WorkerPool", func() {
 				By("👾 NOW AWAITING TERMINATION")
 				pipe.cancel.After(ctxCancel, time.Second/5, cancellations...)
 
-				pipe.wg.Wait()
+				pipe.wgex.Wait(async.GoRoutineName("👾 test-main"))
 
 				fmt.Printf("<--- orpheus(alpha) finished Counts >>> (Producer: '%v', Consumer: '%v'). 🎯🎯🎯\n",
 					pipe.producer.Count,

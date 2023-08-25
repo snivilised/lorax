@@ -22,7 +22,7 @@ func (w *worker[I, O]) run(ctx context.Context) {
 		w.finishedChOut <- w.id // ⚠️ non-pre-emptive send, but this should be ok
 		fmt.Printf("	<--- 🚀 worker.run(%v) (SENT FINISHED). 🚀🚀🚀\n", w.id)
 	}()
-	fmt.Printf("	---> 🚀worker.run(%v) ...(ctx:%+v)\n", w.id, ctx)
+	fmt.Printf("	---> 🚀 worker.run(%v) ...(ctx:%+v)\n", w.id, ctx)
 
 	for running := true; running; {
 		select {

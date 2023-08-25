@@ -3,24 +3,25 @@ package helpers
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/snivilised/lorax/async"
 )
 
 type Consumer[O any] struct {
-	quit        *sync.WaitGroup
+	quitter     async.AssistedQuitter
+	RoutineName async.GoRoutineName
 	OutputsChIn async.OutputStreamR[O]
 	Count       int
 }
 
 func StartConsumer[O any](
 	ctx context.Context,
-	wg *sync.WaitGroup,
+	quitter async.AssistedQuitter,
 	outputsChIn async.OutputStreamR[O],
 ) *Consumer[O] {
 	consumer := &Consumer[O]{
-		quit:        wg,
+		quitter:     quitter,
+		RoutineName: async.GoRoutineName("💠 consumer"),
 		OutputsChIn: outputsChIn,
 	}
 	go consumer.run(ctx)
@@ -30,8 +31,8 @@ func StartConsumer[O any](
 
 func (c *Consumer[O]) run(ctx context.Context) {
 	defer func() {
-		c.quit.Done()
-		fmt.Printf("<<<< consumer.run - finished (QUIT). 💠💠💠 \n")
+		c.quitter.Done(c.RoutineName)
+		fmt.Printf("<<<< 💠 consumer.run - finished (QUIT). 💠💠💠 \n")
 	}()
 	fmt.Printf("<<<< 💠 consumer.run ...(ctx:%+v)\n", ctx)
 

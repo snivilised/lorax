@@ -2,16 +2,17 @@ package async
 
 import (
 	"fmt"
+	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 )
 
 type WaitGroupName string
-type GoRoutineName string
+type GoRoutineName = string
 type GoRoutineID string
+type namesCollection map[GoRoutineName]string
 
 func ComposeGoRoutineID(prefix ...string) GoRoutineID {
 	id := uuid.NewString()
@@ -51,30 +52,50 @@ type AssistedWaiter interface {
 	Done(name ...GoRoutineName)
 }
 
+// ===> Counter
+type AssistedCounter interface {
+	Count() int
+}
+
 type WaitGroupAssister struct {
 	counter int32
+	names   namesCollection
 }
 
-func (g *WaitGroupAssister) Add(delta int, name ...GoRoutineName) {
-	if len(name) > 0 {
-		fmt.Printf("		🧩[[ WaitGroupAssister.Add ]] - name: '%v' (delta: '%v')\n", name[0], delta)
-	}
+func (a *WaitGroupAssister) Add(delta int, name ...GoRoutineName) {
+	a.counter += int32(delta)
 
-	atomic.AddInt32(&g.counter, int32(delta))
+	if len(name) > 0 {
+		a.names[name[0]] = "foo"
+
+		fmt.Printf("		🟪🟪🟪 [[ WaitGroupAssister.Add ]] - name: '%v' (delta: '%v', count: '%v') (running: '%v')\n",
+			name[0], delta, a.counter, a.running(),
+		)
+	}
 }
 
-func (g *WaitGroupAssister) Done(name ...GoRoutineName) {
-	if len(name) > 0 {
-		fmt.Printf("		🧩[[ WaitGroupAssister.Done ]] - name: '%v'\n", name[0])
-	}
+func (a *WaitGroupAssister) Done(name ...GoRoutineName) {
+	a.counter--
 
-	atomic.AddInt32(&g.counter, int32(-1))
+	if len(name) > 0 {
+		delete(a.names, name[0])
+
+		fmt.Printf("		🔷🔷🔷 [[ WaitGroupAssister.Done ]] - name: '%v' (count: '%v') (running: '%v')\n",
+			name[0], a.counter, a.running(),
+		)
+	}
 }
 
-func (g *WaitGroupAssister) Wait(name ...GoRoutineName) {
+func (a *WaitGroupAssister) Wait(name ...GoRoutineName) {
 	if len(name) > 0 {
-		fmt.Printf("		🧩[[ WaitGroupAssister.Wait ]] - name: '%v'\n", name[0])
+		fmt.Printf("		🟤🟤🟤 [[ WaitGroupAssister.Wait ]] - name: '%v' (count: '%v') (running: '%v')\n",
+			name[0], a.counter, a.running(),
+		)
 	}
+}
+
+func (a *WaitGroupAssister) running() string {
+	return strings.Join(lo.Keys(a.names), "/")
 }
 
 // You start off with a core instance and from here you can query it to get the
@@ -99,24 +120,29 @@ type AnnotatedWaitGroup struct {
 	mux       sync.Mutex
 }
 
-func (d *AnnotatedWaitGroup) atomic(operation func()) {
-	defer d.mux.Unlock()
+func NewAnnotatedWaitGroup(_ string) *AnnotatedWaitGroup {
+	return &AnnotatedWaitGroup{
+		assistant: WaitGroupAssister{
+			names: make(namesCollection),
+		},
+	}
+}
 
-	d.mux.Lock()
+func (d *AnnotatedWaitGroup) atomic(operation func()) {
 	operation()
 }
 
 func (d *AnnotatedWaitGroup) Add(delta int, name ...GoRoutineName) {
 	d.atomic(func() {
-		d.wg.Add(delta)
 		d.assistant.Add(delta, name...)
+		d.wg.Add(delta)
 	})
 }
 
 func (d *AnnotatedWaitGroup) Done(name ...GoRoutineName) {
 	d.atomic(func() {
-		d.wg.Done()
 		d.assistant.Done(name...)
+		d.wg.Done()
 	})
 }
 
@@ -132,7 +158,11 @@ func (d *AnnotatedWaitGroup) Wait(name ...GoRoutineName) {
 	// to the console or preferably writing to a log.
 	//
 	d.atomic(func() {
-		d.wg.Wait()
 		d.assistant.Wait(name...)
+		d.wg.Wait()
 	})
+}
+
+func (d *AnnotatedWaitGroup) Count() int {
+	return int(d.assistant.counter)
 }
