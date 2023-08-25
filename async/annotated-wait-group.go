@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/samber/lo"
 )
 
@@ -14,31 +13,11 @@ type GoRoutineName string
 type GoRoutineID string
 type namesCollection map[GoRoutineName]string
 
-func ComposeGoRoutineID(prefix ...string) GoRoutineID {
-	id := uuid.NewString()
-
-	return lo.TernaryF(len(prefix) > 0,
-		func() GoRoutineID {
-			return GoRoutineID(fmt.Sprintf("GR-ID(%v):%v", prefix[0], id))
-		},
-		func() GoRoutineID {
-			return GoRoutineID(fmt.Sprintf("GR-ID:%v", id))
-		},
-	)
-}
-
 //
 // We need to use variadic parameter list in the methods because of go's lack of
 // overloading methods; we need to support calls to wait group methods with or
 // without the go routine name behind the same methods name, ie Add needs to be
 // able to be invoked either way.
-
-// WaitGroupEx the extended WaitGroup
-type WaitGroupEx interface {
-	Add(delta int, name ...GoRoutineName)
-	Done(name ...GoRoutineName)
-	Wait(name ...GoRoutineName)
-}
 
 // AssistedAdder is the interface that is a restricted view of a wait group
 // that only allows adding to the wait group with the addition of being
@@ -61,7 +40,14 @@ type AssistedQuitter interface {
 // able to specify the name representing the calling go routine. This interface
 // can be acquired from the wait group using a standard interface type query.
 type AssistedWaiter interface {
-	Done(name ...GoRoutineName)
+	Wait(name ...GoRoutineName)
+}
+
+// WaitGroupEx the extended WaitGroup
+type WaitGroupEx interface {
+	AssistedAdder
+	AssistedQuitter
+	AssistedWaiter
 }
 
 // AssistedCounter is the interface that is a restricted view of a wait group
