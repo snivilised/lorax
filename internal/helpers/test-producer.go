@@ -15,7 +15,7 @@ type terminationStream chan termination
 type ProviderFunc[I any] func() I
 
 type Producer[I, O any] struct {
-	quitter     async.AssistedQuitter
+	quitter     async.AnnotatedWgQuitter
 	RoutineName async.GoRoutineName
 	sequenceNo  int
 	provider    ProviderFunc[I]
@@ -30,7 +30,7 @@ type Producer[I, O any] struct {
 // indicate end of the work load.
 func StartProducer[I, O any](
 	ctx context.Context,
-	quitter async.AssistedQuitter,
+	quitter async.AnnotatedWgQuitter,
 	capacity int,
 	provider ProviderFunc[I],
 	delay int,

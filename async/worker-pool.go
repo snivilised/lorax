@@ -46,7 +46,7 @@ type WorkerPool[I, O any] struct {
 	noWorkers      int
 	SourceJobsChIn JobStreamR[I]
 
-	Quitter AssistedQuitter
+	Quitter AnnotatedWgQuitter
 }
 
 type NewWorkerPoolParams[I, O any] struct {
@@ -54,7 +54,7 @@ type NewWorkerPoolParams[I, O any] struct {
 	Exec      ExecutiveFunc[I, O]
 	JobsCh    chan Job[I]
 	CancelCh  CancelStream
-	Quitter   AssistedQuitter
+	Quitter   AnnotatedWgQuitter
 }
 
 func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O] {

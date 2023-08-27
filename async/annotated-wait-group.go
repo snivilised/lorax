@@ -19,51 +19,61 @@ type namesCollection map[GoRoutineName]string
 // without the go routine name behind the same methods name, ie Add needs to be
 // able to be invoked either way.
 
-// AssistedAdder is the interface that is a restricted view of a wait group
+// AnnotatedWgAdder is the interface that is a restricted view of a wait group
 // that only allows adding to the wait group with the addition of being
 // able to specify the name representing the calling go routine. This interface
 // can be acquired from the wait group using a standard interface type query.
-type AssistedAdder interface {
+type AnnotatedWgAdder interface {
 	Add(delta int, name ...GoRoutineName)
 }
 
-// AssistedQuitter is the interface that is a restricted view of a wait group
+// AnnotatedWgQuitter is the interface that is a restricted view of a wait group
 // that only allows Done signalling on the wait group with the addition of being
 // able to specify the name representing the calling go routine. This interface
 // can be acquired from the wait group using a standard interface type query.
-type AssistedQuitter interface {
+type AnnotatedWgQuitter interface {
 	Done(name ...GoRoutineName)
 }
 
-// AssistedWaiter is the interface that is a restricted view of a wait group
+// AnnotatedWgAQ is the interface that is a restricted view of a wait group
+// that allows adding to the wait group and Done signalling with the addition of being
+// able to specify the name representing the calling go routine. This interface
+// can be acquired from the wait group using a standard interface type query.
+type AnnotatedWgAQ interface {
+	AnnotatedWgAdder
+	AnnotatedWgQuitter
+}
+
+// AnnotatedWgWaiter is the interface that is a restricted view of a wait group
 // that only allows waiting on the wait group with the addition of being
 // able to specify the name representing the calling go routine. This interface
 // can be acquired from the wait group using a standard interface type query.
-type AssistedWaiter interface {
+type AnnotatedWgWaiter interface {
 	Wait(name ...GoRoutineName)
+}
+
+// AnnotatedWgCounter is the interface that is a restricted view of a wait group
+// that only allows querying the wait group count. This interface
+// can be acquired from the wait group using a standard interface type query.
+type AnnotatedWgCounter interface {
+	Count() int
 }
 
 // WaitGroupEx the extended WaitGroup
 type WaitGroupEx interface {
-	AssistedAdder
-	AssistedQuitter
-	AssistedWaiter
+	AnnotatedWgAdder
+	AnnotatedWgQuitter
+	AnnotatedWgWaiter
+	AnnotatedWgCounter
 }
 
-// AssistedCounter is the interface that is a restricted view of a wait group
-// that only allows querying the wait group count. This interface
-// can be acquired from the wait group using a standard interface type query.
-type AssistedCounter interface {
-	Count() int
-}
-
-type waitGroupAssister struct {
+type waitGroupEx struct {
 	counter       int32
 	names         namesCollection
 	waitGroupName string
 }
 
-func (a *waitGroupAssister) Add(delta int, name ...GoRoutineName) {
+func (a *waitGroupEx) Add(delta int, name ...GoRoutineName) {
 	a.counter += int32(delta)
 
 	if len(name) > 0 {
@@ -73,7 +83,7 @@ func (a *waitGroupAssister) Add(delta int, name ...GoRoutineName) {
 	}
 }
 
-func (a *waitGroupAssister) Done(name ...GoRoutineName) {
+func (a *waitGroupEx) Done(name ...GoRoutineName) {
 	a.counter--
 
 	if len(name) > 0 {
@@ -83,20 +93,20 @@ func (a *waitGroupAssister) Done(name ...GoRoutineName) {
 	}
 }
 
-func (a *waitGroupAssister) Wait(name ...GoRoutineName) {
+func (a *waitGroupEx) Wait(name ...GoRoutineName) {
 	if len(name) > 0 {
 		a.indicate("🧭🧭🧭", string(name[0]), "Wait")
 	}
 }
 
-func (a *waitGroupAssister) indicate(highlight, name, op string) {
+func (a *waitGroupEx) indicate(highlight, name, op string) {
 	fmt.Printf(
 		"		%v [[ WaitGroupAssister(%v).%v ]] - gr-name: '%v' (count: '%v') (running: '%v')\n",
 		highlight, a.waitGroupName, op, name, a.counter, a.running(),
 	)
 }
 
-func (a *waitGroupAssister) running() string {
+func (a *waitGroupEx) running() string {
 	runners := lo.Map(lo.Keys(a.names), func(item GoRoutineName, _ int) string {
 		return string(item)
 	})
@@ -109,15 +119,15 @@ func (a *waitGroupAssister) running() string {
 // diagnosing concurrency issues.
 type AnnotatedWaitGroup struct {
 	wg        sync.WaitGroup
-	assistant waitGroupAssister
+	assistant waitGroupEx
 	mux       sync.Mutex
 }
 
 // NewAnnotatedWaitGroup creates a new AnnotatedWaitGroup instance containing
 // the core WaitGroup instance.
-func NewAnnotatedWaitGroup(name string) *AnnotatedWaitGroup {
+func NewAnnotatedWaitGroup(name string) WaitGroupEx {
 	return &AnnotatedWaitGroup{
-		assistant: waitGroupAssister{
+		assistant: waitGroupEx{
 			waitGroupName: name,
 			names:         make(namesCollection),
 		},

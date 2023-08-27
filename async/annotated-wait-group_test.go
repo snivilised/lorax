@@ -12,7 +12,7 @@ var _ = Describe("AnnotatedWaitGroup", func() {
 
 	Context("Add", func() {
 		It("should: add", func() {
-			var wg async.WaitGroupEx = async.NewAnnotatedWaitGroup("add-unit-test")
+			wg := async.NewAnnotatedWaitGroup("add-unit-test")
 
 			wg.Add(1, "producer")
 		})
@@ -20,7 +20,7 @@ var _ = Describe("AnnotatedWaitGroup", func() {
 
 	Context("Done", func() {
 		It("should: quit", func() {
-			var wg async.WaitGroupEx = async.NewAnnotatedWaitGroup("done-unit-test")
+			wg := async.NewAnnotatedWaitGroup("done-unit-test")
 
 			wg.Add(1, "producer")
 			wg.Done("producer")
@@ -29,7 +29,7 @@ var _ = Describe("AnnotatedWaitGroup", func() {
 
 	Context("Wait", func() {
 		It("should: quit", func() {
-			var wg async.WaitGroupEx = async.NewAnnotatedWaitGroup("wait-unit-test")
+			wg := async.NewAnnotatedWaitGroup("wait-unit-test")
 
 			wg.Add(1, "producer")
 			go func() {
