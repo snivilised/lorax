@@ -8,7 +8,7 @@ import (
 )
 
 type Consumer[O any] struct {
-	quitter     async.AssistedQuitter
+	quitter     async.AnnotatedWgQuitter
 	RoutineName async.GoRoutineName
 	OutputsChIn async.OutputStreamR[O]
 	Count       int
@@ -16,7 +16,7 @@ type Consumer[O any] struct {
 
 func StartConsumer[O any](
 	ctx context.Context,
-	quitter async.AssistedQuitter,
+	quitter async.AnnotatedWgQuitter,
 	outputsChIn async.OutputStreamR[O],
 ) *Consumer[O] {
 	consumer := &Consumer[O]{

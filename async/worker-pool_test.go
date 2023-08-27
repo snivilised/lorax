@@ -158,7 +158,7 @@ var _ = Describe("WorkerPool", func() {
 				pipe := start[TestJobInput, TestJobOutput]()
 
 				defer func() {
-					if counter, ok := (pipe.wgex).(async.AssistedCounter); ok {
+					if counter, ok := (pipe.wgex).(async.AnnotatedWgCounter); ok {
 						fmt.Printf("🎈🎈🎈🎈 remaining count: '%v'\n", counter.Count())
 					}
 				}()
