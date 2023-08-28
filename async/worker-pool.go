@@ -88,8 +88,9 @@ var eyeballs = []string{
 }
 
 func (p *WorkerPool[I, O]) composeID() WorkerID {
-	n := len(p.private.pool) + 1
-	emoji := eyeballs[(n-1)%p.noWorkers]
+	n := len(p.private.pool)
+	index := (n) % len(eyeballs)
+	emoji := eyeballs[index]
 
 	return WorkerID(fmt.Sprintf("(%v)WORKER-ID-%v:%v", emoji, n, uuid.NewString()))
 }
@@ -138,7 +139,7 @@ func (p *WorkerPool[I, O]) run(
 						job.ID,
 						job.SequenceNo,
 					)
-				case <-ctx.Done(): // ☣️☣️☣️ CHECK THIS, IT MIGHT BE INVALID
+				case <-ctx.Done():
 					fmt.Printf("===> 🧊 (#workers: '%v') WorkerPool.run - done received ☢️☢️☢️\n",
 						len(p.private.pool),
 					)

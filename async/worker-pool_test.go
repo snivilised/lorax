@@ -202,6 +202,7 @@ var (
 type poolTE struct {
 	given         string
 	should        string
+	now           int
 	outputsChSize int
 	after         time.Duration
 	context       contextFunc
@@ -243,7 +244,8 @@ var _ = Describe("WorkerPool", func() {
 			pipe.produce(ctx, provider)
 
 			By("👾 WAIT-GROUP ADD(worker-pool)\n")
-			pipe.process(ctx, DefaultNoWorkers, greeter)
+			now := lo.Ternary(entry.now > 0, entry.now, DefaultNoWorkers)
+			pipe.process(ctx, now, greeter)
 
 			if oc != nil {
 				By("👾 WAIT-GROUP ADD(consumer)")
@@ -302,6 +304,18 @@ var _ = Describe("WorkerPool", func() {
 			context:       context.WithCancel,
 			finish:        finishWithCancel,
 			summarise:     summariseWithoutConsumer,
+		}),
+
+		Entry(nil, &poolTE{
+			given:         "finish by stop and high no of workers",
+			should:        "receive and process all",
+			now:           16,
+			outputsChSize: OutputsChSize,
+			after:         time.Second / 5,
+			context:       passthruContext,
+			finish:        finishWithStop,
+			summarise:     summariseWithConsumer,
+			assert:        assertCounts,
 		}),
 	)
 })
