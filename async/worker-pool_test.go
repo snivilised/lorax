@@ -9,6 +9,7 @@ import (
 	"github.com/fortytw2/leaktest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/samber/lo"
 
 	"github.com/snivilised/lorax/async"
 	"github.com/snivilised/lorax/internal/helpers"
@@ -59,7 +60,7 @@ type TestJobInput struct {
 	Recipient string
 }
 
-type TestJobOutput = string
+type TestJobOutput string
 type TestOutputStream chan async.JobOutput[TestJobOutput]
 
 var greeter = func(j async.Job[TestJobInput]) (async.JobOutput[TestJobOutput], error) {
@@ -68,9 +69,9 @@ var greeter = func(j async.Job[TestJobInput]) (async.JobOutput[TestJobOutput], e
 	time.Sleep(delay)
 
 	result := async.JobOutput[TestJobOutput]{
-		Payload: fmt.Sprintf("			---> 🍉🍉🍉 [Seq: %v] Hello: '%v'",
+		Payload: TestJobOutput(fmt.Sprintf("			---> 🍉🍉🍉 [Seq: %v] Hello: '%v'",
 			j.SequenceNo, j.Input.Recipient,
-		),
+		)),
 	}
 
 	return result, nil
@@ -88,10 +89,10 @@ type pipeline[I, O any] struct {
 	stop      TerminatorFunc[I, O]
 }
 
-func start[I, O any]() *pipeline[I, O] {
+func start[I, O any](outputsCh chan async.JobOutput[O]) *pipeline[I, O] {
 	pipe := &pipeline[I, O]{
 		wgex:      async.NewAnnotatedWaitGroup("🍂 pipeline"),
-		outputsCh: make(chan async.JobOutput[O], OutputsChSize),
+		outputsCh: outputsCh,
 		stop:      noOp,
 		cancel:    noOp,
 	}
@@ -149,92 +150,158 @@ func (p *pipeline[I, O]) consume(ctx context.Context) {
 	p.wgex.Add(1, p.consumer.RoutineName)
 }
 
+type TestPipeline *pipeline[TestJobInput, TestJobOutput]
+type assertFunc func(ctx context.Context, pipe TestPipeline)
+type contextFunc func(ctx context.Context) (context.Context, context.CancelFunc)
+type finishFunc func(
+	ctx context.Context,
+	pipe TestPipeline,
+	delay time.Duration,
+	cancel context.CancelFunc,
+)
+type summariseFunc func(pipe TestPipeline)
+
+var (
+	finishWithStop finishFunc = func(
+		ctx context.Context,
+		pipe TestPipeline,
+		delay time.Duration,
+		cancel context.CancelFunc,
+	) {
+		pipe.stop.After(ctx, delay)
+	}
+	finishWithCancel finishFunc = func(
+		ctx context.Context,
+		pipe TestPipeline,
+		delay time.Duration,
+		cancel context.CancelFunc,
+	) {
+		pipe.cancel.After(ctx, delay, cancel)
+	}
+	passthruContext contextFunc = func(ctx context.Context) (context.Context, context.CancelFunc) {
+		return ctx, nil
+	}
+	assertCounts assertFunc = func(ctx context.Context, pipe TestPipeline) {
+		Expect(pipe.producer.Count).To(Equal(pipe.consumer.Count))
+		Eventually(ctx, pipe.outputsCh).WithTimeout(time.Second * 5).Should(BeClosed())
+		Eventually(ctx, pipe.producer.JobsCh).WithTimeout(time.Second * 5).Should(BeClosed())
+	}
+	summariseWithConsumer summariseFunc = func(pipe TestPipeline) {
+		fmt.Printf("<--- orpheus(alpha) finished Counts >>> (Producer: '%v', Consumer: '%v'). 🎯🎯🎯\n",
+			pipe.producer.Count,
+			pipe.consumer.Count,
+		)
+	}
+	summariseWithoutConsumer summariseFunc = func(pipe TestPipeline) {
+		fmt.Printf("<--- orpheus(alpha) finished Counts >>> (Producer: '%v', NO CONSUMER). 🎯🎯🎯\n",
+			pipe.producer.Count,
+		)
+	}
+)
+
+type poolTE struct {
+	given         string
+	should        string
+	outputsChSize int
+	after         time.Duration
+	context       contextFunc
+	finish        finishFunc
+	summarise     summariseFunc
+	assert        assertFunc
+}
+
 var _ = Describe("WorkerPool", func() {
-	When("given: a stream of jobs", func() {
-		Context("and: Stopped", func() {
-			It("🧪 should: receive and process all", func(ctx SpecContext) {
-				defer leaktest.Check(GinkgoT())()
+	DescribeTable("stream of jobs",
+		func(ctxSpec SpecContext, entry *poolTE) {
+			defer leaktest.Check(GinkgoT())()
 
-				pipe := start[TestJobInput, TestJobOutput]()
+			oc := lo.TernaryF(entry.outputsChSize > 0,
+				func() chan async.JobOutput[TestJobOutput] {
+					return make(chan async.JobOutput[TestJobOutput], entry.outputsChSize)
+				},
+				func() chan async.JobOutput[TestJobOutput] {
+					return nil
+				},
+			)
+			pipe := start[TestJobInput, TestJobOutput](oc)
 
-				defer func() {
-					if counter, ok := (pipe.wgex).(async.AnnotatedWgCounter); ok {
-						fmt.Printf("🎈🎈🎈🎈 remaining count: '%v'\n", counter.Count())
-					}
-				}()
-
-				By("👾 WAIT-GROUP ADD(producer)")
-				provider := func() TestJobInput {
-					recipient := rand.Intn(len(audience)) //nolint:gosec // trivial
-					return TestJobInput{
-						Recipient: audience[recipient],
-					}
+			defer func() {
+				if counter, ok := (pipe.wgex).(async.AnnotatedWgCounter); ok {
+					fmt.Printf("🎈🎈🎈🎈 remaining count: '%v'\n", counter.Count())
 				}
-				pipe.produce(ctx, provider)
+			}()
 
-				By("👾 WAIT-GROUP ADD(worker-pool)\n")
-				pipe.process(ctx, DefaultNoWorkers, greeter)
+			ctx, cancel := entry.context(ctxSpec)
 
+			By("👾 WAIT-GROUP ADD(producer)")
+			provider := func() TestJobInput {
+				recipient := rand.Intn(len(audience)) //nolint:gosec // trivial
+				return TestJobInput{
+					Recipient: audience[recipient],
+				}
+			}
+			pipe.produce(ctx, provider)
+
+			By("👾 WAIT-GROUP ADD(worker-pool)\n")
+			pipe.process(ctx, DefaultNoWorkers, greeter)
+
+			if oc != nil {
 				By("👾 WAIT-GROUP ADD(consumer)")
 				pipe.consume(ctx)
+			}
 
-				By("👾 NOW AWAITING TERMINATION")
-				pipe.stop.After(ctx, time.Second/5)
-				pipe.wgex.Wait(async.GoRoutineName("👾 test-main"))
+			By("👾 NOW AWAITING TERMINATION")
+			entry.finish(ctx, pipe, entry.after, cancel)
+			pipe.wgex.Wait(async.GoRoutineName("👾 test-main"))
 
-				fmt.Printf("<--- orpheus(alpha) finished Counts >>> (Producer: '%v', Consumer: '%v'). 🎯🎯🎯\n",
-					pipe.producer.Count,
-					pipe.consumer.Count,
-				)
+			entry.summarise(pipe)
+			if entry.assert != nil {
+				entry.assert(ctx, pipe)
+			}
+		},
+		func(entry *poolTE) string {
+			return fmt.Sprintf("🧪 ===> given: '%v', should: '%v'", entry.given, entry.should)
+		},
 
-				Expect(pipe.producer.Count).To(Equal(pipe.consumer.Count))
-				Eventually(ctx, pipe.outputsCh).WithTimeout(time.Second * 5).Should(BeClosed())
-				Eventually(ctx, pipe.producer.JobsCh).WithTimeout(time.Second * 5).Should(BeClosed())
-			}, SpecTimeout(time.Second*5))
-		})
+		Entry(nil, &poolTE{
+			given:         "finish by stop",
+			should:        "receive and process all",
+			outputsChSize: OutputsChSize,
+			after:         time.Second / 5,
+			context:       passthruContext,
+			finish:        finishWithStop,
+			summarise:     summariseWithConsumer,
+			assert:        assertCounts,
+		}),
 
-		Context("and: Cancelled", func() {
-			It("🧪 should: handle cancellation and shutdown cleanly", func(ctxSpec SpecContext) {
-				defer leaktest.Check(GinkgoT())()
-				pipe := start[TestJobInput, TestJobOutput]()
+		Entry(nil, &poolTE{
+			given:         "finish by cancel",
+			should:        "receive and process all",
+			outputsChSize: OutputsChSize,
+			after:         time.Second / 5,
+			context:       context.WithCancel,
+			finish:        finishWithCancel,
+			summarise:     summariseWithConsumer,
+		}),
 
-				ctxCancel, cancel := context.WithCancel(ctxSpec)
-				cancellations := []context.CancelFunc{cancel}
+		Entry(nil, &poolTE{
+			given:         "finish by stop and no output",
+			should:        "receive and process all",
+			outputsChSize: 0,
+			after:         time.Second / 5,
+			context:       passthruContext,
+			finish:        finishWithStop,
+			summarise:     summariseWithoutConsumer,
+		}),
 
-				By("👾 WAIT-GROUP ADD(producer)")
-				pipe.produce(ctxCancel, func() TestJobInput {
-					recipient := rand.Intn(len(audience)) //nolint:gosec // trivial
-
-					return TestJobInput{
-						Recipient: audience[recipient],
-					}
-				})
-
-				By("👾 WAIT-GROUP ADD(worker-pool)\n")
-				pipe.process(ctxCancel, DefaultNoWorkers, greeter)
-
-				By("👾 WAIT-GROUP ADD(consumer)")
-				pipe.consume(ctxCancel)
-
-				By("👾 NOW AWAITING TERMINATION")
-				pipe.cancel.After(ctxCancel, time.Second/5, cancellations...)
-
-				pipe.wgex.Wait(async.GoRoutineName("👾 test-main"))
-
-				fmt.Printf("<--- orpheus(alpha) finished Counts >>> (Producer: '%v', Consumer: '%v'). 🎯🎯🎯\n",
-					pipe.producer.Count,
-					pipe.consumer.Count,
-				)
-
-				// The producer count is higher than the consumer count. As a feature, we could
-				// collate the numbers produced vs the numbers consumed and perhaps also calculate
-				// which jobs were not processed, each indicated with their corresponding Input
-				// value.
-
-				// Eventually(ctxCancel, pipe.outputsCh).WithTimeout(time.Second * 5).Should(BeClosed())
-				// Eventually(ctxCancel, pipe.producer.JobsCh).WithTimeout(time.Second * 5).Should(BeClosed())
-
-			}, SpecTimeout(time.Second*5))
-		})
-	})
+		Entry(nil, &poolTE{
+			given:         "finish by cancel and no output",
+			should:        "receive and process all",
+			outputsChSize: 0,
+			after:         time.Second / 5,
+			context:       context.WithCancel,
+			finish:        finishWithCancel,
+			summarise:     summariseWithoutConsumer,
+		}),
+	)
 })

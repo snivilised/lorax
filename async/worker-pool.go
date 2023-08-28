@@ -107,7 +107,10 @@ func (p *WorkerPool[I, O]) run(
 	outputsChOut OutputStreamW[O],
 ) {
 	defer func() {
-		close(outputsChOut)
+		if outputsChOut != nil {
+			close(outputsChOut)
+		}
+
 		p.Quitter.Done(p.RoutineName)
 		fmt.Printf("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
 	}()
