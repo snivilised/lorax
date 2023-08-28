@@ -46,10 +46,12 @@ func (w *worker[I, O]) run(ctx context.Context) {
 func (w *worker[I, O]) invoke(ctx context.Context, job Job[I]) {
 	result, _ := w.exec(job)
 
-	select {
-	case <-ctx.Done():
-		fmt.Printf("	---> 🚀 worker.invoke(%v)(cancel) - done received 💥💥💥\n", w.id)
+	if w.outputsChOut != nil {
+		select {
+		case <-ctx.Done():
+			fmt.Printf("	---> 🚀 worker.invoke(%v)(cancel) - done received 💥💥💥\n", w.id)
 
-	case w.outputsChOut <- result:
+		case w.outputsChOut <- result:
+		}
 	}
 }

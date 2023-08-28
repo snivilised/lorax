@@ -39,6 +39,7 @@
     "nakedret",
     "nolint",
     "nolintlint",
+    "passthru",
     "pixa",
     "prealloc",
     "repotoken",
