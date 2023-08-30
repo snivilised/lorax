@@ -16,7 +16,7 @@ import (
 // and hence should only ever be accessed by the worker pool GR in contrast to all the
 // other members of WorkerPool. This is an experimental pattern, the purpose of which
 // is the clearly indicate what state can be accessed in different concurrency contexts,
-// to ensure future updates can be applied with minimal cognitive overload.
+// to ensure future updates can be appliethe d with minimal cognitive overload.
 //
 // There is another purpose for privateWpInfo and that is to do with "confinement" as
 // described on page 86 of CiG. The aim here is to use "lexical confinement" for
