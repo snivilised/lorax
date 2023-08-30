@@ -1,18 +1,18 @@
-package async_test
+package boost_test
 
 import (
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 
-	"github.com/snivilised/lorax/async"
+	"github.com/snivilised/lorax/boost"
 )
 
 var _ = Describe("AnnotatedWaitGroup", func() {
 
 	Context("Add", func() {
 		It("should: add", func() {
-			wg := async.NewAnnotatedWaitGroup("add-unit-test")
+			wg := boost.NewAnnotatedWaitGroup("add-unit-test")
 
 			wg.Add(1, "producer")
 		})
@@ -20,7 +20,7 @@ var _ = Describe("AnnotatedWaitGroup", func() {
 
 	Context("Done", func() {
 		It("should: quit", func() {
-			wg := async.NewAnnotatedWaitGroup("done-unit-test")
+			wg := boost.NewAnnotatedWaitGroup("done-unit-test")
 
 			wg.Add(1, "producer")
 			wg.Done("producer")
@@ -29,7 +29,7 @@ var _ = Describe("AnnotatedWaitGroup", func() {
 
 	Context("Wait", func() {
 		It("should: quit", func() {
-			wg := async.NewAnnotatedWaitGroup("wait-unit-test")
+			wg := boost.NewAnnotatedWaitGroup("wait-unit-test")
 
 			wg.Add(1, "producer")
 			go func() {

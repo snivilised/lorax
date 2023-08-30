@@ -1,4 +1,4 @@
-package async_test
+package boost_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/samber/lo"
 
-	"github.com/snivilised/lorax/async"
+	"github.com/snivilised/lorax/boost"
 	"github.com/snivilised/lorax/internal/helpers"
 )
 
@@ -53,7 +53,7 @@ var (
 
 	noOp = func(_ context.Context, _ time.Duration, _ ...context.CancelFunc) {}
 
-	testMain = async.GoRoutineName("👾 test-main")
+	testMain = boost.GoRoutineName("👾 test-main")
 )
 
 type TestJobInput struct {
@@ -61,14 +61,14 @@ type TestJobInput struct {
 }
 
 type TestJobOutput string
-type TestOutputStream chan async.JobOutput[TestJobOutput]
+type TestOutputStream chan boost.JobOutput[TestJobOutput]
 
-var greeter = func(j async.Job[TestJobInput]) (async.JobOutput[TestJobOutput], error) {
+var greeter = func(j boost.Job[TestJobInput]) (boost.JobOutput[TestJobOutput], error) {
 	r := rand.Intn(1000) + 1 //nolint:gosec // trivial
 	delay := time.Millisecond * time.Duration(r)
 	time.Sleep(delay)
 
-	result := async.JobOutput[TestJobOutput]{
+	result := boost.JobOutput[TestJobOutput]{
 		Payload: TestJobOutput(fmt.Sprintf("			---> 🍉🍉🍉 [Seq: %v] Hello: '%v'",
 			j.SequenceNo, j.Input.Recipient,
 		)),
@@ -78,20 +78,20 @@ var greeter = func(j async.Job[TestJobInput]) (async.JobOutput[TestJobOutput], e
 }
 
 type pipeline[I, O any] struct {
-	wgex      async.WaitGroupEx
+	wgex      boost.WaitGroupEx
 	sequence  int
-	outputsCh chan async.JobOutput[O]
+	outputsCh chan boost.JobOutput[O]
 	provider  helpers.ProviderFunc[I]
 	producer  *helpers.Producer[I, O]
-	pool      *async.WorkerPool[I, O]
+	pool      *boost.WorkerPool[I, O]
 	consumer  *helpers.Consumer[O]
 	cancel    TerminatorFunc[I, O]
 	stop      TerminatorFunc[I, O]
 }
 
-func start[I, O any](outputsCh chan async.JobOutput[O]) *pipeline[I, O] {
+func start[I, O any](outputsCh chan boost.JobOutput[O]) *pipeline[I, O] {
 	pipe := &pipeline[I, O]{
-		wgex:      async.NewAnnotatedWaitGroup("🍂 pipeline"),
+		wgex:      boost.NewAnnotatedWaitGroup("🍂 pipeline"),
 		outputsCh: outputsCh,
 		stop:      noOp,
 		cancel:    noOp,
@@ -126,13 +126,13 @@ func (p *pipeline[I, O]) produce(ctx context.Context, provider helpers.ProviderF
 	p.wgex.Add(1, p.producer.RoutineName)
 }
 
-func (p *pipeline[I, O]) process(ctx context.Context, noWorkers int, executive async.ExecutiveFunc[I, O]) {
-	p.pool = async.NewWorkerPool[I, O](
-		&async.NewWorkerPoolParams[I, O]{
+func (p *pipeline[I, O]) process(ctx context.Context, noWorkers int, executive boost.ExecutiveFunc[I, O]) {
+	p.pool = boost.NewWorkerPool[I, O](
+		&boost.NewWorkerPoolParams[I, O]{
 			NoWorkers: noWorkers,
 			Exec:      executive,
 			JobsCh:    p.producer.JobsCh,
-			CancelCh:  make(async.CancelStream),
+			CancelCh:  make(boost.CancelStream),
 			Quitter:   p.wgex,
 		})
 
@@ -217,17 +217,17 @@ var _ = Describe("WorkerPool", func() {
 			defer leaktest.Check(GinkgoT())()
 
 			oc := lo.TernaryF(entry.outputsChSize > 0,
-				func() chan async.JobOutput[TestJobOutput] {
-					return make(chan async.JobOutput[TestJobOutput], entry.outputsChSize)
+				func() chan boost.JobOutput[TestJobOutput] {
+					return make(chan boost.JobOutput[TestJobOutput], entry.outputsChSize)
 				},
-				func() chan async.JobOutput[TestJobOutput] {
+				func() chan boost.JobOutput[TestJobOutput] {
 					return nil
 				},
 			)
 			pipe := start[TestJobInput, TestJobOutput](oc)
 
 			defer func() {
-				if counter, ok := (pipe.wgex).(async.AnnotatedWgCounter); ok {
+				if counter, ok := (pipe.wgex).(boost.AnnotatedWgCounter); ok {
 					fmt.Printf("🎈🎈🎈🎈 remaining count: '%v'\n", counter.Count())
 				}
 			}()
@@ -254,7 +254,7 @@ var _ = Describe("WorkerPool", func() {
 
 			By("👾 NOW AWAITING TERMINATION")
 			entry.finish(ctx, pipe, entry.after, cancel)
-			pipe.wgex.Wait(async.GoRoutineName("👾 test-main"))
+			pipe.wgex.Wait(boost.GoRoutineName("👾 test-main"))
 
 			entry.summarise(pipe)
 			if entry.assert != nil {

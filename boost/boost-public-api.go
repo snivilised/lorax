@@ -1,18 +1,8 @@
-package async
+package boost
 
 const (
 	MaxWorkers = 100
 )
-
-// Job, this definition is very rudimentary and bears no resemblance to the final
-// version. The job definition should be data driven not functionally driven. We
-// could have a bind function/method that would bind data to the job fn.
-//
-// Job also needs a sequence number (can't be defined yet because Job is just a function,
-// and there does not allow for meta data). What we could do is to use a functional
-// composition technique that allows us to create compound functionality. Will need to
-// refresh knowledge of functional programming, see ramda.
-//
 
 type Job[I any] struct {
 	ID         string
