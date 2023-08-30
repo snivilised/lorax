@@ -147,7 +147,7 @@ func (p *pipeline[I, O]) process(ctx context.Context, noWorkers int, executive b
 			Exec:      executive,
 			JobsCh:    p.producer.JobsCh,
 			CancelCh:  make(boost.CancelStream),
-			Quitter:   p.wgan,
+			WaitAQ:    p.wgan,
 		})
 
 	go p.pool.Start(ctx, p.outputsCh)

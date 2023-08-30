@@ -16,7 +16,7 @@ import (
 // and hence should only ever be accessed by the worker pool GR in contrast to all the
 // other members of WorkerPool. This is an experimental pattern, the purpose of which
 // is the clearly indicate what state can be accessed in different concurrency contexts,
-// to ensure future updates can be appliethe d with minimal cognitive overload.
+// to ensure future updates can be applied with minimal cognitive overload.
 //
 // There is another purpose for privateWpInfo and that is to do with "confinement" as
 // described on page 86 of CiG. The aim here is to use "lexical confinement" for
@@ -46,7 +46,7 @@ type WorkerPool[I, O any] struct {
 	noWorkers      int
 	SourceJobsChIn JobStreamR[I]
 
-	Quitter AnnotatedWgQuitter
+	WaitAQ AnnotatedWgAQ
 }
 
 type NewWorkerPoolParams[I, O any] struct {
@@ -54,7 +54,7 @@ type NewWorkerPoolParams[I, O any] struct {
 	Exec      ExecutiveFunc[I, O]
 	JobsCh    chan Job[I]
 	CancelCh  CancelStream
-	Quitter   AnnotatedWgQuitter
+	WaitAQ    AnnotatedWgAQ
 }
 
 func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O] {
@@ -75,7 +75,7 @@ func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O
 		noWorkers:      noWorkers,
 		SourceJobsChIn: params.JobsCh,
 
-		Quitter: params.Quitter,
+		WaitAQ: params.WaitAQ,
 	}
 
 	return wp
@@ -112,7 +112,7 @@ func (p *WorkerPool[I, O]) run(
 			close(outputsChOut)
 		}
 
-		p.Quitter.Done(p.RoutineName)
+		p.WaitAQ.Done(p.RoutineName)
 		fmt.Printf("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
 	}()
 	fmt.Printf("===> 🧊 WorkerPool.run ...(ctx:%+v)\n", ctx)
