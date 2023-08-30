@@ -1,4 +1,4 @@
-package async_test
+package boost_test
 
 import (
 	"testing"

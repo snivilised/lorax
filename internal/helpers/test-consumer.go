@@ -4,24 +4,24 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/snivilised/lorax/async"
+	"github.com/snivilised/lorax/boost"
 )
 
 type Consumer[O any] struct {
-	quitter     async.AnnotatedWgQuitter
-	RoutineName async.GoRoutineName
-	OutputsChIn async.OutputStreamR[O]
+	quitter     boost.AnnotatedWgQuitter
+	RoutineName boost.GoRoutineName
+	OutputsChIn boost.OutputStreamR[O]
 	Count       int
 }
 
 func StartConsumer[O any](
 	ctx context.Context,
-	quitter async.AnnotatedWgQuitter,
-	outputsChIn async.OutputStreamR[O],
+	quitter boost.AnnotatedWgQuitter,
+	outputsChIn boost.OutputStreamR[O],
 ) *Consumer[O] {
 	consumer := &Consumer[O]{
 		quitter:     quitter,
-		RoutineName: async.GoRoutineName("💠 consumer"),
+		RoutineName: boost.GoRoutineName("💠 consumer"),
 		OutputsChIn: outputsChIn,
 	}
 	go consumer.run(ctx)
