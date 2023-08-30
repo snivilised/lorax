@@ -97,7 +97,7 @@ func (p *WorkerPool[I, O]) composeID() WorkerID {
 
 func (p *WorkerPool[I, O]) Start(
 	ctx context.Context,
-	outputsChOut OutputStreamW[O],
+	outputsChOut OutputStream[O],
 ) {
 	p.run(ctx, p.private.workersJobsCh, outputsChOut)
 }
@@ -105,7 +105,7 @@ func (p *WorkerPool[I, O]) Start(
 func (p *WorkerPool[I, O]) run(
 	ctx context.Context,
 	forwardChOut JobStreamW[I],
-	outputsChOut OutputStreamW[O],
+	outputsChOut OutputStream[O],
 ) {
 	defer func() {
 		if outputsChOut != nil {
@@ -171,7 +171,7 @@ func (p *WorkerPool[I, O]) run(
 func (p *WorkerPool[I, O]) spawn(
 	ctx context.Context,
 	jobsChIn JobStreamR[I],
-	outputsChOut OutputStreamW[O],
+	outputsChOut OutputStream[O],
 	finishedChOut FinishedStreamW,
 ) {
 	cancelCh := make(CancelStream, 1)
