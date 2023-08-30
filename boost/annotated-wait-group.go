@@ -59,21 +59,21 @@ type AnnotatedWgCounter interface {
 	Count() int
 }
 
-// WaitGroupEx the extended WaitGroup
-type WaitGroupEx interface {
+// WaitGroupAn the extended WaitGroup
+type WaitGroupAn interface {
 	AnnotatedWgAdder
 	AnnotatedWgQuitter
 	AnnotatedWgWaiter
 	AnnotatedWgCounter
 }
 
-type waitGroupEx struct {
+type waitGroupAnImpl struct {
 	counter       int32
 	names         namesCollection
 	waitGroupName string
 }
 
-func (a *waitGroupEx) Add(delta int, name ...GoRoutineName) {
+func (a *waitGroupAnImpl) Add(delta int, name ...GoRoutineName) {
 	a.counter += int32(delta)
 
 	if len(name) > 0 {
@@ -83,7 +83,7 @@ func (a *waitGroupEx) Add(delta int, name ...GoRoutineName) {
 	}
 }
 
-func (a *waitGroupEx) Done(name ...GoRoutineName) {
+func (a *waitGroupAnImpl) Done(name ...GoRoutineName) {
 	a.counter--
 
 	if len(name) > 0 {
@@ -93,20 +93,20 @@ func (a *waitGroupEx) Done(name ...GoRoutineName) {
 	}
 }
 
-func (a *waitGroupEx) Wait(name ...GoRoutineName) {
+func (a *waitGroupAnImpl) Wait(name ...GoRoutineName) {
 	if len(name) > 0 {
 		a.indicate("🧭🧭🧭", string(name[0]), "Wait")
 	}
 }
 
-func (a *waitGroupEx) indicate(highlight, name, op string) {
+func (a *waitGroupAnImpl) indicate(highlight, name, op string) {
 	fmt.Printf(
 		"		%v [[ WaitGroupAssister(%v).%v ]] - gr-name: '%v' (count: '%v') (running: '%v')\n",
 		highlight, a.waitGroupName, op, name, a.counter, a.running(),
 	)
 }
 
-func (a *waitGroupEx) running() string {
+func (a *waitGroupAnImpl) running() string {
 	runners := lo.Map(lo.Keys(a.names), func(item GoRoutineName, _ int) string {
 		return string(item)
 	})
@@ -119,15 +119,14 @@ func (a *waitGroupEx) running() string {
 // diagnosing concurrency issues.
 type AnnotatedWaitGroup struct {
 	wg        sync.WaitGroup
-	assistant waitGroupEx
-	mux       sync.Mutex
+	assistant waitGroupAnImpl
 }
 
 // NewAnnotatedWaitGroup creates a new AnnotatedWaitGroup instance containing
 // the core WaitGroup instance.
-func NewAnnotatedWaitGroup(name string) WaitGroupEx {
+func NewAnnotatedWaitGroup(name string) WaitGroupAn {
 	return &AnnotatedWaitGroup{
-		assistant: waitGroupEx{
+		assistant: waitGroupAnImpl{
 			waitGroupName: name,
 			names:         make(namesCollection),
 		},

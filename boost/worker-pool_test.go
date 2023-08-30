@@ -78,7 +78,7 @@ var greeter = func(j boost.Job[TestJobInput]) (boost.JobOutput[TestJobOutput], e
 }
 
 type pipeline[I, O any] struct {
-	wgex      boost.WaitGroupEx
+	wgan      boost.WaitGroupAn
 	sequence  int
 	outputsCh chan boost.JobOutput[O]
 	provider  helpers.ProviderFunc[I]
@@ -91,7 +91,7 @@ type pipeline[I, O any] struct {
 
 func start[I, O any](outputsCh chan boost.JobOutput[O]) *pipeline[I, O] {
 	pipe := &pipeline[I, O]{
-		wgex:      boost.NewAnnotatedWaitGroup("🍂 pipeline"),
+		wgan:      boost.NewAnnotatedWaitGroup("🍂 pipeline"),
 		outputsCh: outputsCh,
 		stop:      noOp,
 		cancel:    noOp,
@@ -117,13 +117,13 @@ func (p *pipeline[I, O]) produce(ctx context.Context, provider helpers.ProviderF
 
 	p.producer = helpers.StartProducer[I, O](
 		ctx,
-		p.wgex,
+		p.wgan,
 		JobChSize,
 		provider,
 		Delay,
 	)
 
-	p.wgex.Add(1, p.producer.RoutineName)
+	p.wgan.Add(1, p.producer.RoutineName)
 }
 
 func (p *pipeline[I, O]) process(ctx context.Context, noWorkers int, executive boost.ExecutiveFunc[I, O]) {
@@ -133,21 +133,21 @@ func (p *pipeline[I, O]) process(ctx context.Context, noWorkers int, executive b
 			Exec:      executive,
 			JobsCh:    p.producer.JobsCh,
 			CancelCh:  make(boost.CancelStream),
-			Quitter:   p.wgex,
+			Quitter:   p.wgan,
 		})
 
 	go p.pool.Start(ctx, p.outputsCh)
 
-	p.wgex.Add(1, p.pool.RoutineName)
+	p.wgan.Add(1, p.pool.RoutineName)
 }
 
 func (p *pipeline[I, O]) consume(ctx context.Context) {
 	p.consumer = helpers.StartConsumer(ctx,
-		p.wgex,
+		p.wgan,
 		p.outputsCh,
 	)
 
-	p.wgex.Add(1, p.consumer.RoutineName)
+	p.wgan.Add(1, p.consumer.RoutineName)
 }
 
 type TestPipeline *pipeline[TestJobInput, TestJobOutput]
@@ -227,7 +227,7 @@ var _ = Describe("WorkerPool", func() {
 			pipe := start[TestJobInput, TestJobOutput](oc)
 
 			defer func() {
-				if counter, ok := (pipe.wgex).(boost.AnnotatedWgCounter); ok {
+				if counter, ok := (pipe.wgan).(boost.AnnotatedWgCounter); ok {
 					fmt.Printf("🎈🎈🎈🎈 remaining count: '%v'\n", counter.Count())
 				}
 			}()
@@ -254,7 +254,7 @@ var _ = Describe("WorkerPool", func() {
 
 			By("👾 NOW AWAITING TERMINATION")
 			entry.finish(ctx, pipe, entry.after, cancel)
-			pipe.wgex.Wait(boost.GoRoutineName("👾 test-main"))
+			pipe.wgan.Wait(boost.GoRoutineName("👾 test-main"))
 
 			entry.summarise(pipe)
 			if entry.assert != nil {
