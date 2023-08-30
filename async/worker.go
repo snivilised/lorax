@@ -9,7 +9,7 @@ type worker[I any, O any] struct {
 	id            WorkerID
 	exec          ExecutiveFunc[I, O]
 	jobsChIn      JobStreamR[I]
-	outputsChOut  OutputStreamW[O]
+	outputsChOut  OutputStream[O]
 	finishedChOut FinishedStreamW
 
 	// this might be better replaced with a broadcast mechanism such as sync.Cond
