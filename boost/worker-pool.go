@@ -4,18 +4,19 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"time"
 
 	"github.com/google/uuid"
 )
 
-// privateWpInfo contains any state that needs to be mutated in a non concurrent manner
+// privateWpInfo (dmz!) contains any state that needs to be mutated in a non concurrent manner
 // and therefore should be exclusively accessed by a single go routine. Actually, due to
 // our ability to compose functionality with channels as opposed to shared state, the
 // pool does not contain any state that is accessed directly or indirectly from other
 // go routines. But in the case of the actual core pool, it is mutated without synchronisation
 // and hence should only ever be accessed by the worker pool GR in contrast to all the
 // other members of WorkerPool. This is an experimental pattern, the purpose of which
-// is the clearly indicate what state can be accessed in different concurrency contexts,
+// is to clearly indicate what state can be accessed in different concurrency contexts,
 // to ensure future updates can be applied with minimal cognitive overload.
 //
 // There is another purpose for privateWpInfo and that is to do with "confinement" as
@@ -28,32 +29,36 @@ import (
 // than be expected to simply access the member variable directly. This clearly signals
 // that any channel defined in privateWpInfo should never to accessed directly (other
 // than for passing it to another method). This is an experimental convention that
-// I'm establishing for all snivilised projects.
+// is being established for all snivilised projects.
 type privateWpInfo[I, O any] struct {
 	pool          workersCollection[I, O]
 	workersJobsCh chan Job[I]
-	finishedCh    FinishedStream
+	finishedCh    finishedStream
 	cancelCh      CancelStream
+	resultOutCh   PoolResultStreamW
 }
 
 // WorkerPool owns the resultOut channel, because it is the only entity that knows
 // when all workers have completed their work due to the finished channel, which it also
 // owns.
 type WorkerPool[I, O any] struct {
-	private        privateWpInfo[I, O]
-	exec           ExecutiveFunc[I, O]
-	noWorkers      int
-	sourceJobsChIn JobStream[I]
-	RoutineName    GoRoutineName
-	WaitAQ         AnnotatedWgAQ
+	private         privateWpInfo[I, O]
+	outputChTimeout time.Duration
+	exec            ExecutiveFunc[I, O]
+	noWorkers       int
+	sourceJobsChIn  JobStream[I]
+	RoutineName     GoRoutineName
+	WaitAQ          AnnotatedWgAQ
+	ResultInCh      PoolResultStreamR
 }
 
 type NewWorkerPoolParams[I, O any] struct {
-	NoWorkers int
-	Exec      ExecutiveFunc[I, O]
-	JobsCh    JobStream[I]
-	CancelCh  CancelStream
-	WaitAQ    AnnotatedWgAQ
+	NoWorkers       int
+	OutputChTimeout time.Duration
+	Exec            ExecutiveFunc[I, O]
+	JobsCh          JobStream[I]
+	CancelCh        CancelStream
+	WaitAQ          AnnotatedWgAQ
 }
 
 func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O] {
@@ -62,19 +67,22 @@ func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O
 		noWorkers = params.NoWorkers
 	}
 
+	resultCh := make(PoolResultStream, 1)
 	wp := &WorkerPool[I, O]{
 		private: privateWpInfo[I, O]{
 			pool:          make(workersCollection[I, O], noWorkers),
 			workersJobsCh: make(JobStream[I], noWorkers),
-			finishedCh:    make(FinishedStream, noWorkers),
+			finishedCh:    make(finishedStream, noWorkers),
 			cancelCh:      params.CancelCh,
+			resultOutCh:   resultCh,
 		},
-		exec:           params.Exec,
-		RoutineName:    GoRoutineName("🧊 worker pool"),
-		noWorkers:      noWorkers,
-		sourceJobsChIn: params.JobsCh,
-
-		WaitAQ: params.WaitAQ,
+		outputChTimeout: params.OutputChTimeout,
+		exec:            params.Exec,
+		RoutineName:     GoRoutineName("🧊 worker pool"),
+		noWorkers:       noWorkers,
+		sourceJobsChIn:  params.JobsCh,
+		WaitAQ:          params.WaitAQ,
+		ResultInCh:      resultCh,
 	}
 
 	return wp
@@ -86,42 +94,48 @@ var eyeballs = []string{
 	"❤️", "💙", "💚", "💜", "💛", "🤍", "💖", "💗", "💝",
 }
 
-func (p *WorkerPool[I, O]) composeID() WorkerID {
+func (p *WorkerPool[I, O]) composeID() workerID {
 	n := len(p.private.pool)
 	index := (n) % len(eyeballs)
 	emoji := eyeballs[index]
 
-	return WorkerID(fmt.Sprintf("(%v)WORKER-ID-%v:%v", emoji, n, uuid.NewString()))
+	return workerID(fmt.Sprintf("(%v)WORKER-ID-%v:%v", emoji, n, uuid.NewString()))
 }
 
 func (p *WorkerPool[I, O]) Start(
-	ctx context.Context,
+	parentContext context.Context,
+	parentCancel context.CancelFunc,
 	outputsChOut OutputStream[O],
 ) {
-	p.run(ctx, p.private.workersJobsCh, outputsChOut)
+	p.run(parentContext, parentCancel, p.outputChTimeout, p.private.workersJobsCh, outputsChOut)
 }
 
 func (p *WorkerPool[I, O]) run(
-	ctx context.Context,
+	parentContext context.Context,
+	parentCancel context.CancelFunc,
+	outputChTimeout time.Duration,
 	forwardChOut JobStreamW[I],
 	outputsChOut OutputStream[O],
 ) {
-	defer func() {
+	result := &PoolResult{}
+	defer func(r *PoolResult) {
 		if outputsChOut != nil {
 			close(outputsChOut)
 		}
+		p.private.resultOutCh <- r
 
 		p.WaitAQ.Done(p.RoutineName)
 		fmt.Printf("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
-	}()
-	fmt.Printf("===> 🧊 WorkerPool.run ...(ctx:%+v)\n", ctx)
+	}(result)
+	fmt.Printf("===> 🧊 WorkerPool.run ...(ctx:%+v)\n", parentContext)
 
 	for running := true; running; {
 		select {
-		case <-ctx.Done():
-			fmt.Println("===> 🧊 WorkerPool.run - done received ☢️☢️☢️")
-
+		case <-parentContext.Done():
 			running = false
+
+			close(forwardChOut) // ⚠️ This is new
+			fmt.Println("===> 🧊 WorkerPool.run (source jobs chan closed) - done received ☢️☢️☢️")
 
 		case job, ok := <-p.sourceJobsChIn:
 			if ok {
@@ -130,7 +144,13 @@ func (p *WorkerPool[I, O]) run(
 				)
 
 				if len(p.private.pool) < p.noWorkers {
-					p.spawn(ctx, p.private.workersJobsCh, outputsChOut, p.private.finishedCh)
+					p.spawn(parentContext,
+						parentCancel,
+						outputChTimeout,
+						p.private.workersJobsCh,
+						outputsChOut,
+						p.private.finishedCh,
+					)
 				}
 				select {
 				case forwardChOut <- job:
@@ -138,7 +158,10 @@ func (p *WorkerPool[I, O]) run(
 						job.ID,
 						job.SequenceNo,
 					)
-				case <-ctx.Done():
+				case <-parentContext.Done():
+					running = false
+
+					close(forwardChOut) // ⚠️ This is new
 					fmt.Printf("===> 🧊 (#workers: '%v') WorkerPool.run - done received ☢️☢️☢️\n",
 						len(p.private.pool),
 					)
@@ -149,9 +172,9 @@ func (p *WorkerPool[I, O]) run(
 				// when the producer closes p.sourceJobsChIn, we need to delegate that
 				// closure to forwardChOut, otherwise we end up in a deadlock.
 				//
+				running = false
 				close(forwardChOut)
 				fmt.Printf("===> 🚀 WorkerPool.run(source jobs chan closed) 🟥🟥🟥\n")
-				running = false
 			}
 		}
 	}
@@ -160,18 +183,27 @@ func (p *WorkerPool[I, O]) run(
 	// don't pass in the context's Done() channel as it already been consumed
 	// in the run loop, and is now closed.
 	//
-	p.drain(p.private.finishedCh)
+	if err := p.drain(p.private.finishedCh); err != nil {
+		result.Error = err
 
-	fmt.Printf("===> 🧊 WorkerPool.run - drain complete (workers count: '%v'). 🎃🎃🎃\n",
-		len(p.private.pool),
-	)
+		fmt.Printf("===> 🧊 WorkerPool.run - drain complete with error: '%v' (workers count: '%v'). 📛📛📛\n",
+			err,
+			len(p.private.pool),
+		)
+	} else {
+		fmt.Printf("===> 🧊 WorkerPool.run - drain complete OK (workers count: '%v'). ☑️☑️☑️\n",
+			len(p.private.pool),
+		)
+	}
 }
 
 func (p *WorkerPool[I, O]) spawn(
-	ctx context.Context,
+	parentContext context.Context,
+	parentCancel context.CancelFunc,
+	outputChTimeout time.Duration,
 	jobsChIn JobStreamR[I],
 	outputsChOut OutputStream[O],
-	finishedChOut FinishedStreamW,
+	finishedChOut finishedStreamW,
 ) {
 	cancelCh := make(CancelStream, 1)
 
@@ -182,34 +214,35 @@ func (p *WorkerPool[I, O]) spawn(
 			jobsChIn:      jobsChIn,
 			outputsChOut:  outputsChOut,
 			finishedChOut: finishedChOut,
-			cancelChIn:    cancelCh,
 		},
-		cancelChOut: cancelCh,
+		cancelChOut: cancelCh, // TODO: this is not used, so delete
 	}
 
 	p.private.pool[w.core.id] = w
-	go w.core.run(ctx)
+	go w.core.run(parentContext, parentCancel, outputChTimeout)
 	fmt.Printf("===> 🧊 WorkerPool.spawned new worker: '%v' 🎀🎀🎀\n", w.core.id)
 }
 
-func (p *WorkerPool[I, O]) drain(finishedChIn FinishedStreamR) {
+func (p *WorkerPool[I, O]) drain(finishedChIn finishedStreamR) error {
 	fmt.Printf(
 		"!!!! 🧊 WorkerPool.drain - waiting for remaining workers: %v (#GRs: %v); 🧊🧊🧊 \n",
 		len(p.private.pool), runtime.NumGoroutine(),
 	)
 
+	var firstError error
+
 	for running := true; running; {
 		// 📍 Here, we don't access the finishedChIn channel in a pre-emptive way via
-		// the ctx.Done() channel. This is because in a unit test, we define a timeout as
+		// the parentContext.Done() channel. This is because in a unit test, we define a timeout as
 		// part of the test spec using SpecTimeout. When this fires, this is handled by the
 		// run loop, which ends that loop then enters drain the phase. When this happens,
 		// you can't reuse that same done channel as it will immediately return the value
 		// already handled. This has the effect of short-circuiting this loop meaning that
-		// workerID := <-finishedChIn never has a chance to be selected and the drain loop
+		// workerResult := <-finishedChIn never has a chance to be selected and the drain loop
 		// exits early. The end result of which means that the p.private.pool collection is
 		// never depleted.
 		//
-		// ⚠️ So an important lesson to be learnt here is that once a ctx.Done() has fired,
+		// ⚠️ So an important lesson to be learnt here is that once a parentContext.Done() has fired,
 		// you can't reuse tha same channel in another select statement as it will simply
 		// return immediately, bypassing all the others cases in the select statement.
 		//
@@ -237,29 +270,28 @@ func (p *WorkerPool[I, O]) drain(finishedChIn FinishedStreamR) {
 		// If a goroutine outlives its context or keeps references to closed Done() channels,
 		// it might not behave as expected.
 		//
-		workerID := <-finishedChIn
-		delete(p.private.pool, workerID)
+		workerResult := <-finishedChIn
+		delete(p.private.pool, workerResult.id)
 
 		if len(p.private.pool) == 0 {
 			running = false
 		}
 
-		fmt.Printf("!!!! 🧊 WorkerPool.drain - worker(%v) finished, remaining: '%v' 🟥\n",
-			workerID, len(p.private.pool),
+		if workerResult.err != nil {
+			fmt.Printf("!!!! 🧊 WorkerPool.drain - worker (%v) 💢💢💢 finished with error: '%v'\n",
+				workerResult.id,
+				workerResult.err,
+			)
+
+			if firstError == nil {
+				firstError = workerResult.err
+			}
+		}
+
+		fmt.Printf("!!!! 🧊 WorkerPool.drain - worker-result-error(%v) finished, remaining: '%v' 🟥\n",
+			workerResult.err, len(p.private.pool),
 		)
 	}
-}
 
-func (p *WorkerPool[I, O]) cancelWorkers() {
-	// perhaps, we can replace this with another broadcast mechanism such as sync.Cond
-	//
-	n := len(p.private.pool)
-	for k, w := range p.private.pool {
-		fmt.Printf("===> 🧊 cancelling worker '%v' of %v 📛📛📛... \n", k, n)
-		// shouldn't need to be preemptable because it is a buffered single item channel
-		// which should only ever be accessed by the work pool GR and therefore should
-		// never be a position where its competing to send on that channel
-		//
-		w.cancelChOut <- CancelWorkSignal{}
-	}
+	return firstError
 }

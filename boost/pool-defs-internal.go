@@ -7,9 +7,21 @@ const (
 	DefaultChSize = 100
 )
 
-type workerWrapper[I any, O any] struct {
-	cancelChOut chan<- CancelWorkSignal
-	core        *worker[I, O]
-}
+type (
+	workerID             string
+	workerFinishedResult struct {
+		id  workerID
+		err error
+	}
 
-type workersCollection[I, O any] map[WorkerID]*workerWrapper[I, O]
+	finishedStream  = chan *workerFinishedResult
+	finishedStreamR = <-chan *workerFinishedResult
+	finishedStreamW = chan<- *workerFinishedResult
+
+	workerWrapper[I any, O any] struct {
+		cancelChOut CancelStreamW
+		core        *worker[I, O]
+	}
+
+	workersCollection[I, O any] map[workerID]*workerWrapper[I, O]
+)

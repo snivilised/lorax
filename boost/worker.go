@@ -2,38 +2,49 @@ package boost
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 )
 
 type worker[I any, O any] struct {
-	id            WorkerID
+	id            workerID
 	exec          ExecutiveFunc[I, O]
 	jobsChIn      JobStreamR[I]
 	outputsChOut  OutputStream[O]
-	finishedChOut FinishedStreamW
-
-	// this might be better replaced with a broadcast mechanism such as sync.Cond
-	//
-	cancelChIn CancelStreamR
+	finishedChOut finishedStreamW
 }
 
-func (w *worker[I, O]) run(ctx context.Context) {
-	defer func() {
-		w.finishedChOut <- w.id // ⚠️ non-pre-emptive send, but this should be ok
-		fmt.Printf("	<--- 🚀 worker.run(%v) (SENT FINISHED). 🚀🚀🚀\n", w.id)
-	}()
-	fmt.Printf("	---> 🚀 worker.run(%v) ...(ctx:%+v)\n", w.id, ctx)
+func (w *worker[I, O]) run(parentContext context.Context,
+	parentCancel context.CancelFunc,
+	outputChTimeout time.Duration,
+) {
+	result := workerFinishedResult{
+		id: w.id,
+	}
+	defer func(r *workerFinishedResult) {
+		w.finishedChOut <- r // ⚠️ non-pre-emptive send, but this should be ok
+
+		fmt.Printf("	<--- 🚀 worker.run(%v) (SENT FINISHED - error:'%v'). 🚀🚀🚀\n", w.id, r.err)
+	}(&result)
+
+	fmt.Printf("	---> 🚀 worker.run(%v) ...(ctx:%+v)\n", w.id, parentContext)
 
 	for running := true; running; {
 		select {
-		case <-ctx.Done():
+		case <-parentContext.Done():
 			fmt.Printf("	---> 🚀 worker.run(%v)(finished) - done received 🔶🔶🔶\n", w.id)
 
 			running = false
 		case job, ok := <-w.jobsChIn:
 			if ok {
 				fmt.Printf("	---> 🚀 worker.run(%v)(input:'%v')\n", w.id, job.Input)
-				w.invoke(ctx, job)
+				err := w.invoke(parentContext, parentCancel, outputChTimeout, job)
+
+				if err != nil {
+					result.err = err
+					running = false
+				}
 			} else {
 				fmt.Printf("	---> 🚀 worker.run(%v)(jobs chan closed) 🟥🟥🟥\n", w.id)
 
@@ -43,15 +54,36 @@ func (w *worker[I, O]) run(ctx context.Context) {
 	}
 }
 
-func (w *worker[I, O]) invoke(ctx context.Context, job Job[I]) {
+func (w *worker[I, O]) invoke(parentContext context.Context,
+	parentCancel context.CancelFunc,
+	outputChTimeout time.Duration,
+	job Job[I],
+) error {
+	var err error
+
+	outputContext, cancel := context.WithTimeout(parentContext, outputChTimeout)
+	defer cancel()
+
 	result, _ := w.exec(job)
 
 	if w.outputsChOut != nil {
+		fmt.Printf("	---> 🚀 worker.invoke ⏰ output timeout: '%v'\n", outputChTimeout)
+
 		select {
-		case <-ctx.Done():
+		case w.outputsChOut <- result:
+
+		case <-parentContext.Done():
 			fmt.Printf("	---> 🚀 worker.invoke(%v)(cancel) - done received 💥💥💥\n", w.id)
 
-		case w.outputsChOut <- result:
+		case <-outputContext.Done():
+			fmt.Printf("	---> 🚀 worker.invoke(%v)(cancel) - timeout on send 👿👿👿\n", w.id)
+
+			// ??? err = i18n.NewOutputChTimeoutError()
+			err = errors.New("timeout on send")
+
+			parentCancel()
 		}
 	}
+
+	return err
 }

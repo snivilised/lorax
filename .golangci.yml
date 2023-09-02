@@ -25,7 +25,10 @@ linters:
   enable:
     - bodyclose
     # - deadcode
-    - depguard
+    # depguard needs to be reviewed properly and then configured, before
+    # it can be re-enabled.
+    # https://github.com/OpenPeeDeeP/depguard#example-configs
+    # - depguard
     - dogsled
     # - dupl
     - errcheck

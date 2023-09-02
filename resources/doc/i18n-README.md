@@ -8,18 +8,18 @@ The local directory structure is as follows:
 
 - ___default___: contains the translation file created by the __newt__ (new translation task). Actually, this task creates an __active__ file (`active.en-GB.json`) in the `i18n/out` folder, the result  of which needs to be manually copied into the __active__ file in the `default` folder.
 
-- ___deploy___: contains all the translations files that are intended to be deployed with the application. There will be one per supported language and by default this template project includes a translation file for __en-US__ (`astrolib.active.en-US.json`)
+- ___deploy___: contains all the translations files that are intended to be deployed with the application. There will be one per supported language and by default this template project includes a translation file for __en-US__ (`lorax.active.en-US.json`)
 
 ## ⚙️ Translation Workflow
 
 ### ✨ New Translations
 
-__goi18n__ instructs the user to manually create an empty translation message file that they want to add (eg `translate.en-US.json`). This is taken care of by the __newt__ task. Then the requirement is to run the goi18n merge \<active\> command (goi18n merge `astrolib.active.en-US.json` `astrolib.translate.en-US.json`). This has been wrapped up into the __merge__ task and the result is that the translation file `astrolib.translation.en-US.json` is populated with the messages to be translated. So the sequence goes:
+__goi18n__ instructs the user to manually create an empty translation message file that they want to add (eg `translate.en-US.json`). This is taken care of by the __newt__ task. Then the requirement is to run the goi18n merge \<active\> command (goi18n merge `lorax.active.en-US.json` `lorax.translate.en-US.json`). This has been wrapped up into the __merge__ task and the result is that the translation file `lorax.translation.en-US.json` is populated with the messages to be translated. So the sequence goes:
 
-- run __newt__ task: (generates default language file `./src/i18n/out/active.en-GB.json` and empty `./src/i18n/out/us-US/astrolib.translation.en-US.json` file). This task can be run from the root folder, __goi18n__ will recursively search the directory tree for files with translate-able content, ie files with template definitions (___i18n.Message___)
-- run __merge__ task: derives a translation file for the requested language __en-US__ using 2 files as inputs: source active file (`./src/i18n/out/active.en-GB.json`) and the empty __en-US__ translate file (`./src/i18n/out/us-US/astrolib.translation.en-US.json`), both of which were generated in the previous step.
+- run __newt__ task: (generates default language file `./i18n/out/active.en-GB.json` and empty `./i18n/out/us-US/lorax.translation.en-US.json` file). This task can be run from the root folder, __goi18n__ will recursively search the directory tree for files with translate-able content, ie files with template definitions (___i18n.Message___)
+- run __merge__ task: derives a translation file for the requested language __en-US__ using 2 files as inputs: source active file (`./i18n/out/active.en-GB.json`) and the empty __en-US__ translate file (`./i18n/out/us-US/lorax.translation.en-US.json`), both of which were generated in the previous step.
 - hand the translate file to your translator for them to translate
-- rename the translate file to the active equivalent (`astrolib.translation.en-US.json`). Save this into the __deploy__ folder. This file will be deployed with the application.
+- rename the translate file to the active equivalent (`lorax.translation.en-US.json`). Save this into the __deploy__ folder. This file will be deployed with the application.
 
 ### 🧩 Update Existing Translations (⚠️ not finalised)
 
@@ -36,7 +36,7 @@ However, in this template, the user can execute the following steps:
 
 - run task __update__: this will re-extract messages into `active.en-GB.json` and then runs merge to create an updated translate file.
 - hand the translate file to your translator for them to translate
-- as before, this translated file should be used to update the active file `astrolib.active.en-US.json` inside the __deploy__ folder.
+- as before, this translated file should be used to update the active file `lorax.active.en-US.json` inside the __deploy__ folder.
 
 ## 🎓 Task Reference
 
@@ -56,17 +56,17 @@ Inputs:
 
 Outputs:
 
-- ./src/i18n/out/active.en-GB.json (messages extracted from code, without hashes)
-- ./src/i18n/out/en-US/translate.en-US.json (empty)
+- ./i18n/out/active.en-GB.json (messages extracted from code, without hashes)
+- ./i18n/out/en-US/translate.en-US.json (empty)
 
 ### 💠 merge
 
 Inputs:
 
-- ./src/i18n/out/active.en-GB.json
-- ./src/i18n/out/en-US/astrolib.translate-en-US.json
+- ./i18n/out/active.en-GB.json
+- ./i18n/out/en-US/lorax.translate-en-US.json
 
 Outputs:
 
-- ./src/i18n/out/active.en-US.json
-- ./src/i18n/out/translate.en-US.json
+- ./i18n/out/active.en-US.json
+- ./i18n/out/translate.en-US.json
