@@ -113,13 +113,13 @@ tasks:
       - goi18n extract
         -format json
         -sourceLanguage "en-GB"
-        -outdir ./i18n/out/l10n
+        -outdir ./i18n/out
 
   # new translation
   newt:
     deps: [extract]
     cmds:
-      - touch ./i18n/out/l10n/translate.en-US.json
+      - touch ./i18n/out/translate.en-US.json
 
   # derive a translation from the default
   merge:
@@ -128,7 +128,7 @@ tasks:
         -format json
         -sourceLanguage "en-GB"
         -outdir ./i18n/out
-        ./i18n/out/active.en-GB.json ./i18n/out/l10n/translate.en-US.json
+        ./i18n/out/active.en-GB.json ./i18n/out/translate.en-US.json
 
   # update existing translations
   # after running this task, the translation file generated will

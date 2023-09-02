@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/snivilised/lorax/boost"
 )
@@ -10,35 +11,40 @@ import (
 type Consumer[O any] struct {
 	quitter     boost.AnnotatedWgQuitter
 	RoutineName boost.GoRoutineName
+	interval    time.Duration
 	OutputsChIn boost.OutputStreamR[O]
 	Count       int
 }
 
 func StartConsumer[O any](
-	ctx context.Context,
+	parentContext context.Context,
 	quitter boost.AnnotatedWgQuitter,
 	outputsChIn boost.OutputStreamR[O],
+	interval time.Duration,
 ) *Consumer[O] {
 	consumer := &Consumer[O]{
 		quitter:     quitter,
 		RoutineName: boost.GoRoutineName("💠 consumer"),
+		interval:    interval,
 		OutputsChIn: outputsChIn,
 	}
-	go consumer.run(ctx)
+
+	go consumer.run(parentContext)
 
 	return consumer
 }
 
-func (c *Consumer[O]) run(ctx context.Context) {
+func (c *Consumer[O]) run(parentContext context.Context) {
 	defer func() {
 		c.quitter.Done(c.RoutineName)
 		fmt.Printf("<<<< 💠 consumer.run - finished (QUIT). 💠💠💠 \n")
 	}()
-	fmt.Printf("<<<< 💠 consumer.run ...(ctx:%+v)\n", ctx)
+	fmt.Printf("<<<< 💠 consumer.run ...(ctx:%+v)\n", parentContext)
 
 	for running := true; running; {
+		<-time.After(c.interval)
 		select {
-		case <-ctx.Done():
+		case <-parentContext.Done():
 			running = false
 
 			fmt.Println("<<<< 💠 consumer.run - done received 💔💔💔")
