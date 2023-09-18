@@ -8,7 +8,7 @@ require (
 	github.com/onsi/gomega v1.27.10
 	github.com/samber/lo v1.38.1
 	github.com/snivilised/extendio v0.1.20
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.26.0
 )
 
 require github.com/fortytw2/leaktest v1.3.0
