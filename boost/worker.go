@@ -11,7 +11,7 @@ type worker[I any, O any] struct {
 	id            workerID
 	exec          ExecutiveFunc[I, O]
 	jobsChIn      JobStreamR[I]
-	outputsChOut  OutputStream[O]
+	outputsChOut  JobOutputStreamW[O]
 	finishedChOut finishedStreamW
 }
 

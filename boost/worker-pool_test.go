@@ -32,7 +32,12 @@ func (f TerminatorFunc[I, O]) After(parentContext context.Context,
 const (
 	JobChSize     = 10
 	OutputsChSize = 10
+	ScalingFactor = 1
 )
+
+func scale(t time.Duration) time.Duration {
+	return t / ScalingFactor
+}
 
 var defaults = struct {
 	noOfWorkers      int
@@ -77,15 +82,17 @@ var (
 // type TestInputStream = chan boost.Job[TestJobInput]
 //
 
-type TestInput struct {
-	Recipient string
-}
-type TestJobInput = boost.Job[TestInput]
-type TestInputStream = chan boost.Job[TestJobInput]
+type (
+	TestInput struct {
+		Recipient string
+	}
 
-type TestOutput string
-type TestJobOutput = boost.JobOutput[TestOutput]
-type TestOutputStream = chan boost.JobOutput[TestOutput]
+	TestJobInput        = boost.Job[TestInput]
+	TestInputStream     = boost.JobStream[TestJobInput]
+	TestOutput          string
+	TestJobOutput       = boost.JobOutput[TestOutput]
+	TestJobOutputStream = boost.JobOutputStream[TestOutput]
+)
 
 var greeter = func(j TestJobInput) (TestJobOutput, error) {
 	r := rand.Intn(1000) + 1 //nolint:gosec // trivial
@@ -102,23 +109,23 @@ var greeter = func(j TestJobInput) (TestJobOutput, error) {
 }
 
 type pipeline[I, O any] struct {
-	wgan      boost.WaitGroupAn
-	sequence  int
-	outputsCh chan boost.JobOutput[O]
-	provider  helpers.ProviderFunc[I]
-	producer  *helpers.Producer[I, O]
-	pool      *boost.WorkerPool[I, O]
-	consumer  *helpers.Consumer[O]
-	cancel    TerminatorFunc[I, O]
-	stop      TerminatorFunc[I, O]
+	wgan       boost.WaitGroupAn
+	sequence   int
+	outputsDup *boost.Duplex[boost.JobOutput[O]]
+	provider   helpers.ProviderFunc[I]
+	producer   *helpers.Producer[I, O]
+	pool       *boost.WorkerPool[I, O]
+	consumer   *helpers.Consumer[O]
+	cancel     TerminatorFunc[I, O]
+	stop       TerminatorFunc[I, O]
 }
 
-func start[I, O any](outputsCh chan boost.JobOutput[O]) *pipeline[I, O] {
+func start[I, O any](outputsDupCh *boost.Duplex[boost.JobOutput[O]]) *pipeline[I, O] {
 	pipe := &pipeline[I, O]{
-		wgan:      boost.NewAnnotatedWaitGroup("🍂 pipeline"),
-		outputsCh: outputsCh,
-		stop:      noOp,
-		cancel:    noOp,
+		wgan:       boost.NewAnnotatedWaitGroup("🍂 pipeline"),
+		outputsDup: outputsDupCh,
+		stop:       noOp,
+		cancel:     noOp,
 	}
 
 	return pipe
@@ -147,7 +154,6 @@ func (p *pipeline[I, O]) produce(parentContext context.Context,
 			delay,
 		)
 	}
-
 	p.producer = helpers.StartProducer[I, O](
 		parentContext,
 		p.wgan,
@@ -177,13 +183,13 @@ func (p *pipeline[I, O]) process(parentContext context.Context,
 
 	p.wgan.Add(1, p.pool.RoutineName)
 
-	go p.pool.Start(parentContext, parentCancel, p.outputsCh)
+	go p.pool.Start(parentContext, parentCancel, p.outputsDup.WriterCh)
 }
 
 func (p *pipeline[I, O]) consume(parentContext context.Context, interval time.Duration) {
 	p.consumer = helpers.StartConsumer(parentContext,
 		p.wgan,
-		p.outputsCh,
+		p.outputsDup.ReaderCh,
 		interval,
 	)
 
@@ -226,7 +232,7 @@ var (
 	) {
 		Expect(result.Error).Error().To(BeNil())
 		Expect(pipe.producer.Count).To(Equal(pipe.consumer.Count))
-		Eventually(parentContext, pipe.outputsCh).WithTimeout(time.Second * 5).Should(BeClosed())
+		Eventually(parentContext, pipe.outputsDup.Channel).WithTimeout(time.Second * 5).Should(BeClosed())
 		Eventually(parentContext, pipe.producer.JobsCh).WithTimeout(time.Second * 5).Should(BeClosed())
 	}
 	assertCancelled assertFunc = func(parentContext context.Context,
@@ -302,15 +308,16 @@ var _ = Describe("WorkerPool", func() {
 		func(specContext SpecContext, entry *poolTE) {
 			defer leaktest.Check(GinkgoT())()
 
-			outputCh := lo.TernaryF(entry.outputsChSize > 0,
-				func() TestOutputStream {
-					return make(TestOutputStream, entry.outputsChSize)
+			outputDup := lo.TernaryF(entry.outputsChSize > 0,
+				func() *boost.Duplex[boost.JobOutput[TestOutput]] {
+					return boost.NewDuplex(make(TestJobOutputStream, entry.outputsChSize))
 				},
-				func() TestOutputStream {
-					return nil
+				func() *boost.Duplex[boost.JobOutput[TestOutput]] {
+					return &boost.Duplex[boost.JobOutput[TestOutput]]{}
 				},
 			)
-			pipe := start[TestInput, TestOutput](outputCh)
+
+			pipe := start[TestInput, TestOutput](outputDup)
 
 			defer func() {
 				if counter, ok := (pipe.wgan).(boost.AnnotatedWgCounter); ok {
@@ -340,7 +347,7 @@ var _ = Describe("WorkerPool", func() {
 				greeter,
 			)
 
-			if outputCh != nil {
+			if outputDup.Channel != nil {
 				By("👾 WAIT-GROUP ADD(consumer)")
 				pipe.consume(parentContext, lo.Ternary(entry.intervals.consumer > 0,
 					entry.intervals.consumer, defaults.consumerInterval,
@@ -366,8 +373,8 @@ var _ = Describe("WorkerPool", func() {
 			should:        "receive and process all",
 			outputsChSize: OutputsChSize,
 			intervals: durations{
-				finishAfter:     time.Second / 5,
-				outputChTimeout: time.Second,
+				finishAfter:     scale(time.Second / 5),
+				outputChTimeout: scale(time.Second),
 			},
 			finish:    finishWithStop,
 			summarise: summariseWithConsumer,
@@ -379,9 +386,9 @@ var _ = Describe("WorkerPool", func() {
 			should: "timeout on error",
 			now:    2,
 			intervals: durations{
-				consumer:        1, // time.Second * 8,
-				finishAfter:     time.Second * 2,
-				outputChTimeout: time.Second * 1,
+				consumer:        scale(1), // time.Second * 8,
+				finishAfter:     scale(time.Second * 2),
+				outputChTimeout: scale(time.Second * 1),
 			},
 			outputsChSize: OutputsChSize,
 			finish:        finishWithCancel,
@@ -395,8 +402,8 @@ var _ = Describe("WorkerPool", func() {
 			now:           16,
 			outputsChSize: OutputsChSize,
 			intervals: durations{
-				finishAfter:     time.Second / 5,
-				outputChTimeout: time.Second,
+				finishAfter:     scale(time.Second / 5),
+				outputChTimeout: scale(time.Second),
 			},
 			finish:    finishWithStop,
 			summarise: summariseWithConsumer,
@@ -408,8 +415,8 @@ var _ = Describe("WorkerPool", func() {
 			should:        "receive and process all without sending output, no error",
 			outputsChSize: 0,
 			intervals: durations{
-				finishAfter:     time.Second / 5,
-				outputChTimeout: time.Second / 10,
+				finishAfter:     scale(time.Second / 5),
+				outputChTimeout: scale(time.Second / 10),
 			},
 			finish:    finishWithStop,
 			summarise: summariseWithoutConsumer,
@@ -421,8 +428,8 @@ var _ = Describe("WorkerPool", func() {
 			should:        "receive and process all without sending output, no error",
 			outputsChSize: 0,
 			intervals: durations{
-				finishAfter:     time.Second / 5,
-				outputChTimeout: time.Second / 10,
+				finishAfter:     scale(time.Second / 5),
+				outputChTimeout: scale(time.Second / 10),
 			},
 			finish:    finishWithCancel,
 			summarise: summariseWithoutConsumer,
@@ -435,8 +442,8 @@ var _ = Describe("WorkerPool", func() {
 			now:           2,
 			outputsChSize: OutputsChSize, // 1
 			intervals: durations{
-				finishAfter:     time.Second / 5,
-				outputChTimeout: time.Second / 1000,
+				finishAfter:     scale(time.Second / 5),
+				outputChTimeout: scale(time.Second / 1000),
 			},
 			finish:    finishWithStop,
 			summarise: summariseWithConsumer,

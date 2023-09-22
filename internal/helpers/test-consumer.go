@@ -12,14 +12,14 @@ type Consumer[O any] struct {
 	quitter     boost.AnnotatedWgQuitter
 	RoutineName boost.GoRoutineName
 	interval    time.Duration
-	OutputsChIn boost.OutputStreamR[O]
+	OutputsChIn boost.JobOutputStreamR[O]
 	Count       int
 }
 
 func StartConsumer[O any](
 	parentContext context.Context,
 	quitter boost.AnnotatedWgQuitter,
-	outputsChIn boost.OutputStreamR[O],
+	outputsChIn boost.JobOutputStreamR[O],
 	interval time.Duration,
 ) *Consumer[O] {
 	consumer := &Consumer[O]{
