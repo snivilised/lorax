@@ -19,8 +19,7 @@ type (
 	finishedStreamW = chan<- *workerFinishedResult
 
 	workerWrapper[I any, O any] struct {
-		cancelChOut CancelStreamW
-		core        *worker[I, O]
+		core *worker[I, O]
 	}
 
 	workersCollection[I, O any] map[workerID]*workerWrapper[I, O]

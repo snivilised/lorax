@@ -10,19 +10,19 @@ import (
 )
 
 type termination string
-type terminationStream chan termination
+type terminationDuplex *boost.Duplex[termination]
 
 type ProviderFunc[I any] func() I
 
 type Producer[I, O any] struct {
-	quitter     boost.AnnotatedWgQuitter
-	RoutineName boost.GoRoutineName
-	sequenceNo  int
-	provider    ProviderFunc[I]
-	interval    time.Duration
-	terminateCh terminationStream
-	JobsCh      boost.JobStream[I]
-	Count       int
+	quitter      boost.AnnotatedWgQuitter
+	RoutineName  boost.GoRoutineName
+	sequenceNo   int
+	provider     ProviderFunc[I]
+	interval     time.Duration
+	terminateDup terminationDuplex
+	JobsCh       boost.JobStream[I]
+	Count        int
 }
 
 // The producer owns the Jobs channel as it knows when to close it. This producer is
@@ -40,13 +40,14 @@ func StartProducer[I, O any](
 	}
 
 	producer := Producer[I, O]{
-		quitter:     quitter,
-		RoutineName: boost.GoRoutineName("✨ producer"),
-		provider:    provider,
-		interval:    interval,
-		terminateCh: make(terminationStream),
-		JobsCh:      make(boost.JobStream[I], capacity),
+		quitter:      quitter,
+		RoutineName:  boost.GoRoutineName("✨ producer"),
+		provider:     provider,
+		interval:     interval,
+		terminateDup: boost.NewDuplex(make(chan termination)),
+		JobsCh:       make(boost.JobStream[I], capacity),
 	}
+
 	go producer.run(parentContext)
 
 	return &producer
@@ -68,7 +69,7 @@ func (p *Producer[I, O]) run(parentContext context.Context) {
 
 			fmt.Println(">>>> ✨ producer.run - done received ⛔⛔⛔")
 
-		case <-p.terminateCh:
+		case <-p.terminateDup.ReaderCh:
 			running = false
 			fmt.Printf(">>>> ✨ producer.run - termination detected (running: %v)\n", running)
 
@@ -116,8 +117,8 @@ func (p *Producer[I, O]) item(parentContext context.Context) bool {
 
 func (p *Producer[I, O]) Stop() {
 	fmt.Println(">>>> 🧲 producer terminating ...")
-	p.terminateCh <- termination("done")
-	close(p.terminateCh)
+	p.terminateDup.WriterCh <- termination("done")
+	close(p.terminateDup.Channel)
 }
 
 // StopProducerAfter, run in a new go routine

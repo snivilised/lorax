@@ -105,9 +105,14 @@ func (p *WorkerPool[I, O]) composeID() workerID {
 func (p *WorkerPool[I, O]) Start(
 	parentContext context.Context,
 	parentCancel context.CancelFunc,
-	outputsChOut OutputStream[O],
+	outputsChOut chan<- JobOutput[O],
 ) {
-	p.run(parentContext, parentCancel, p.outputChTimeout, p.private.workersJobsCh, outputsChOut)
+	p.run(parentContext,
+		parentCancel,
+		p.outputChTimeout,
+		p.private.workersJobsCh,
+		outputsChOut,
+	)
 }
 
 func (p *WorkerPool[I, O]) run(
@@ -115,7 +120,7 @@ func (p *WorkerPool[I, O]) run(
 	parentCancel context.CancelFunc,
 	outputChTimeout time.Duration,
 	forwardChOut JobStreamW[I],
-	outputsChOut OutputStream[O],
+	outputsChOut JobOutputStreamW[O],
 ) {
 	result := &PoolResult{}
 	defer func(r *PoolResult) {
@@ -202,11 +207,9 @@ func (p *WorkerPool[I, O]) spawn(
 	parentCancel context.CancelFunc,
 	outputChTimeout time.Duration,
 	jobsChIn JobStreamR[I],
-	outputsChOut OutputStream[O],
+	outputsChOut JobOutputStreamW[O],
 	finishedChOut finishedStreamW,
 ) {
-	cancelCh := make(CancelStream, 1)
-
 	w := &workerWrapper[I, O]{
 		core: &worker[I, O]{
 			id:            p.composeID(),
@@ -215,7 +218,6 @@ func (p *WorkerPool[I, O]) spawn(
 			outputsChOut:  outputsChOut,
 			finishedChOut: finishedChOut,
 		},
-		cancelChOut: cancelCh, // TODO: this is not used, so delete
 	}
 
 	p.private.pool[w.core.id] = w
