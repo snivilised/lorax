@@ -62,3 +62,7 @@ func NewDuplex[T any](channel chan T) *Duplex[T] {
 		WriterCh: channel,
 	}
 }
+
+type ActivityCallback func(message string)
+
+var Alert ActivityCallback = func(message string) {}

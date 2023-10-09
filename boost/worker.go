@@ -25,20 +25,29 @@ func (w *worker[I, O]) run(parentContext context.Context,
 	defer func(r *workerFinishedResult) {
 		w.finishedChOut <- r // ⚠️ non-pre-emptive send, but this should be ok
 
-		fmt.Printf("	<--- 🚀 worker.run(%v) (SENT FINISHED - error:'%v'). 🚀🚀🚀\n", w.id, r.err)
+		Alert(fmt.Sprintf("	<--- 🚀 worker.run(%v) (SENT FINISHED - error:'%v'). 🚀🚀🚀",
+			w.id, r.err,
+		))
 	}(&result)
 
-	fmt.Printf("	---> 🚀 worker.run(%v) ...(ctx:%+v)\n", w.id, parentContext)
+	Alert(
+		fmt.Sprintf("	---> 🚀 worker.run(%v) ...(ctx:%+v)\n", w.id, parentContext),
+	)
 
 	for running := true; running; {
 		select {
 		case <-parentContext.Done():
-			fmt.Printf("	---> 🚀 worker.run(%v)(finished) - done received 🔶🔶🔶\n", w.id)
+			Alert(fmt.Sprintf(
+				"	---> 🚀 worker.run(%v)(finished) - done received 🔶🔶🔶", w.id,
+			))
 
 			running = false
 		case job, ok := <-w.jobsChIn:
 			if ok {
-				fmt.Printf("	---> 🚀 worker.run(%v)(input:'%v')\n", w.id, job.Input)
+				Alert(fmt.Sprintf(
+					"	---> 🚀 worker.run(%v)(input:'%v')", w.id, job.Input,
+				))
+
 				err := w.invoke(parentContext, parentCancel, outputChTimeout, job)
 
 				if err != nil {
@@ -46,7 +55,9 @@ func (w *worker[I, O]) run(parentContext context.Context,
 					running = false
 				}
 			} else {
-				fmt.Printf("	---> 🚀 worker.run(%v)(jobs chan closed) 🟥🟥🟥\n", w.id)
+				Alert(fmt.Sprintf(
+					"	---> 🚀 worker.run(%v)(jobs chan closed) 🟥🟥🟥", w.id,
+				))
 
 				running = false
 			}
@@ -67,16 +78,22 @@ func (w *worker[I, O]) invoke(parentContext context.Context,
 	result, _ := w.exec(job)
 
 	if w.outputsChOut != nil {
-		fmt.Printf("	---> 🚀 worker.invoke ⏰ output timeout: '%v'\n", outputChTimeout)
+		Alert(fmt.Sprintf(
+			"	---> 🚀 worker.invoke ⏰ output timeout: '%v'", outputChTimeout,
+		))
 
 		select {
 		case w.outputsChOut <- result:
 
 		case <-parentContext.Done():
-			fmt.Printf("	---> 🚀 worker.invoke(%v)(cancel) - done received 💥💥💥\n", w.id)
+			Alert(fmt.Sprintf(
+				"	---> 🚀 worker.invoke(%v)(cancel) - done received 💥💥💥", w.id,
+			))
 
 		case <-outputContext.Done():
-			fmt.Printf("	---> 🚀 worker.invoke(%v)(cancel) - timeout on send 👿👿👿\n", w.id)
+			Alert(fmt.Sprintf(
+				"	---> 🚀 worker.invoke(%v)(cancel) - timeout on send 👿👿👿", w.id,
+			))
 
 			// ??? err = i18n.NewOutputChTimeoutError()
 			err = errors.New("timeout on send")

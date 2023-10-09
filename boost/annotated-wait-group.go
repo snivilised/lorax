@@ -100,9 +100,11 @@ func (a *waitGroupAnImpl) Wait(name ...GoRoutineName) {
 }
 
 func (a *waitGroupAnImpl) indicate(highlight, name, op string) {
-	fmt.Printf(
-		"		%v [[ WaitGroupAssister(%v).%v ]] - gr-name: '%v' (count: '%v') (running: '%v')\n",
-		highlight, a.waitGroupName, op, name, a.counter, a.running(),
+	Alert(
+		fmt.Sprintf(
+			"		%v [[ WaitGroupAssister(%v).%v ]] - gr-name: '%v' (count: '%v') (running: '%v')\n",
+			highlight, a.waitGroupName, op, name, a.counter, a.running(),
+		),
 	)
 }
 
