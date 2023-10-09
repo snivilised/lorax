@@ -130,9 +130,12 @@ func (p *WorkerPool[I, O]) run(
 		p.private.resultOutCh <- r
 
 		p.WaitAQ.Done(p.RoutineName)
-		fmt.Printf("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
+		Alert("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
 	}(result)
-	fmt.Printf("===> 🧊 WorkerPool.run ...(ctx:%+v)\n", parentContext)
+	Alert(fmt.Sprintf(
+		"===> 🧊 WorkerPool.run ...(ctx:%+v)\n",
+		parentContext,
+	))
 
 	for running := true; running; {
 		select {
@@ -140,13 +143,14 @@ func (p *WorkerPool[I, O]) run(
 			running = false
 
 			close(forwardChOut) // ⚠️ This is new
-			fmt.Println("===> 🧊 WorkerPool.run (source jobs chan closed) - done received ☢️☢️☢️")
+			Alert("===> 🧊 WorkerPool.run (source jobs chan closed) - done received ☢️☢️☢️")
 
 		case job, ok := <-p.sourceJobsChIn:
 			if ok {
-				fmt.Printf("===> 🧊 (#workers: '%v') WorkerPool.run - new job received\n",
+				Alert(fmt.Sprintf(
+					"===> 🧊 (#workers: '%v') WorkerPool.run - new job received",
 					len(p.private.pool),
-				)
+				))
 
 				if len(p.private.pool) < p.noWorkers {
 					p.spawn(parentContext,
@@ -159,17 +163,19 @@ func (p *WorkerPool[I, O]) run(
 				}
 				select {
 				case forwardChOut <- job:
-					fmt.Printf("===> 🧊 WorkerPool.run - forwarded job 🧿🧿🧿(%v) [Seq: %v]\n",
+					Alert(fmt.Sprintf(
+						"===> 🧊 WorkerPool.run - forwarded job 🧿🧿🧿(%v) [Seq: %v]",
 						job.ID,
 						job.SequenceNo,
-					)
+					))
 				case <-parentContext.Done():
 					running = false
 
 					close(forwardChOut) // ⚠️ This is new
-					fmt.Printf("===> 🧊 (#workers: '%v') WorkerPool.run - done received ☢️☢️☢️\n",
+					Alert(fmt.Sprintf(
+						"===> 🧊 (#workers: '%v') WorkerPool.run - done received ☢️☢️☢️",
 						len(p.private.pool),
-					)
+					))
 				}
 			} else {
 				// ⚠️ This close is essential. Since the pool acts as a bridge between
@@ -179,7 +185,7 @@ func (p *WorkerPool[I, O]) run(
 				//
 				running = false
 				close(forwardChOut)
-				fmt.Printf("===> 🚀 WorkerPool.run(source jobs chan closed) 🟥🟥🟥\n")
+				Alert("===> 🚀 WorkerPool.run(source jobs chan closed) 🟥🟥🟥")
 			}
 		}
 	}
@@ -191,14 +197,16 @@ func (p *WorkerPool[I, O]) run(
 	if err := p.drain(p.private.finishedCh); err != nil {
 		result.Error = err
 
-		fmt.Printf("===> 🧊 WorkerPool.run - drain complete with error: '%v' (workers count: '%v'). 📛📛📛\n",
+		Alert(fmt.Sprintf(
+			"===> 🧊 WorkerPool.run - drain complete with error: '%v' (workers count: '%v'). 📛📛📛",
 			err,
 			len(p.private.pool),
-		)
+		))
 	} else {
-		fmt.Printf("===> 🧊 WorkerPool.run - drain complete OK (workers count: '%v'). ☑️☑️☑️\n",
+		Alert(fmt.Sprintf(
+			"===> 🧊 WorkerPool.run - drain complete OK (workers count: '%v'). ☑️☑️☑️",
 			len(p.private.pool),
-		)
+		))
 	}
 }
 
@@ -222,14 +230,17 @@ func (p *WorkerPool[I, O]) spawn(
 
 	p.private.pool[w.core.id] = w
 	go w.core.run(parentContext, parentCancel, outputChTimeout)
-	fmt.Printf("===> 🧊 WorkerPool.spawned new worker: '%v' 🎀🎀🎀\n", w.core.id)
+	Alert(fmt.Sprintf(
+		"===> 🧊 WorkerPool.spawned new worker: '%v' 🎀🎀🎀",
+		w.core.id,
+	))
 }
 
 func (p *WorkerPool[I, O]) drain(finishedChIn finishedStreamR) error {
-	fmt.Printf(
-		"!!!! 🧊 WorkerPool.drain - waiting for remaining workers: %v (#GRs: %v); 🧊🧊🧊 \n",
+	Alert(fmt.Sprintf(
+		"!!!! 🧊 WorkerPool.drain - waiting for remaining workers: %v (#GRs: %v); 🧊🧊🧊",
 		len(p.private.pool), runtime.NumGoroutine(),
-	)
+	))
 
 	var firstError error
 
@@ -280,19 +291,21 @@ func (p *WorkerPool[I, O]) drain(finishedChIn finishedStreamR) error {
 		}
 
 		if workerResult.err != nil {
-			fmt.Printf("!!!! 🧊 WorkerPool.drain - worker (%v) 💢💢💢 finished with error: '%v'\n",
+			Alert(fmt.Sprintf(
+				"!!!! 🧊 WorkerPool.drain - worker (%v) 💢💢💢 finished with error: '%v'",
 				workerResult.id,
 				workerResult.err,
-			)
+			))
 
 			if firstError == nil {
 				firstError = workerResult.err
 			}
 		}
 
-		fmt.Printf("!!!! 🧊 WorkerPool.drain - worker-result-error(%v) finished, remaining: '%v' 🟥\n",
+		Alert(fmt.Sprintf(
+			"!!!! 🧊 WorkerPool.drain - worker-result-error(%v) finished, remaining: '%v' 🟥",
 			workerResult.err, len(p.private.pool),
-		)
+		))
 	}
 
 	return firstError
