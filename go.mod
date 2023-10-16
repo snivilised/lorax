@@ -4,10 +4,10 @@ go 1.19
 
 require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible
-	github.com/onsi/ginkgo/v2 v2.12.1
+	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.28.0
 	github.com/samber/lo v1.38.1
-	github.com/snivilised/extendio v0.2.1
+	github.com/snivilised/extendio v0.3.0
 	go.uber.org/zap v1.26.0
 )
 
