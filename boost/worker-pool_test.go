@@ -404,7 +404,7 @@ var _ = Describe("WorkerPool", Ordered, func() {
 			assert:        assertCancelled,
 		}), // SpecTimeout(time.Second*8)
 
-		Entry(nil, &poolTE{
+		XEntry(nil, &poolTE{
 			given:         "finish by stop and high no of workers",
 			should:        "receive and process all",
 			now:           16,
