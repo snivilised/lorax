@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/samber/lo"
 )
@@ -74,7 +75,7 @@ type waitGroupAnImpl struct {
 }
 
 func (a *waitGroupAnImpl) Add(delta int, name ...GoRoutineName) {
-	a.counter += int32(delta)
+	atomic.AddInt32(&a.counter, int32(delta))
 
 	if len(name) > 0 {
 		a.names[name[0]] = "foo"
@@ -84,7 +85,7 @@ func (a *waitGroupAnImpl) Add(delta int, name ...GoRoutineName) {
 }
 
 func (a *waitGroupAnImpl) Done(name ...GoRoutineName) {
-	a.counter--
+	atomic.AddInt32(&a.counter, int32(-1))
 
 	if len(name) > 0 {
 		delete(a.names, name[0])
