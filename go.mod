@@ -1,13 +1,13 @@
 module github.com/snivilised/lorax
 
-go 1.19
+go 1.21
 
 require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.29.0
 	github.com/samber/lo v1.38.1
-	github.com/snivilised/extendio v0.3.0
+	github.com/snivilised/extendio v0.3.1
 	go.uber.org/zap v1.26.0
 )
 
@@ -21,7 +21,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/pprof v0.0.0-20230406165453-00490a63f317 // indirect
 	github.com/google/uuid v1.4.0
-	github.com/nicksnyder/go-i18n/v2 v2.2.1 // indirect
+	github.com/nicksnyder/go-i18n/v2 v2.2.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect

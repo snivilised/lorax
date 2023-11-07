@@ -28,6 +28,7 @@
     "golangci",
     "goleak",
     "gomnd",
+    "goreleaser",
     "gosec",
     "gosimple",
     "goveralls",
