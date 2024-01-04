@@ -3,10 +3,14 @@ package boost
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"runtime"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
+	"go.uber.org/zap/exp/zapslog"
+	"go.uber.org/zap/zapcore"
 )
 
 // privateWpInfo (dmz!) contains any state that needs to be mutated in a non concurrent manner
@@ -50,6 +54,7 @@ type WorkerPool[I, O any] struct {
 	RoutineName     GoRoutineName
 	WaitAQ          AnnotatedWgAQ
 	ResultInCh      PoolResultStreamR
+	Logger          *slog.Logger
 }
 
 type NewWorkerPoolParams[I, O any] struct {
@@ -59,6 +64,7 @@ type NewWorkerPoolParams[I, O any] struct {
 	JobsCh          JobStream[I]
 	CancelCh        CancelStream
 	WaitAQ          AnnotatedWgAQ
+	Logger          *slog.Logger
 }
 
 func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O] {
@@ -68,6 +74,18 @@ func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O
 	}
 
 	resultCh := make(PoolResultStream, 1)
+
+	logger := lo.TernaryF(params.Logger == nil,
+		func() *slog.Logger {
+			return slog.New(zapslog.NewHandler(
+				zapcore.NewNopCore(), nil),
+			)
+		},
+		func() *slog.Logger {
+			return params.Logger
+		},
+	)
+
 	wp := &WorkerPool[I, O]{
 		private: privateWpInfo[I, O]{
 			pool:          make(workersCollection[I, O], noWorkers),
@@ -83,6 +101,7 @@ func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O
 		sourceJobsChIn:  params.JobsCh,
 		WaitAQ:          params.WaitAQ,
 		ResultInCh:      resultCh,
+		Logger:          logger,
 	}
 
 	return wp
@@ -130,9 +149,9 @@ func (p *WorkerPool[I, O]) run(
 		p.private.resultOutCh <- r
 
 		p.WaitAQ.Done(p.RoutineName)
-		Alert("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
+		p.Logger.Debug("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
 	}(result)
-	Alert(fmt.Sprintf(
+	p.Logger.Debug(fmt.Sprintf(
 		"===> 🧊 WorkerPool.run ...(ctx:%+v)\n",
 		parentContext,
 	))
@@ -143,11 +162,11 @@ func (p *WorkerPool[I, O]) run(
 			running = false
 
 			close(forwardChOut) // ⚠️ This is new
-			Alert("===> 🧊 WorkerPool.run (source jobs chan closed) - done received ☢️☢️☢️")
+			p.Logger.Debug("===> 🧊 WorkerPool.run (source jobs chan closed) - done received ☢️☢️☢️")
 
 		case job, ok := <-p.sourceJobsChIn:
 			if ok {
-				Alert(fmt.Sprintf(
+				p.Logger.Debug(fmt.Sprintf(
 					"===> 🧊 (#workers: '%v') WorkerPool.run - new job received",
 					len(p.private.pool),
 				))
@@ -163,7 +182,7 @@ func (p *WorkerPool[I, O]) run(
 				}
 				select {
 				case forwardChOut <- job:
-					Alert(fmt.Sprintf(
+					p.Logger.Debug(fmt.Sprintf(
 						"===> 🧊 WorkerPool.run - forwarded job 🧿🧿🧿(%v) [Seq: %v]",
 						job.ID,
 						job.SequenceNo,
@@ -172,7 +191,7 @@ func (p *WorkerPool[I, O]) run(
 					running = false
 
 					close(forwardChOut) // ⚠️ This is new
-					Alert(fmt.Sprintf(
+					p.Logger.Debug(fmt.Sprintf(
 						"===> 🧊 (#workers: '%v') WorkerPool.run - done received ☢️☢️☢️",
 						len(p.private.pool),
 					))
@@ -185,7 +204,7 @@ func (p *WorkerPool[I, O]) run(
 				//
 				running = false
 				close(forwardChOut)
-				Alert("===> 🚀 WorkerPool.run(source jobs chan closed) 🟥🟥🟥")
+				p.Logger.Debug("===> 🚀 WorkerPool.run(source jobs chan closed) 🟥🟥🟥")
 			}
 		}
 	}
@@ -197,13 +216,13 @@ func (p *WorkerPool[I, O]) run(
 	if err := p.drain(p.private.finishedCh); err != nil {
 		result.Error = err
 
-		Alert(fmt.Sprintf(
+		p.Logger.Debug(fmt.Sprintf(
 			"===> 🧊 WorkerPool.run - drain complete with error: '%v' (workers count: '%v'). 📛📛📛",
 			err,
 			len(p.private.pool),
 		))
 	} else {
-		Alert(fmt.Sprintf(
+		p.Logger.Debug(fmt.Sprintf(
 			"===> 🧊 WorkerPool.run - drain complete OK (workers count: '%v'). ☑️☑️☑️",
 			len(p.private.pool),
 		))
@@ -225,19 +244,20 @@ func (p *WorkerPool[I, O]) spawn(
 			jobsChIn:      jobsChIn,
 			outputsChOut:  outputsChOut,
 			finishedChOut: finishedChOut,
+			logger:        p.Logger,
 		},
 	}
 
 	p.private.pool[w.core.id] = w
 	go w.core.run(parentContext, parentCancel, outputChTimeout)
-	Alert(fmt.Sprintf(
+	p.Logger.Debug(fmt.Sprintf(
 		"===> 🧊 WorkerPool.spawned new worker: '%v' 🎀🎀🎀",
 		w.core.id,
 	))
 }
 
 func (p *WorkerPool[I, O]) drain(finishedChIn finishedStreamR) error {
-	Alert(fmt.Sprintf(
+	p.Logger.Debug(fmt.Sprintf(
 		"!!!! 🧊 WorkerPool.drain - waiting for remaining workers: %v (#GRs: %v); 🧊🧊🧊",
 		len(p.private.pool), runtime.NumGoroutine(),
 	))
@@ -291,7 +311,7 @@ func (p *WorkerPool[I, O]) drain(finishedChIn finishedStreamR) error {
 		}
 
 		if workerResult.err != nil {
-			Alert(fmt.Sprintf(
+			p.Logger.Debug(fmt.Sprintf(
 				"!!!! 🧊 WorkerPool.drain - worker (%v) 💢💢💢 finished with error: '%v'",
 				workerResult.id,
 				workerResult.err,
@@ -302,7 +322,7 @@ func (p *WorkerPool[I, O]) drain(finishedChIn finishedStreamR) error {
 			}
 		}
 
-		Alert(fmt.Sprintf(
+		p.Logger.Debug(fmt.Sprintf(
 			"!!!! 🧊 WorkerPool.drain - worker-result-error(%v) finished, remaining: '%v' 🟥",
 			workerResult.err, len(p.private.pool),
 		))

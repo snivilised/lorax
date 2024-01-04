@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -13,6 +14,7 @@ type worker[I any, O any] struct {
 	jobsChIn      JobStreamR[I]
 	outputsChOut  JobOutputStreamW[O]
 	finishedChOut finishedStreamW
+	logger        *slog.Logger
 }
 
 func (w *worker[I, O]) run(parentContext context.Context,
@@ -25,26 +27,24 @@ func (w *worker[I, O]) run(parentContext context.Context,
 	defer func(r *workerFinishedResult) {
 		w.finishedChOut <- r // ⚠️ non-pre-emptive send, but this should be ok
 
-		Alert(fmt.Sprintf("	<--- 🚀 worker.run(%v) (SENT FINISHED - error:'%v'). 🚀🚀🚀",
+		w.logger.Debug(fmt.Sprintf("	<--- 🚀 worker.run(%v) (SENT FINISHED - error:'%v'). 🚀🚀🚀",
 			w.id, r.err,
 		))
 	}(&result)
 
-	Alert(
-		fmt.Sprintf("	---> 🚀 worker.run(%v) ...(ctx:%+v)\n", w.id, parentContext),
-	)
+	w.logger.Debug(fmt.Sprintf("	---> 🚀 worker.run(%v) ...(ctx:%+v)\n", w.id, parentContext))
 
 	for running := true; running; {
 		select {
 		case <-parentContext.Done():
-			Alert(fmt.Sprintf(
+			w.logger.Debug(fmt.Sprintf(
 				"	---> 🚀 worker.run(%v)(finished) - done received 🔶🔶🔶", w.id,
 			))
 
 			running = false
 		case job, ok := <-w.jobsChIn:
 			if ok {
-				Alert(fmt.Sprintf(
+				w.logger.Debug(fmt.Sprintf(
 					"	---> 🚀 worker.run(%v)(input:'%v')", w.id, job.Input,
 				))
 
@@ -55,7 +55,7 @@ func (w *worker[I, O]) run(parentContext context.Context,
 					running = false
 				}
 			} else {
-				Alert(fmt.Sprintf(
+				w.logger.Debug(fmt.Sprintf(
 					"	---> 🚀 worker.run(%v)(jobs chan closed) 🟥🟥🟥", w.id,
 				))
 
@@ -78,7 +78,7 @@ func (w *worker[I, O]) invoke(parentContext context.Context,
 	result, _ := w.exec(job)
 
 	if w.outputsChOut != nil {
-		Alert(fmt.Sprintf(
+		w.logger.Debug(fmt.Sprintf(
 			"	---> 🚀 worker.invoke ⏰ output timeout: '%v'", outputChTimeout,
 		))
 
@@ -86,12 +86,12 @@ func (w *worker[I, O]) invoke(parentContext context.Context,
 		case w.outputsChOut <- result:
 
 		case <-parentContext.Done():
-			Alert(fmt.Sprintf(
+			w.logger.Debug(fmt.Sprintf(
 				"	---> 🚀 worker.invoke(%v)(cancel) - done received 💥💥💥", w.id,
 			))
 
 		case <-outputContext.Done():
-			Alert(fmt.Sprintf(
+			w.logger.Debug(fmt.Sprintf(
 				"	---> 🚀 worker.invoke(%v)(cancel) - timeout on send 👿👿👿", w.id,
 			))
 

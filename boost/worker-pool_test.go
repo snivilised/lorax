@@ -303,15 +303,7 @@ type poolTE struct {
 	assert        assertFunc
 }
 
-func alertPrinter(message string) {
-	fmt.Println(message)
-}
-
 var _ = Describe("WorkerPool", Ordered, func() {
-	BeforeAll(func() {
-		boost.Alert = alertPrinter
-	})
-
 	DescribeTable("stream of jobs",
 		func(specContext SpecContext, entry *poolTE) {
 			defer leaktest.Check(GinkgoT())()
