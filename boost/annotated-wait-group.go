@@ -2,11 +2,14 @@ package boost
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/samber/lo"
+	"go.uber.org/zap/exp/zapslog"
+	"go.uber.org/zap/zapcore"
 )
 
 type WaitGroupName string
@@ -72,6 +75,7 @@ type waitGroupAnImpl struct {
 	counter       int32
 	names         namesCollection
 	waitGroupName string
+	logger        *slog.Logger
 }
 
 func (a *waitGroupAnImpl) Add(delta int, name ...GoRoutineName) {
@@ -80,7 +84,7 @@ func (a *waitGroupAnImpl) Add(delta int, name ...GoRoutineName) {
 	if len(name) > 0 {
 		a.names[name[0]] = "foo"
 
-		a.indicate("➕➕➕", string(name[0]), "Add")
+		a.indicate("💫", string(name[0]), "Add")
 	}
 }
 
@@ -90,18 +94,18 @@ func (a *waitGroupAnImpl) Done(name ...GoRoutineName) {
 	if len(name) > 0 {
 		delete(a.names, name[0])
 
-		a.indicate("🚩🚩🚩", string(name[0]), "Done")
+		a.indicate("🚩", string(name[0]), "Done")
 	}
 }
 
 func (a *waitGroupAnImpl) Wait(name ...GoRoutineName) {
 	if len(name) > 0 {
-		a.indicate("🧭🧭🧭", string(name[0]), "Wait")
+		a.indicate("🧭", string(name[0]), "Wait")
 	}
 }
 
 func (a *waitGroupAnImpl) indicate(highlight, name, op string) {
-	Alert(
+	a.logger.Debug(
 		fmt.Sprintf(
 			"		%v [[ WaitGroupAssister(%v).%v ]] - gr-name: '%v' (count: '%v') (running: '%v')\n",
 			highlight, a.waitGroupName, op, name, a.counter, a.running(),
@@ -127,11 +131,23 @@ type AnnotatedWaitGroup struct {
 
 // NewAnnotatedWaitGroup creates a new AnnotatedWaitGroup instance containing
 // the core WaitGroup instance.
-func NewAnnotatedWaitGroup(name string) WaitGroupAn {
+func NewAnnotatedWaitGroup(name string, log ...*slog.Logger) WaitGroupAn {
+	logger := lo.TernaryF(len(log) > 0,
+		func() *slog.Logger {
+			return log[0]
+		},
+		func() *slog.Logger {
+			return slog.New(zapslog.NewHandler(
+				zapcore.NewNopCore(), nil),
+			)
+		},
+	)
+
 	return &AnnotatedWaitGroup{
 		assistant: waitGroupAnImpl{
 			waitGroupName: name,
 			names:         make(namesCollection),
+			logger:        logger,
 		},
 	}
 }
