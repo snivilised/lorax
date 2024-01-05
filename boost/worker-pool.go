@@ -149,27 +149,24 @@ func (p *WorkerPool[I, O]) run(
 		p.private.resultOutCh <- r
 
 		p.WaitAQ.Done(p.RoutineName)
-		p.Logger.Debug("<--- WorkerPool.run (QUIT). 🧊🧊🧊\n")
 	}(result)
-	p.Logger.Debug(fmt.Sprintf(
-		"===> 🧊 WorkerPool.run ...(ctx:%+v)\n",
-		parentContext,
-	))
 
 	for running := true; running; {
 		select {
 		case <-parentContext.Done():
 			running = false
 
-			close(forwardChOut) // ⚠️ This is new
-			p.Logger.Debug("===> 🧊 WorkerPool.run (source jobs chan closed) - done received ☢️☢️☢️")
+			close(forwardChOut)
+			p.Logger.Debug("source jobs chan closed - done received",
+				slog.String("source", "worker-pool.run"),
+			)
 
 		case job, ok := <-p.sourceJobsChIn:
 			if ok {
-				p.Logger.Debug(fmt.Sprintf(
-					"===> 🧊 (#workers: '%v') WorkerPool.run - new job received",
-					len(p.private.pool),
-				))
+				p.Logger.Debug("new job received",
+					slog.String("source", "worker-pool.run"),
+					slog.Int("pool size", len(p.private.pool)),
+				)
 
 				if len(p.private.pool) < p.noWorkers {
 					p.spawn(parentContext,
@@ -182,29 +179,31 @@ func (p *WorkerPool[I, O]) run(
 				}
 				select {
 				case forwardChOut <- job:
-					p.Logger.Debug(fmt.Sprintf(
-						"===> 🧊 WorkerPool.run - forwarded job 🧿🧿🧿(%v) [Seq: %v]",
-						job.ID,
-						job.SequenceNo,
-					))
+					p.Logger.Debug("forwarded job",
+						slog.String("source", "worker-pool.run"),
+						slog.String("job-id", job.ID),
+						slog.Int("sequence-no", job.SequenceNo),
+					)
 				case <-parentContext.Done():
 					running = false
 
-					close(forwardChOut) // ⚠️ This is new
-					p.Logger.Debug(fmt.Sprintf(
-						"===> 🧊 (#workers: '%v') WorkerPool.run - done received ☢️☢️☢️",
-						len(p.private.pool),
-					))
+					close(forwardChOut)
+					p.Logger.Debug("done received",
+						slog.String("source", "worker-pool.run"),
+						slog.Int("pool size", len(p.private.pool)),
+					)
 				}
 			} else {
-				// ⚠️ This close is essential. Since the pool acts as a bridge between
+				// 💫 This close is essential. Since the pool acts as a bridge between
 				// 2 channels (p.sourceJobsChIn and p.private.workersJobsCh/forwardChOut),
 				// when the producer closes p.sourceJobsChIn, we need to delegate that
 				// closure to forwardChOut, otherwise we end up in a deadlock.
 				//
 				running = false
 				close(forwardChOut)
-				p.Logger.Debug("===> 🚀 WorkerPool.run(source jobs chan closed) 🟥🟥🟥")
+				p.Logger.Debug("source jobs chan closed",
+					slog.String("source", "worker-pool.run"),
+				)
 			}
 		}
 	}
@@ -216,16 +215,16 @@ func (p *WorkerPool[I, O]) run(
 	if err := p.drain(p.private.finishedCh); err != nil {
 		result.Error = err
 
-		p.Logger.Debug(fmt.Sprintf(
-			"===> 🧊 WorkerPool.run - drain complete with error: '%v' (workers count: '%v'). 📛📛📛",
-			err,
-			len(p.private.pool),
-		))
+		p.Logger.Error("drain complete with error",
+			slog.String("source", "worker-pool.run"),
+			slog.Int("pool size", len(p.private.pool)),
+			slog.String("error", err.Error()),
+		)
 	} else {
-		p.Logger.Debug(fmt.Sprintf(
-			"===> 🧊 WorkerPool.run - drain complete OK (workers count: '%v'). ☑️☑️☑️",
-			len(p.private.pool),
-		))
+		p.Logger.Debug("drain complete OK",
+			slog.String("source", "worker-pool.run"),
+			slog.Int("pool size", len(p.private.pool)),
+		)
 	}
 }
 
@@ -250,17 +249,17 @@ func (p *WorkerPool[I, O]) spawn(
 
 	p.private.pool[w.core.id] = w
 	go w.core.run(parentContext, parentCancel, outputChTimeout)
-	p.Logger.Debug(fmt.Sprintf(
-		"===> 🧊 WorkerPool.spawned new worker: '%v' 🎀🎀🎀",
-		w.core.id,
-	))
+	p.Logger.Debug("spawned new worker",
+		slog.String("source", "WorkerPool.spawn"),
+		slog.String("worker-id", string(w.core.id)),
+	)
 }
 
 func (p *WorkerPool[I, O]) drain(finishedChIn finishedStreamR) error {
-	p.Logger.Debug(fmt.Sprintf(
-		"!!!! 🧊 WorkerPool.drain - waiting for remaining workers: %v (#GRs: %v); 🧊🧊🧊",
-		len(p.private.pool), runtime.NumGoroutine(),
-	))
+	p.Logger.Debug("waiting for remaining workers...",
+		slog.String("source", "WorkerPool.drain"),
+		slog.Int("pool size", len(p.private.pool)),
+	)
 
 	var firstError error
 
@@ -311,21 +310,21 @@ func (p *WorkerPool[I, O]) drain(finishedChIn finishedStreamR) error {
 		}
 
 		if workerResult.err != nil {
-			p.Logger.Debug(fmt.Sprintf(
-				"!!!! 🧊 WorkerPool.drain - worker (%v) 💢💢💢 finished with error: '%v'",
-				workerResult.id,
-				workerResult.err,
-			))
+			p.Logger.Error("worker finished with error",
+				slog.String("source", "WorkerPool.drain"),
+				slog.String("result-id", string(workerResult.id)),
+				slog.String("error", workerResult.err.Error()),
+			)
 
 			if firstError == nil {
 				firstError = workerResult.err
 			}
 		}
 
-		p.Logger.Debug(fmt.Sprintf(
-			"!!!! 🧊 WorkerPool.drain - worker-result-error(%v) finished, remaining: '%v' 🟥",
-			workerResult.err, len(p.private.pool),
-		))
+		p.Logger.Debug("worker pool finished",
+			slog.String("source", "WorkerPool.drain"),
+			slog.Int("remaining", len(p.private.pool)),
+		)
 	}
 
 	return firstError

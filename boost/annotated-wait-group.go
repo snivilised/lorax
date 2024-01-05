@@ -1,7 +1,6 @@
 package boost
 
 import (
-	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -84,7 +83,7 @@ func (a *waitGroupAnImpl) Add(delta int, name ...GoRoutineName) {
 	if len(name) > 0 {
 		a.names[name[0]] = "foo"
 
-		a.indicate("💫", string(name[0]), "Add")
+		a.indicate(string(name[0]), "Add")
 	}
 }
 
@@ -94,22 +93,24 @@ func (a *waitGroupAnImpl) Done(name ...GoRoutineName) {
 	if len(name) > 0 {
 		delete(a.names, name[0])
 
-		a.indicate("🚩", string(name[0]), "Done")
+		a.indicate(string(name[0]), "Done")
 	}
 }
 
 func (a *waitGroupAnImpl) Wait(name ...GoRoutineName) {
 	if len(name) > 0 {
-		a.indicate("🧭", string(name[0]), "Wait")
+		a.indicate(string(name[0]), "Wait")
 	}
 }
 
-func (a *waitGroupAnImpl) indicate(highlight, name, op string) {
+func (a *waitGroupAnImpl) indicate(name, op string) {
 	a.logger.Debug(
-		fmt.Sprintf(
-			"		%v [[ WaitGroupAssister(%v).%v ]] - gr-name: '%v' (count: '%v') (running: '%v')\n",
-			highlight, a.waitGroupName, op, name, a.counter, a.running(),
-		),
+		"WaitGroupAssister",
+		slog.String("wg-name", a.waitGroupName),
+		slog.String("op", op),
+		slog.String("name", name),
+		slog.Int("counter", int(a.counter)),
+		slog.String("running", a.running()),
 	)
 }
 
