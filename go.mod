@@ -6,7 +6,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/samber/lo v1.39.0
-	github.com/snivilised/extendio v0.5.2
+	github.com/snivilised/extendio v0.5.4
 )
 
 require (
@@ -16,6 +16,7 @@ require (
 )
 
 require (
+	github.com/avfs/avfs v0.33.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 )
