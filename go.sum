@@ -42,8 +42,8 @@ github.com/rogpeppe/go-internal v1.11.0 h1:cWPaGQEPrBb5/AsnsZesgZZ9yb1OQ+GOISoDN
 github.com/rogpeppe/go-internal v1.11.0/go.mod h1:ddIwULY96R17DhadqLgMfk9H9tvdUzkipdSkR5nkCZA=
 github.com/samber/lo v1.39.0 h1:4gTz1wUhNYLhFSKl6O+8peW0v2F4BCY034GRpU9WnuA=
 github.com/samber/lo v1.39.0/go.mod h1:+m/ZKRl6ClXCE2Lgf3MsQlWfh4bn1bz6CXEOxnEXnEA=
-github.com/snivilised/extendio v0.6.0 h1:wrKIAmbBVsemOCmD5LcEMeIY4m1agakwcYcJ8U5iWb0=
-github.com/snivilised/extendio v0.6.0/go.mod h1:wn3atq3GVwcnKrlLpBdpTi/bxtUNlGzFA0Vmq1/Dnmo=
+github.com/snivilised/extendio v0.6.1 h1:8IIJ4rryKcRv796QxfHcMnuWl4erFMqJF4Rqcj8eY/k=
+github.com/snivilised/extendio v0.6.1/go.mod h1:LbMvItdNqN8oZI4yUENxM459OkTP+W+hYXxKrc9l8ZQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
