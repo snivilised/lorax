@@ -11,7 +11,7 @@ require (
 
 require (
 	github.com/fortytw2/leaktest v1.3.0
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	go.uber.org/zap/exp v0.2.0
 )
 
