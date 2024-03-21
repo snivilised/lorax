@@ -200,7 +200,9 @@ func (p *WorkerPool[I, O]) run(
 				// closure to forwardChOut, otherwise we end up in a deadlock.
 				//
 				running = false
+
 				close(forwardChOut)
+
 				p.Logger.Debug("source jobs chan closed",
 					slog.String("source", "worker-pool.run"),
 				)
