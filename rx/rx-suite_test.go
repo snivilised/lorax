@@ -1,4 +1,4 @@
-package boost_test
+package rx_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
 )
 
-func TestAsync(t *testing.T) {
+func TestRx(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Async Suite")
+	RunSpecs(t, "Rx Suite")
 }

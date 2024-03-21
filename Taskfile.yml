@@ -18,6 +18,19 @@ tasks:
     cmds:
       - go build ./...
 
+  # NB: this clean task is very aggressive. It will not only remove
+  # old versions of packages, it removes all of them, even the
+  # current versions in use. You can use the download task to
+  # refresh the pkg cache.
+  #
+  clean:
+    cmds:
+      - go clean
+
+  clean-t:
+    cmds:
+      - go clean -testcache
+
   # === test =================================================
 
   t:
@@ -27,6 +40,14 @@ tasks:
   ti:
     cmds:
       - go test ./i18n
+
+  tx:
+    cmds:
+      - ginkgo rx/...
+
+  tc:
+    cmds:
+      - ginkgo common/...
 
   dry:
     cmds:

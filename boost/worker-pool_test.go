@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
+	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
 	"github.com/samber/lo"
 
 	"github.com/snivilised/lorax/boost"
@@ -135,7 +135,7 @@ func (p *pipeline[I, O]) produce(parentContext context.Context,
 	interval time.Duration,
 	provider helpers.ProviderFunc[I],
 ) {
-	p.cancel = func(parentContext context.Context,
+	p.cancel = func(_ context.Context,
 		parentCancel context.CancelFunc,
 		delay time.Duration,
 	) {
@@ -144,8 +144,8 @@ func (p *pipeline[I, O]) produce(parentContext context.Context,
 			parentCancel,
 		)
 	}
-	p.stop = func(parentContext context.Context,
-		parentCancel context.CancelFunc,
+	p.stop = func(_ context.Context,
+		_ context.CancelFunc,
 		delay time.Duration,
 	) {
 		go helpers.StopProducerAfter(
@@ -235,15 +235,15 @@ var (
 		Eventually(parentContext, pipe.outputsDup.Channel).WithTimeout(time.Second * 5).Should(BeClosed())
 		Eventually(parentContext, pipe.producer.JobsCh).WithTimeout(time.Second * 5).Should(BeClosed())
 	}
-	assertCancelled assertFunc = func(parentContext context.Context,
-		pipe TestPipeline,
+	assertCancelled assertFunc = func(_ context.Context,
+		_ TestPipeline,
 		result *boost.PoolResult,
 	) {
 		// This needs to be upgraded to check that it is "timeout on send" error
 		Expect(result.Error).Error().NotTo(BeNil())
 	}
-	assertOutputChTimeout assertFunc = func(parentContext context.Context,
-		pipe TestPipeline,
+	assertOutputChTimeout assertFunc = func(_ context.Context,
+		_ TestPipeline,
 		result *boost.PoolResult,
 	) {
 		Expect(result.Error).Error().NotTo(BeNil())
@@ -257,7 +257,8 @@ var (
 		// }
 	}
 
-	assertNoError assertFunc = func(parentContext context.Context, pipe TestPipeline, result *boost.PoolResult) {
+	assertNoError assertFunc = func(_ context.Context,
+		_ TestPipeline, result *boost.PoolResult) {
 		Expect(result.Error).Error().To(BeNil())
 	}
 
@@ -265,6 +266,8 @@ var (
 		pipe TestPipeline,
 		result *boost.PoolResult,
 	) {
+		_, _ = parentContext, pipe
+
 		if result.Error == nil {
 			return // This is temporary
 		}
