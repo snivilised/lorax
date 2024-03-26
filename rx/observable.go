@@ -19,36 +19,36 @@ func LimitComparator[T constraints.Ordered](a, b T) int {
 	return 1
 }
 
-type Observable[I any] interface {
-	Iterable[I]
+type Observable[T any] interface {
+	Iterable[T]
 
-	Max(comparator Comparator[I], opts ...Option[I]) OptionalSingle[I]
-	Min(comparator Comparator[I], opts ...Option[I]) OptionalSingle[I]
+	Max(comparator Comparator[T], opts ...Option[T]) OptionalSingle[T]
+	Min(comparator Comparator[T], opts ...Option[T]) OptionalSingle[T]
 }
 
 // ObservableImpl implements Observable.
-type ObservableImpl[I any] struct {
+type ObservableImpl[T any] struct {
 	parent   context.Context
-	iterable Iterable[I]
+	iterable Iterable[T]
 }
 
-func defaultErrorFuncOperator[I any](ctx context.Context,
-	item Item[I], dst chan<- Item[I], options operatorOptions[I],
+func defaultErrorFuncOperator[T any](ctx context.Context,
+	item Item[T], dst chan<- Item[T], options operatorOptions[T],
 ) {
 	item.SendContext(ctx, dst)
 	options.stop()
 }
 
-type operator[I any] interface {
-	next(ctx context.Context, item Item[I], dst chan<- Item[I], options operatorOptions[I])
-	err(ctx context.Context, item Item[I], dst chan<- Item[I], options operatorOptions[I])
-	end(ctx context.Context, dst chan<- Item[I])
-	gatherNext(ctx context.Context, item Item[I], dst chan<- Item[I], options operatorOptions[I])
+type operator[T any] interface {
+	next(ctx context.Context, item Item[T], dst chan<- Item[T], options operatorOptions[T])
+	err(ctx context.Context, item Item[T], dst chan<- Item[T], options operatorOptions[T])
+	end(ctx context.Context, dst chan<- Item[T])
+	gatherNext(ctx context.Context, item Item[T], dst chan<- Item[T], options operatorOptions[T])
 }
 
-func single[I any](parent context.Context,
-	iterable Iterable[I], operatorFactory func() operator[I], forceSeq, bypassGather bool, opts ...Option[I],
-) Single[I] {
+func single[T any](parent context.Context,
+	iterable Iterable[T], operatorFactory func() operator[T], forceSeq, bypassGather bool, opts ...Option[T],
+) Single[T] {
 	option := parseOptions(opts...)
 	parallel, _ := option.getPool()
 	next := option.buildChannel()
@@ -61,11 +61,11 @@ func single[I any](parent context.Context,
 			runParallel(ctx, next, iterable.Observe(opts...), operatorFactory, bypassGather, option, opts...)
 		}
 
-		return &SingleImpl[I]{iterable: newChannelIterable(next)}
+		return &SingleImpl[T]{iterable: newChannelIterable(next)}
 	}
 
-	return &SingleImpl[I]{
-		iterable: newFactoryIterable(func(propagatedOptions ...Option[I]) <-chan Item[I] {
+	return &SingleImpl[T]{
+		iterable: newFactoryIterable(func(propagatedOptions ...Option[T]) <-chan Item[T] {
 			mergedOptions := append(opts, propagatedOptions...) //nolint:gocritic // foo
 
 			option = parseOptions(mergedOptions...)
@@ -80,11 +80,11 @@ func single[I any](parent context.Context,
 	}
 }
 
-func optionalSingle[I any](parent context.Context,
-	iterable Iterable[I], operatorFactory func() operator[I],
+func optionalSingle[T any](parent context.Context,
+	iterable Iterable[T], operatorFactory func() operator[T],
 	forceSeq, bypassGather bool,
-	opts ...Option[I],
-) OptionalSingle[I] {
+	opts ...Option[T],
+) OptionalSingle[T] {
 	option := parseOptions(opts...)
 	ctx := option.buildContext(parent)
 	parallel, _ := option.getPool()
@@ -102,12 +102,12 @@ func optionalSingle[I any](parent context.Context,
 			)
 		}
 
-		return &OptionalSingleImpl[I]{iterable: newChannelIterable(next)}
+		return &OptionalSingleImpl[T]{iterable: newChannelIterable(next)}
 	}
 
-	return &OptionalSingleImpl[I]{
+	return &OptionalSingleImpl[T]{
 		parent: ctx,
-		iterable: newFactoryIterable(func(propagatedOptions ...Option[I]) <-chan Item[I] {
+		iterable: newFactoryIterable(func(propagatedOptions ...Option[T]) <-chan Item[T] {
 			mergedOptions := append(opts, propagatedOptions...) //nolint:gocritic // foo
 			option = parseOptions(mergedOptions...)
 
@@ -129,22 +129,22 @@ func optionalSingle[I any](parent context.Context,
 	}
 }
 
-func runSequential[I any](ctx context.Context,
-	next chan Item[I], iterable Iterable[I], operatorFactory func() operator[I],
-	option Option[I], opts ...Option[I],
+func runSequential[T any](ctx context.Context,
+	next chan Item[T], iterable Iterable[T], operatorFactory func() operator[T],
+	option Option[T], opts ...Option[T],
 ) {
 	observe := iterable.Observe(opts...)
 
 	go func() {
 		op := operatorFactory()
 		stopped := false
-		operator := operatorOptions[I]{
+		operator := operatorOptions[T]{
 			stop: func() {
 				if option.getErrorStrategy() == StopOnError {
 					stopped = true
 				}
 			},
-			resetIterable: func(newIterable Iterable[I]) {
+			resetIterable: func(newIterable Iterable[T]) {
 				observe = newIterable.Observe(opts...)
 			},
 		}
@@ -171,31 +171,31 @@ func runSequential[I any](ctx context.Context,
 	}()
 }
 
-func runParallel[I any](ctx context.Context,
-	next chan Item[I], observe <-chan Item[I], operatorFactory func() operator[I],
-	bypassGather bool, option Option[I], opts ...Option[I],
+func runParallel[T any](ctx context.Context,
+	next chan Item[T], observe <-chan Item[T], operatorFactory func() operator[T],
+	bypassGather bool, option Option[T], opts ...Option[T],
 ) {
 	wg := sync.WaitGroup{}
 	_, pool := option.getPool()
 	wg.Add(pool)
 
-	var gather chan Item[I]
+	var gather chan Item[T]
 	if bypassGather {
 		gather = next
 	} else {
-		gather = make(chan Item[I], 1)
+		gather = make(chan Item[T], 1)
 
 		// Gather
 		go func() {
 			op := operatorFactory()
 			stopped := false
-			operator := operatorOptions[I]{
+			operator := operatorOptions[T]{
 				stop: func() {
 					if option.getErrorStrategy() == StopOnError {
 						stopped = true
 					}
 				},
-				resetIterable: func(newIterable Iterable[I]) {
+				resetIterable: func(newIterable Iterable[T]) {
 					observe = newIterable.Observe(opts...)
 				},
 			}
@@ -222,13 +222,13 @@ func runParallel[I any](ctx context.Context,
 		go func() {
 			op := operatorFactory()
 			stopped := false
-			operator := operatorOptions[I]{
+			operator := operatorOptions[T]{
 				stop: func() {
 					if option.getErrorStrategy() == StopOnError {
 						stopped = true
 					}
 				},
-				resetIterable: func(newIterable Iterable[I]) {
+				resetIterable: func(newIterable Iterable[T]) {
 					observe = newIterable.Observe(opts...)
 				},
 			}
@@ -243,12 +243,12 @@ func runParallel[I any](ctx context.Context,
 					if !ok {
 						if !bypassGather {
 							// TODO:
-							// cannot use gather (variable of type chan Item[I]) as chan<- Item[operator[I]]
+							// cannot use gather (variable of type chan Item[T]) as chan<- Item[operator[T]]
 							// value in argument to Of(op).SendContext
 							//
-							// op = operator[I] / Item[operator[I]]
-							// gather = chan Item[I]
-							// can we send I down the channel, then apply the operator on the other
+							// op = operator[T] / Item[operator[T]]
+							// gather = chan Item[T]
+							// can we send T down the channel, then apply the operator on the other
 							// end of the channel?
 							//
 							// or can we define another method on Item, such as SendOp ==> this looks

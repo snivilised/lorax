@@ -5,42 +5,42 @@ import (
 	"reflect"
 )
 
-func (o *ObservableImpl[I]) Observe(opts ...Option[I]) <-chan Item[I] {
+func (o *ObservableImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	return o.iterable.Observe(opts...)
 }
 
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
-func (o *ObservableImpl[I]) Max(comparator Comparator[I],
-	opts ...Option[I],
-) OptionalSingle[I] {
+func (o *ObservableImpl[T]) Max(comparator Comparator[T],
+	opts ...Option[T],
+) OptionalSingle[T] {
 	const (
 		forceSeq     = false
 		bypassGather = false
 	)
 
-	return optionalSingle(o.parent, o, func() operator[I] {
-		return &maxOperator[I]{
+	return optionalSingle(o.parent, o, func() operator[T] {
+		return &maxOperator[T]{
 			comparator: comparator,
 			empty:      true,
 		}
 	}, forceSeq, bypassGather, opts...)
 }
 
-func isLimitDefined[I any](limit I) bool {
+func isLimitDefined[T any](limit T) bool {
 	val := reflect.ValueOf(limit).Interface()
 	zero := reflect.Zero(reflect.TypeOf(limit)).Interface()
 
 	return val != zero
 }
 
-type maxOperator[I any] struct {
-	comparator Comparator[I]
+type maxOperator[T any] struct {
+	comparator Comparator[T]
 	empty      bool
-	max        I
+	max        T
 }
 
-func (op *maxOperator[I]) next(_ context.Context,
-	item Item[I], _ chan<- Item[I], _ operatorOptions[I],
+func (op *maxOperator[T]) next(_ context.Context,
+	item Item[T], _ chan<- Item[T], _ operatorOptions[T],
 ) {
 	op.empty = false
 
@@ -56,20 +56,20 @@ func (op *maxOperator[I]) next(_ context.Context,
 	}
 }
 
-func (op *maxOperator[I]) err(ctx context.Context,
-	item Item[I], dst chan<- Item[I], operatorOptions operatorOptions[I],
+func (op *maxOperator[T]) err(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
 }
 
-func (op *maxOperator[I]) end(ctx context.Context, dst chan<- Item[I]) {
+func (op *maxOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 	if !op.empty {
 		Of(op.max).SendContext(ctx, dst)
 	}
 }
 
-func (op *maxOperator[I]) gatherNext(ctx context.Context,
-	item Item[I], dst chan<- Item[I], operatorOptions operatorOptions[I],
+func (op *maxOperator[T]) gatherNext(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	// TODO(check): op.next(ctx, Of(item.V.(*maxOperator).max), dst, operatorOptions)÷
 	op.next(ctx, Of(item.V), dst, operatorOptions)
@@ -77,29 +77,29 @@ func (op *maxOperator[I]) gatherNext(ctx context.Context,
 
 // Min determines and emits the minimum-valued item emitted by an Observable
 // according to a comparator.
-func (o *ObservableImpl[I]) Min(comparator Comparator[I], opts ...Option[I]) OptionalSingle[I] {
+func (o *ObservableImpl[T]) Min(comparator Comparator[T], opts ...Option[T]) OptionalSingle[T] {
 	const (
 		forceSeq     = false
 		bypassGather = false
 	)
 
-	return optionalSingle(o.parent, o, func() operator[I] {
-		return &minOperator[I]{
+	return optionalSingle(o.parent, o, func() operator[T] {
+		return &minOperator[T]{
 			comparator: comparator,
 			empty:      true,
 		}
 	}, forceSeq, bypassGather, opts...)
 }
 
-type minOperator[I any] struct {
-	comparator Comparator[I]
+type minOperator[T any] struct {
+	comparator Comparator[T]
 	empty      bool
-	min        I
-	limit      func(value I) bool // represents min or max
+	min        T
+	limit      func(value T) bool // represents min or max
 }
 
-func (op *minOperator[I]) next(_ context.Context,
-	item Item[I], _ chan<- Item[I], _ operatorOptions[I],
+func (op *minOperator[T]) next(_ context.Context,
+	item Item[T], _ chan<- Item[T], _ operatorOptions[T],
 ) {
 	op.empty = false
 
@@ -115,20 +115,20 @@ func (op *minOperator[I]) next(_ context.Context,
 	}
 }
 
-func (op *minOperator[I]) err(ctx context.Context,
-	item Item[I], dst chan<- Item[I], operatorOptions operatorOptions[I],
+func (op *minOperator[T]) err(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
 }
 
-func (op *minOperator[I]) end(ctx context.Context, dst chan<- Item[I]) {
+func (op *minOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 	if !op.empty {
 		Of(op.min).SendContext(ctx, dst)
 	}
 }
 
-func (op *minOperator[I]) gatherNext(ctx context.Context,
-	item Item[I], dst chan<- Item[I], operatorOptions operatorOptions[I],
+func (op *minOperator[T]) gatherNext(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	// TODO(check): op.next(ctx, Of(item.V.(*minOperator).min), dst, operatorOptions)
 	op.next(ctx, Of(item.V), dst, operatorOptions)

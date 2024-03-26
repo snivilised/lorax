@@ -9,32 +9,32 @@ import (
 )
 
 // AssertPredicate is a custom predicate based on the items.
-type AssertPredicate[I any] func(items []I) error
+type AssertPredicate[T any] func(items []T) error
 
 // RxAssert lists the Observable assertions.
-type RxAssert[I any] interface { //nolint:revive // foo
-	apply(*rxAssert[I])
-	itemsToBeChecked() (bool, []I)
-	itemsNoOrderedToBeChecked() (bool, []I)
+type RxAssert[T any] interface { //nolint:revive // foo
+	apply(*rxAssert[T])
+	itemsToBeChecked() (bool, []T)
+	itemsNoOrderedToBeChecked() (bool, []T)
 	noItemsToBeChecked() bool
 	someItemsToBeChecked() bool
 	raisedErrorToBeChecked() (bool, error)
 	raisedErrorsToBeChecked() (bool, []error)
 	raisedAnErrorToBeChecked() (bool, error)
 	notRaisedErrorToBeChecked() bool
-	itemToBeChecked() (bool, I)
-	noItemToBeChecked() (bool, I)
-	customPredicatesToBeChecked() (bool, []AssertPredicate[I])
+	itemToBeChecked() (bool, T)
+	noItemToBeChecked() (bool, T)
+	customPredicatesToBeChecked() (bool, []AssertPredicate[T])
 }
 
-type rxAssert[I any] struct {
-	f                       func(*rxAssert[I])
+type rxAssert[T any] struct {
+	f                       func(*rxAssert[T])
 	checkHasItems           bool
 	checkHasNoItems         bool
 	checkHasSomeItems       bool
-	items                   []I
+	items                   []T
 	checkHasItemsNoOrder    bool
-	itemsNoOrder            []I
+	itemsNoOrder            []T
 	checkHasRaisedError     bool
 	err                     error
 	checkHasRaisedErrors    bool
@@ -42,67 +42,67 @@ type rxAssert[I any] struct {
 	checkHasRaisedAnError   bool
 	checkHasNotRaisedError  bool
 	checkHasItem            bool
-	item                    I
+	item                    T
 	checkHasNoItem          bool
 	checkHasCustomPredicate bool
-	customPredicates        []AssertPredicate[I]
+	customPredicates        []AssertPredicate[T]
 }
 
-func (ass *rxAssert[I]) apply(do *rxAssert[I]) {
+func (ass *rxAssert[T]) apply(do *rxAssert[T]) {
 	ass.f(do)
 }
 
-func (ass *rxAssert[I]) itemsToBeChecked() (b bool, i []I) {
+func (ass *rxAssert[T]) itemsToBeChecked() (b bool, i []T) {
 	return ass.checkHasItems, ass.items
 }
 
-func (ass *rxAssert[I]) itemsNoOrderedToBeChecked() (b bool, i []I) {
+func (ass *rxAssert[T]) itemsNoOrderedToBeChecked() (b bool, i []T) {
 	return ass.checkHasItemsNoOrder, ass.itemsNoOrder
 }
 
-func (ass *rxAssert[I]) noItemsToBeChecked() bool {
+func (ass *rxAssert[T]) noItemsToBeChecked() bool {
 	return ass.checkHasNoItems
 }
 
-func (ass *rxAssert[I]) someItemsToBeChecked() bool {
+func (ass *rxAssert[T]) someItemsToBeChecked() bool {
 	return ass.checkHasSomeItems
 }
-func (ass *rxAssert[I]) raisedErrorToBeChecked() (bool, error) {
+func (ass *rxAssert[T]) raisedErrorToBeChecked() (bool, error) {
 	return ass.checkHasRaisedError, ass.err
 }
 
-func (ass *rxAssert[I]) raisedErrorsToBeChecked() (bool, []error) {
+func (ass *rxAssert[T]) raisedErrorsToBeChecked() (bool, []error) {
 	return ass.checkHasRaisedErrors, ass.errs
 }
 
-func (ass *rxAssert[I]) raisedAnErrorToBeChecked() (bool, error) {
+func (ass *rxAssert[T]) raisedAnErrorToBeChecked() (bool, error) {
 	return ass.checkHasRaisedAnError, ass.err
 }
 
-func (ass *rxAssert[I]) notRaisedErrorToBeChecked() bool {
+func (ass *rxAssert[T]) notRaisedErrorToBeChecked() bool {
 	return ass.checkHasNotRaisedError
 }
 
-func (ass *rxAssert[I]) itemToBeChecked() (b bool, i I) {
+func (ass *rxAssert[T]) itemToBeChecked() (b bool, i T) {
 	return ass.checkHasItem, ass.item
 }
 
-func (ass *rxAssert[I]) noItemToBeChecked() (b bool, i I) {
+func (ass *rxAssert[T]) noItemToBeChecked() (b bool, i T) {
 	return ass.checkHasNoItem, ass.item
 }
 
-func (ass *rxAssert[I]) customPredicatesToBeChecked() (bool, []AssertPredicate[I]) {
+func (ass *rxAssert[T]) customPredicatesToBeChecked() (bool, []AssertPredicate[T]) {
 	return ass.checkHasCustomPredicate, ass.customPredicates
 }
 
-func newAssertion[I any](f func(*rxAssert[I])) *rxAssert[I] {
-	return &rxAssert[I]{
+func newAssertion[T any](f func(*rxAssert[T])) *rxAssert[T] {
+	return &rxAssert[T]{
 		f: f,
 	}
 }
 
-func parseAssertions[I any](assertions ...RxAssert[I]) RxAssert[I] {
-	ass := new(rxAssert[I])
+func parseAssertions[T any](assertions ...RxAssert[T]) RxAssert[T] {
+	ass := new(rxAssert[T])
 
 	for _, assertion := range assertions {
 		assertion.apply(ass)
@@ -111,9 +111,9 @@ func parseAssertions[I any](assertions ...RxAssert[I]) RxAssert[I] {
 	return ass
 }
 
-func Assert[I any](ctx context.Context, iterable Iterable[I], assertions ...RxAssert[I]) {
+func Assert[T any](ctx context.Context, iterable Iterable[T], assertions ...RxAssert[T]) {
 	ass := parseAssertions(assertions...)
-	got := make([]I, 0)
+	got := make([]T, 0)
 	errs := make([]error, 0)
 	observe := iterable.Observe()
 
@@ -211,51 +211,51 @@ loop:
 	}
 }
 
-func HasItems[I any](expectedItems []I) RxAssert[I] {
-	return newAssertion(func(ra *rxAssert[I]) {
+func HasItems[T any](expectedItems []T) RxAssert[T] {
+	return newAssertion(func(ra *rxAssert[T]) {
 		ra.checkHasItems = true
 		ra.items = expectedItems
 	})
 }
 
 // HasItem checks if a single or optional single has a specific item.
-func HasItem[I any](i I) RxAssert[I] {
-	return newAssertion(func(a *rxAssert[I]) {
+func HasItem[T any](i T) RxAssert[T] {
+	return newAssertion(func(a *rxAssert[T]) {
 		a.checkHasItem = true
 		a.item = i
 	})
 }
 
 // IsNotEmpty checks that the observable produces some items.
-func IsNotEmpty[I any]() RxAssert[I] {
-	return newAssertion(func(a *rxAssert[I]) {
+func IsNotEmpty[T any]() RxAssert[T] {
+	return newAssertion(func(a *rxAssert[T]) {
 		a.checkHasSomeItems = true
 	})
 }
 
 // IsEmpty checks that the observable has not produce any item.
-func IsEmpty[I any]() RxAssert[I] {
-	return newAssertion(func(a *rxAssert[I]) {
+func IsEmpty[T any]() RxAssert[T] {
+	return newAssertion(func(a *rxAssert[T]) {
 		a.checkHasNoItems = true
 	})
 }
 
-func HasError[I any](err error) RxAssert[I] {
-	return newAssertion(func(a *rxAssert[I]) {
+func HasError[T any](err error) RxAssert[T] {
+	return newAssertion(func(a *rxAssert[T]) {
 		a.checkHasRaisedError = true
 		a.err = err
 	})
 }
 
 // HasAnError checks that the observable has produce an error.
-func HasAnError[I any]() RxAssert[I] {
-	return newAssertion(func(a *rxAssert[I]) {
+func HasAnError[T any]() RxAssert[T] {
+	return newAssertion(func(a *rxAssert[T]) {
 		a.checkHasRaisedAnError = true
 	})
 }
 
-func HasNoError[I any]() RxAssert[I] {
-	return newAssertion(func(ra *rxAssert[I]) {
+func HasNoError[T any]() RxAssert[T] {
+	return newAssertion(func(ra *rxAssert[T]) {
 		ra.checkHasNotRaisedError = true
 	})
 }

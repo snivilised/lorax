@@ -3,45 +3,45 @@ package rx
 import "context"
 
 type (
-	operatorOptions[I any] struct {
+	operatorOptions[T any] struct {
 		stop          func()
-		resetIterable func(Iterable[I])
+		resetIterable func(Iterable[T])
 	}
 
 	// Comparator defines a func that returns an int:
 	// - 0 if two elements are equals
 	// - A negative value if the first argument is less than the second
 	// - A positive value if the first argument is greater than the second
-	Comparator[I any] func(I, I) int
+	Comparator[T any] func(T, T) int
 	// ItemToObservable defines a function that computes an observable from an item.
-	ItemToObservable[I any] func(Item[I]) Observable[I]
+	ItemToObservable[T any] func(Item[T]) Observable[T]
 	// ErrorToObservable defines a function that transforms an observable from an error.
-	ErrorToObservable[I any] func(error) Observable[I]
+	ErrorToObservable[T any] func(error) Observable[T]
 	// Func defines a function that computes a value from an input value.
-	Func[I any] func(context.Context, I) (I, error)
+	Func[T any] func(context.Context, T) (T, error)
 	// Func2 defines a function that computes a value from two input values.
-	Func2[I any] func(context.Context, I, I) (I, error)
+	Func2[T any] func(context.Context, T, T) (T, error)
 	// FuncN defines a function that computes a value from N input values.
-	FuncN[I any] func(...I) I
+	FuncN[T any] func(...T) T
 	// ErrorFunc defines a function that computes a value from an error.
-	ErrorFunc[I any] func(error) I
+	ErrorFunc[T any] func(error) T
 	// Predicate defines a func that returns a bool from an input value.
-	Predicate[I any] func(I) bool
-	// Marshaller defines a marshaller type (ItemValue[I] to []byte).
-	Marshaller[I any] func(I) ([]byte, error)
+	Predicate[T any] func(T) bool
+	// Marshaller defines a marshaller type (ItemValue[T] to []byte).
+	Marshaller[T any] func(T) ([]byte, error)
 	// Unmarshaller defines an unmarshaller type ([]byte to interface).
-	Unmarshaller[I any] func([]byte, I) error
+	Unmarshaller[T any] func([]byte, T) error
 	// Producer defines a producer implementation.
-	Producer[I any] func(ctx context.Context, next chan<- Item[I])
+	Producer[T any] func(ctx context.Context, next chan<- Item[T])
 	// Supplier defines a function that supplies a result from nothing.
-	Supplier[I any] func(ctx context.Context) Item[I]
+	Supplier[T any] func(ctx context.Context) Item[T]
 	// Disposed is a notification channel indicating when an Observable is closed.
 	Disposed <-chan struct{}
 	// Disposable is a function to be called in order to dispose a subscription.
 	Disposable context.CancelFunc
 
 	// NextFunc handles a next item in a stream.
-	NextFunc[I any] func(I)
+	NextFunc[T any] func(T)
 	// ErrFunc handles an error in a stream.
 	ErrFunc func(error)
 	// CompletedFunc handles the end of a stream.

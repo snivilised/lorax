@@ -8,16 +8,16 @@ import (
 type (
 	// Item is a wrapper having either a value or an error.
 	//
-	Item[I any] struct {
-		V I
+	Item[T any] struct {
+		V T
 		E error
 	}
 
 	// TimestampItem attach a timestamp to an item.
 	//
-	TimestampItem[I any] struct {
+	TimestampItem[T any] struct {
 		Timestamp time.Time
-		V         I
+		V         T
 	}
 
 	// CloseChannelStrategy indicates a strategy on whether to close a channel.
@@ -32,21 +32,21 @@ const (
 )
 
 // Of creates an item from a value.
-func Of[I any](v I) Item[I] {
-	return Item[I]{V: v}
+func Of[T any](v T) Item[T] {
+	return Item[T]{V: v}
 }
 
 // Error creates an item from an error.
-func Error[I any](err error) Item[I] {
-	return Item[I]{E: err}
+func Error[T any](err error) Item[T] {
+	return Item[T]{E: err}
 }
 
 // SendItems is an utility function that send a list of items and indicate a
 // strategy on whether to close the channel once the function completes.
 // This method has been derived from the original SendItems.
 // (does not support channels or slice)
-func SendItems[I any](ctx context.Context,
-	ch chan<- Item[I], strategy CloseChannelStrategy, items ...Item[I],
+func SendItems[T any](ctx context.Context,
+	ch chan<- Item[T], strategy CloseChannelStrategy, items ...Item[T],
 ) {
 	if strategy == CloseChannel {
 		defer close(ch)
@@ -55,25 +55,25 @@ func SendItems[I any](ctx context.Context,
 	sendItems(ctx, ch, items...)
 }
 
-func sendItems[I any](ctx context.Context, ch chan<- Item[I], items ...Item[I]) {
+func sendItems[T any](ctx context.Context, ch chan<- Item[T], items ...Item[T]) {
 	for _, item := range items {
 		item.SendContext(ctx, ch)
 	}
 }
 
 // IsError checks if an item is an error.
-func (i Item[I]) IsError() bool {
+func (i Item[T]) IsError() bool {
 	return i.E != nil
 }
 
 // SendBlocking sends an item and blocks until it is sent.
-func (i Item[I]) SendBlocking(ch chan<- Item[I]) {
+func (i Item[T]) SendBlocking(ch chan<- Item[T]) {
 	ch <- i
 }
 
 // SendContext sends an item and blocks until it is sent or a context canceled.
 // It returns a boolean to indicate whether the item was sent.
-func (i Item[I]) SendContext(ctx context.Context, ch chan<- Item[I]) bool {
+func (i Item[T]) SendContext(ctx context.Context, ch chan<- Item[T]) bool {
 	select {
 	case <-ctx.Done(): // Context's done channel has the highest priority
 		return false
@@ -87,7 +87,7 @@ func (i Item[I]) SendContext(ctx context.Context, ch chan<- Item[I]) bool {
 	}
 }
 
-func (i Item[I]) SendOpContext(ctx context.Context, ch any) bool { // Item[operator[I]]
+func (i Item[T]) SendOpContext(ctx context.Context, ch any) bool { // Item[operator[T]]
 	_ = ctx
 	_ = ch
 
@@ -96,7 +96,7 @@ func (i Item[I]) SendOpContext(ctx context.Context, ch any) bool { // Item[opera
 
 // SendNonBlocking sends an item without blocking.
 // It returns a boolean to indicate whether the item was sent.
-func (i Item[I]) SendNonBlocking(ch chan<- Item[I]) bool {
+func (i Item[T]) SendNonBlocking(ch chan<- Item[T]) bool {
 	select {
 	default:
 		return false

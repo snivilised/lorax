@@ -3,30 +3,30 @@ package rx
 import "context"
 
 // Single is a observable with a single element.
-type Single[I any] interface {
-	Iterable[I]
-	Filter(apply Predicate[I], opts ...Option[I]) OptionalSingle[I]
-	Get(opts ...Option[I]) (Item[I], error)
-	Map(apply Func[I], opts ...Option[I]) Single[I]
-	Run(opts ...Option[I]) Disposed
+type Single[T any] interface {
+	Iterable[T]
+	Filter(apply Predicate[T], opts ...Option[T]) OptionalSingle[T]
+	Get(opts ...Option[T]) (Item[T], error)
+	Map(apply Func[T], opts ...Option[T]) Single[T]
+	Run(opts ...Option[T]) Disposed
 }
 
 // SingleImpl implements Single.
-type SingleImpl[I any] struct {
+type SingleImpl[T any] struct {
 	parent   context.Context
-	iterable Iterable[I]
+	iterable Iterable[T]
 }
 
 // Filter emits only those items from an Observable that pass a predicate test.
-func (s *SingleImpl[I]) Filter(apply Predicate[I], opts ...Option[I]) OptionalSingle[I] {
-	return optionalSingle(s.parent, s, func() operator[I] {
-		return &filterOperatorSingle[I]{apply: apply}
+func (s *SingleImpl[T]) Filter(apply Predicate[T], opts ...Option[T]) OptionalSingle[T] {
+	return optionalSingle(s.parent, s, func() operator[T] {
+		return &filterOperatorSingle[T]{apply: apply}
 	}, true, true, opts...)
 }
 
 // Get returns the item. The error returned is if the context has been cancelled.
 // This method is blocking.
-func (s *SingleImpl[I]) Get(opts ...Option[I]) (Item[I], error) {
+func (s *SingleImpl[T]) Get(opts ...Option[T]) (Item[T], error) {
 	option := parseOptions(opts...)
 	ctx := option.buildContext(s.parent)
 
@@ -35,7 +35,7 @@ func (s *SingleImpl[I]) Get(opts ...Option[I]) (Item[I], error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return Item[I]{}, ctx.Err()
+			return Item[T]{}, ctx.Err()
 		case v := <-observe:
 			return v, nil
 		}
@@ -43,23 +43,23 @@ func (s *SingleImpl[I]) Get(opts ...Option[I]) (Item[I], error) {
 }
 
 // Map transforms the items emitted by a Single by applying a function to each item.
-func (s *SingleImpl[I]) Map(apply Func[I], opts ...Option[I]) Single[I] {
-	return single(s.parent, s, func() operator[I] {
-		return &mapOperatorSingle[I]{apply: apply}
+func (s *SingleImpl[T]) Map(apply Func[T], opts ...Option[T]) Single[T] {
+	return single(s.parent, s, func() operator[T] {
+		return &mapOperatorSingle[T]{apply: apply}
 	}, false, true, opts...)
 }
 
-type mapOperatorSingle[I any] struct {
-	apply Func[I]
+type mapOperatorSingle[T any] struct {
+	apply Func[T]
 }
 
-func (op *mapOperatorSingle[I]) next(ctx context.Context,
-	item Item[I], dst chan<- Item[I], operatorOptions operatorOptions[I],
+func (op *mapOperatorSingle[T]) next(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	res, err := op.apply(ctx, item.V)
 
 	if err != nil {
-		Error[I](err).SendContext(ctx, dst)
+		Error[T](err).SendContext(ctx, dst)
 		operatorOptions.stop()
 
 		return
@@ -68,17 +68,17 @@ func (op *mapOperatorSingle[I]) next(ctx context.Context,
 	Of(res).SendContext(ctx, dst)
 }
 
-func (op *mapOperatorSingle[I]) err(ctx context.Context,
-	item Item[I], dst chan<- Item[I], operatorOptions operatorOptions[I],
+func (op *mapOperatorSingle[T]) err(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
 }
 
-func (op *mapOperatorSingle[I]) end(_ context.Context, _ chan<- Item[I]) {
+func (op *mapOperatorSingle[T]) end(_ context.Context, _ chan<- Item[T]) {
 }
 
-func (op *mapOperatorSingle[I]) gatherNext(ctx context.Context,
-	item Item[I], dst chan<- Item[I], _ operatorOptions[I],
+func (op *mapOperatorSingle[T]) gatherNext(ctx context.Context,
+	item Item[T], dst chan<- Item[T], _ operatorOptions[T],
 ) {
 	// TODO: switch item.V.(type) {
 	// case *mapOperatorSingle:
@@ -90,38 +90,38 @@ func (op *mapOperatorSingle[I]) gatherNext(ctx context.Context,
 }
 
 // Observe observes a Single by returning its channel.
-func (s *SingleImpl[I]) Observe(opts ...Option[I]) <-chan Item[I] {
+func (s *SingleImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	return s.iterable.Observe(opts...)
 }
 
-type filterOperatorSingle[I any] struct {
-	apply Predicate[I]
+type filterOperatorSingle[T any] struct {
+	apply Predicate[T]
 }
 
-func (op *filterOperatorSingle[I]) next(ctx context.Context,
-	item Item[I], dst chan<- Item[I], _ operatorOptions[I],
+func (op *filterOperatorSingle[T]) next(ctx context.Context,
+	item Item[T], dst chan<- Item[T], _ operatorOptions[T],
 ) {
 	if op.apply(item.V) {
 		item.SendContext(ctx, dst)
 	}
 }
 
-func (op *filterOperatorSingle[I]) err(ctx context.Context,
-	item Item[I], dst chan<- Item[I], operatorOptions operatorOptions[I],
+func (op *filterOperatorSingle[T]) err(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
 }
 
-func (op *filterOperatorSingle[I]) end(_ context.Context, _ chan<- Item[I]) {
+func (op *filterOperatorSingle[T]) end(_ context.Context, _ chan<- Item[T]) {
 }
 
-func (op *filterOperatorSingle[I]) gatherNext(_ context.Context,
-	_ Item[I], _ chan<- Item[I], _ operatorOptions[I],
+func (op *filterOperatorSingle[T]) gatherNext(_ context.Context,
+	_ Item[T], _ chan<- Item[T], _ operatorOptions[T],
 ) {
 }
 
 // Run creates an observer without consuming the emitted items.
-func (s *SingleImpl[I]) Run(opts ...Option[I]) Disposed {
+func (s *SingleImpl[T]) Run(opts ...Option[T]) Disposed {
 	dispose := make(chan struct{})
 	option := parseOptions(opts...)
 	ctx := option.buildContext(s.parent)
