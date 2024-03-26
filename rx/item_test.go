@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
 	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
 	"github.com/snivilised/lorax/rx"
-	"github.com/snivilised/lorax/rxa"
 )
 
 var _ = Describe("Item", Ordered, func() {
@@ -25,10 +24,10 @@ var _ = Describe("Item", Ordered, func() {
 						rx.Of(3),
 					)
 
-					rxa.Assert(context.Background(),
+					rx.Assert(context.Background(),
 						rx.FromChannel(ch),
-						rxa.HasItems([]int{1, 2, 3}),
-						rxa.HasNoError[int]())
+						rx.HasItems([]int{1, 2, 3}),
+						rx.HasNoError[int]())
 				})
 			})
 
@@ -44,10 +43,10 @@ var _ = Describe("Item", Ordered, func() {
 						rx.Of(3),
 					)
 
-					rxa.Assert(context.Background(),
+					rx.Assert(context.Background(),
 						rx.FromChannel(ch),
-						rxa.HasItems([]int{1, 3}),
-						rxa.HasAnError[int]())
+						rx.HasItems([]int{1, 3}),
+						rx.HasAnError[int]())
 				})
 			})
 
@@ -63,10 +62,10 @@ var _ = Describe("Item", Ordered, func() {
 						rx.Of(3),
 					)
 
-					rxa.Assert(context.Background(),
+					rx.Assert(context.Background(),
 						rx.FromChannel(ch),
-						rxa.HasItems([]int{1, 3}),
-						rxa.HasError[int](errFoo))
+						rx.HasItems([]int{1, 3}),
+						rx.HasError[int](errFoo))
 				})
 			})
 		})

@@ -87,6 +87,13 @@ func (i Item[I]) SendContext(ctx context.Context, ch chan<- Item[I]) bool {
 	}
 }
 
+func (i Item[I]) SendOpContext(ctx context.Context, ch any) bool { // Item[operator[I]]
+	_ = ctx
+	_ = ch
+
+	panic("SendOpContext: NOT-IMPL")
+}
+
 // SendNonBlocking sends an item without blocking.
 // It returns a boolean to indicate whether the item was sent.
 func (i Item[I]) SendNonBlocking(ch chan<- Item[I]) bool {
