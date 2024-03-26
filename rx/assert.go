@@ -1,6 +1,4 @@
-package rxa
-
-// rxa (rx assertion) package can use rx
+package rx
 
 import (
 	"context"
@@ -8,14 +6,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive,stylecheck // ginkgo ok
 	. "github.com/onsi/gomega"    //nolint:revive,stylecheck // gomega ok
-	"github.com/snivilised/lorax/rx"
 )
 
 // AssertPredicate is a custom predicate based on the items.
 type AssertPredicate[I any] func(items []I) error
 
 // RxAssert lists the Observable assertions.
-type RxAssert[I any] interface {
+type RxAssert[I any] interface { //nolint:revive // foo
 	apply(*rxAssert[I])
 	itemsToBeChecked() (bool, []I)
 	itemsNoOrderedToBeChecked() (bool, []I)
@@ -87,7 +84,7 @@ func (ass *rxAssert[I]) notRaisedErrorToBeChecked() bool {
 }
 
 func (ass *rxAssert[I]) itemToBeChecked() (b bool, i I) {
-	return ass.checkHasNoItem, ass.item
+	return ass.checkHasItem, ass.item
 }
 
 func (ass *rxAssert[I]) noItemToBeChecked() (b bool, i I) {
@@ -114,7 +111,7 @@ func parseAssertions[I any](assertions ...RxAssert[I]) RxAssert[I] {
 	return ass
 }
 
-func Assert[I any](ctx context.Context, iterable rx.Iterable[I], assertions ...RxAssert[I]) {
+func Assert[I any](ctx context.Context, iterable Iterable[I], assertions ...RxAssert[I]) {
 	ass := parseAssertions(assertions...)
 	got := make([]I, 0)
 	errs := make([]error, 0)
@@ -212,4 +209,53 @@ loop:
 	if ass.notRaisedErrorToBeChecked() {
 		Expect(errs).To(BeEmpty())
 	}
+}
+
+func HasItems[I any](expectedItems []I) RxAssert[I] {
+	return newAssertion(func(ra *rxAssert[I]) {
+		ra.checkHasItems = true
+		ra.items = expectedItems
+	})
+}
+
+// HasItem checks if a single or optional single has a specific item.
+func HasItem[I any](i I) RxAssert[I] {
+	return newAssertion(func(a *rxAssert[I]) {
+		a.checkHasItem = true
+		a.item = i
+	})
+}
+
+// IsNotEmpty checks that the observable produces some items.
+func IsNotEmpty[I any]() RxAssert[I] {
+	return newAssertion(func(a *rxAssert[I]) {
+		a.checkHasSomeItems = true
+	})
+}
+
+// IsEmpty checks that the observable has not produce any item.
+func IsEmpty[I any]() RxAssert[I] {
+	return newAssertion(func(a *rxAssert[I]) {
+		a.checkHasNoItems = true
+	})
+}
+
+func HasError[I any](err error) RxAssert[I] {
+	return newAssertion(func(a *rxAssert[I]) {
+		a.checkHasRaisedError = true
+		a.err = err
+	})
+}
+
+// HasAnError checks that the observable has produce an error.
+func HasAnError[I any]() RxAssert[I] {
+	return newAssertion(func(a *rxAssert[I]) {
+		a.checkHasRaisedAnError = true
+	})
+}
+
+func HasNoError[I any]() RxAssert[I] {
+	return newAssertion(func(ra *rxAssert[I]) {
+		ra.checkHasNotRaisedError = true
+	})
 }

@@ -22,7 +22,10 @@ func newChannelIterable[I any](next <-chan Item[I], opts ...Option[I]) Iterable[
 }
 
 func (i *channelIterable[I]) Observe(opts ...Option[I]) <-chan Item[I] {
-	mergedOptions := append(i.opts, opts...) //nolint:gocritic // foo
+	mergedOptions := make([]Option[I], 0, len(opts))
+	copy(mergedOptions, opts)
+	mergedOptions = append(mergedOptions, opts...)
+
 	option := parseOptions(mergedOptions...)
 
 	if !option.isConnectable() {
