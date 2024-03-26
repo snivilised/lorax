@@ -1,6 +1,6 @@
 package rx
 
 // Iterable is the basic type that can be observed.
-type Iterable[I any] interface {
-	Observe(opts ...Option[I]) <-chan Item[I]
+type Iterable[T any] interface {
+	Observe(opts ...Option[T]) <-chan Item[T]
 }

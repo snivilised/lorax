@@ -1,23 +1,23 @@
 package rx
 
-type justIterable[I any] struct {
-	items []I
-	opts  []Option[I]
+type justIterable[T any] struct {
+	items []T
+	opts  []Option[T]
 }
 
-func newJustIterable[I any](items ...I) func(opts ...Option[I]) Iterable[I] {
-	return func(opts ...Option[I]) Iterable[I] {
-		return &justIterable[I]{
+func newJustIterable[T any](items ...T) func(opts ...Option[T]) Iterable[T] {
+	return func(opts ...Option[T]) Iterable[T] {
+		return &justIterable[T]{
 			items: items,
 			opts:  opts,
 		}
 	}
 }
 
-func (i *justIterable[I]) Observe(opts ...Option[I]) <-chan Item[I] {
+func (i *justIterable[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	option := parseOptions(append(i.opts, opts...)...)
 	next := option.buildChannel()
-	items := make([]Item[I], 0, len(i.items))
+	items := make([]Item[T], 0, len(i.items))
 
 	for _, item := range i.items {
 		items = append(items, Of(item))

@@ -5,40 +5,40 @@ import (
 )
 
 // OptionalSingle is an optional single.
-type OptionalSingle[I any] interface {
-	Iterable[I]
-	Get(opts ...Option[I]) (Item[I], error)
-	Map(apply Func[I], opts ...Option[I]) OptionalSingle[I]
-	Run(opts ...Option[I]) Disposed
+type OptionalSingle[T any] interface {
+	Iterable[T]
+	Get(opts ...Option[T]) (Item[T], error)
+	Map(apply Func[T], opts ...Option[T]) OptionalSingle[T]
+	Run(opts ...Option[T]) Disposed
 }
 
 // OptionalSingleImpl implements OptionalSingle.
-type OptionalSingleImpl[I any] struct {
+type OptionalSingleImpl[T any] struct {
 	parent   context.Context
-	iterable Iterable[I]
+	iterable Iterable[T]
 }
 
 // NewOptionalSingleImpl create OptionalSingleImpl
-func NewOptionalSingleImpl[I any](iterable Iterable[I]) OptionalSingleImpl[I] {
+func NewOptionalSingleImpl[T any](iterable Iterable[T]) OptionalSingleImpl[T] {
 	// this is new functionality due to iterable not being exported
 	//
-	return OptionalSingleImpl[I]{
+	return OptionalSingleImpl[T]{
 		iterable: iterable,
 	}
 }
 
 // Get returns the item or rxgo.OptionalEmpty. The error returned is if the context has been cancelled.
 // This method is blocking.
-func (o *OptionalSingleImpl[I]) Get(opts ...Option[I]) (Item[I], error) {
+func (o *OptionalSingleImpl[T]) Get(opts ...Option[T]) (Item[T], error) {
 	option := parseOptions(opts...)
 	ctx := option.buildContext(o.parent)
-	optionalSingleEmpty := Item[I]{}
+	optionalSingleEmpty := Item[T]{}
 	observe := o.Observe(opts...)
 
 	for {
 		select {
 		case <-ctx.Done():
-			return Item[I]{}, ctx.Err()
+			return Item[T]{}, ctx.Err()
 		case v, ok := <-observe:
 			if !ok {
 				return optionalSingleEmpty, nil
@@ -50,27 +50,27 @@ func (o *OptionalSingleImpl[I]) Get(opts ...Option[I]) (Item[I], error) {
 }
 
 // Map transforms the items emitted by an OptionalSingle by applying a function to each item.
-func (o *OptionalSingleImpl[I]) Map(apply Func[I], opts ...Option[I]) OptionalSingle[I] {
-	return optionalSingle(o.parent, o, func() operator[I] {
-		return &mapOperatorOptionalSingle[I]{apply: apply}
+func (o *OptionalSingleImpl[T]) Map(apply Func[T], opts ...Option[T]) OptionalSingle[T] {
+	return optionalSingle(o.parent, o, func() operator[T] {
+		return &mapOperatorOptionalSingle[T]{apply: apply}
 	}, false, true, opts...)
 }
 
 // Observe observes an OptionalSingle by returning its channel.
-func (o *OptionalSingleImpl[I]) Observe(opts ...Option[I]) <-chan Item[I] {
+func (o *OptionalSingleImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	return o.iterable.Observe(opts...)
 }
 
-type mapOperatorOptionalSingle[I any] struct {
-	apply Func[I]
+type mapOperatorOptionalSingle[T any] struct {
+	apply Func[T]
 }
 
-func (op *mapOperatorOptionalSingle[I]) next(ctx context.Context,
-	item Item[I], dst chan<- Item[I], operatorOptions operatorOptions[I],
+func (op *mapOperatorOptionalSingle[T]) next(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	res, err := op.apply(ctx, item.V)
 	if err != nil {
-		dst <- Error[I](err)
+		dst <- Error[T](err)
 
 		operatorOptions.stop()
 
@@ -79,20 +79,20 @@ func (op *mapOperatorOptionalSingle[I]) next(ctx context.Context,
 	dst <- Of(res)
 }
 
-func (op *mapOperatorOptionalSingle[I]) err(ctx context.Context,
-	item Item[I], dst chan<- Item[I], operatorOptions operatorOptions[I],
+func (op *mapOperatorOptionalSingle[T]) err(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
 }
 
-func (op *mapOperatorOptionalSingle[I]) end(_ context.Context, _ chan<- Item[I]) {
+func (op *mapOperatorOptionalSingle[T]) end(_ context.Context, _ chan<- Item[T]) {
 }
 
-func (op *mapOperatorOptionalSingle[I]) gatherNext(_ context.Context,
-	item Item[I], dst chan<- Item[I], _ operatorOptions[I],
+func (op *mapOperatorOptionalSingle[T]) gatherNext(_ context.Context,
+	item Item[T], dst chan<- Item[T], _ operatorOptions[T],
 ) {
 	// --> switch item.V.(type) {
-	// case *mapOperatorOptionalSingle[I]:
+	// case *mapOperatorOptionalSingle[T]:
 	// 	return
 	// }
 	dst <- item
@@ -101,7 +101,7 @@ func (op *mapOperatorOptionalSingle[I]) gatherNext(_ context.Context,
 }
 
 // Run creates an observer without consuming the emitted items.
-func (o *OptionalSingleImpl[I]) Run(opts ...Option[I]) Disposed {
+func (o *OptionalSingleImpl[T]) Run(opts ...Option[T]) Disposed {
 	dispose := make(chan struct{})
 	option := parseOptions(opts...)
 	ctx := option.buildContext(o.parent)

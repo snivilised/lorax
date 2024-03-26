@@ -1,13 +1,13 @@
 package rx
 
-type factoryIterable[I any] struct {
-	factory func(opts ...Option[I]) <-chan Item[I]
+type factoryIterable[T any] struct {
+	factory func(opts ...Option[T]) <-chan Item[T]
 }
 
-func newFactoryIterable[I any](factory func(opts ...Option[I]) <-chan Item[I]) Iterable[I] {
-	return &factoryIterable[I]{factory: factory}
+func newFactoryIterable[T any](factory func(opts ...Option[T]) <-chan Item[T]) Iterable[T] {
+	return &factoryIterable[T]{factory: factory}
 }
 
-func (i *factoryIterable[I]) Observe(opts ...Option[I]) <-chan Item[I] {
+func (i *factoryIterable[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	return i.factory(opts...)
 }
