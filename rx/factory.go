@@ -1,5 +1,7 @@
 package rx
 
+import "github.com/samber/lo"
+
 // Amb takes several Observables, emit all of the items from only the first of these Observables
 // to emit an item or notification.
 func Amb[T any](observables []Observable[T], opts ...Option[T]) Observable[T] {
@@ -33,7 +35,9 @@ func FromChannel[T any](next <-chan Item[T], opts ...Option[T]) Observable[T] {
 func Just[T any](values ...T) func(opts ...Option[T]) Observable[T] {
 	return func(opts ...Option[T]) Observable[T] {
 		return &ObservableImpl[T]{
-			iterable: newJustIterable(values...)(opts...),
+			iterable: newJustIterable[T](lo.Map(values, func(it T, _ int) any {
+				return it
+			})...)(opts...),
 		}
 	}
 }
@@ -44,7 +48,7 @@ func Just[T any](values ...T) func(opts ...Option[T]) Observable[T] {
 func JustSingle[T any](value T, opts ...Option[T]) func(opts ...Option[T]) Single[T] {
 	return func(_ ...Option[T]) Single[T] {
 		return &SingleImpl[T]{
-			iterable: newJustIterable(value)(opts...),
+			iterable: newJustIterable[T](value)(opts...),
 		}
 	}
 }
@@ -54,7 +58,16 @@ func JustItem[T any](value T, opts ...Option[T]) Single[T] {
 	// Why does this not return a func, but Just does?
 	//
 	return &SingleImpl[T]{
-		iterable: newJustIterable(value)(opts...),
+		iterable: newJustIterable[T](value)(opts...),
+	}
+}
+
+// Just creates an Observable with the provided items.
+func JustError[T any](err error) func(opts ...Option[T]) Single[T] {
+	return func(opts ...Option[T]) Single[T] {
+		return &SingleImpl[T]{
+			iterable: newJustIterable[T](err)(opts...),
+		}
 	}
 }
 

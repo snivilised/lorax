@@ -1,11 +1,11 @@
 package rx
 
 type justIterable[T any] struct {
-	items []T
+	items []any
 	opts  []Option[T]
 }
 
-func newJustIterable[T any](items ...T) func(opts ...Option[T]) Iterable[T] {
+func newJustIterable[T any](items ...any) func(opts ...Option[T]) Iterable[T] {
 	return func(opts ...Option[T]) Iterable[T] {
 		return &justIterable[T]{
 			items: items,
@@ -17,13 +17,12 @@ func newJustIterable[T any](items ...T) func(opts ...Option[T]) Iterable[T] {
 func (i *justIterable[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	option := parseOptions(append(i.opts, opts...)...)
 	next := option.buildChannel()
-	items := make([]Item[T], 0, len(i.items))
+	items := make([]any, 0, len(i.items))
+	items = append(items, i.items...)
 
-	for _, item := range i.items {
-		items = append(items, Of(item))
-	}
-
-	go SendItems(option.buildContext(emptyContext), next, CloseChannel, items...)
+	go SendItems(option.buildContext(emptyContext), next, CloseChannel,
+		items...,
+	)
 
 	return next
 }

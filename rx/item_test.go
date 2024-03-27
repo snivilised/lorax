@@ -19,9 +19,7 @@ var _ = Describe("Item", Ordered, func() {
 					ch := make(chan rx.Item[int], 3)
 
 					rx.SendItems(context.Background(), ch, rx.CloseChannel,
-						rx.Of(1),
-						rx.Of(2),
-						rx.Of(3),
+						1, 2, 3,
 					)
 
 					rx.Assert(context.Background(),
@@ -38,9 +36,9 @@ var _ = Describe("Item", Ordered, func() {
 					ch := make(chan rx.Item[int], 3)
 
 					rx.SendItems(context.Background(), ch, rx.CloseChannel,
-						rx.Of(1),
+						1,
 						rx.Error[int](errFoo),
-						rx.Of(3),
+						3,
 					)
 
 					rx.Assert(context.Background(),
@@ -57,9 +55,9 @@ var _ = Describe("Item", Ordered, func() {
 					ch := make(chan rx.Item[int], 3)
 
 					rx.SendItems(context.Background(), ch, rx.CloseChannel,
-						rx.Of(1),
+						1,
 						rx.Error[int](errFoo),
-						rx.Of(3),
+						3,
 					)
 
 					rx.Assert(context.Background(),
@@ -77,8 +75,8 @@ var _ = Describe("Item", Ordered, func() {
 
 					ch := make(chan rx.Item[int], 1)
 					defer close(ch)
-					rx.Of[int](5).SendBlocking(ch)
 
+					rx.Of(5).SendBlocking(ch)
 					Expect((<-ch).V).To(Equal(5))
 				})
 			})
