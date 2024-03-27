@@ -2,15 +2,17 @@ package rx
 
 import (
 	"context"
+	"reflect"
 	"time"
 )
 
 type (
-	// Item is a wrapper having either a value or an error.
+	// Item is a wrapper having either a value, error or channel.
 	//
 	Item[T any] struct {
 		V T
 		E error
+		C chan<- Item[T]
 	}
 
 	// TimestampItem attach a timestamp to an item.
@@ -36,6 +38,15 @@ func Of[T any](v T) Item[T] {
 	return Item[T]{V: v}
 }
 
+// Ch creates an item from a channel
+func Ch[T any](ch any) Item[T] {
+	if c, ok := ch.(chan<- Item[T]); ok {
+		return Item[T]{C: c}
+	}
+
+	panic("invalid ch type")
+}
+
 // Error creates an item from an error.
 func Error[T any](err error) Item[T] {
 	return Item[T]{E: err}
@@ -43,22 +54,73 @@ func Error[T any](err error) Item[T] {
 
 // SendItems is an utility function that send a list of items and indicate a
 // strategy on whether to close the channel once the function completes.
-// This method has been derived from the original SendItems.
-// (does not support channels or slice)
 func SendItems[T any](ctx context.Context,
-	ch chan<- Item[T], strategy CloseChannelStrategy, items ...Item[T],
+	ch chan<- Item[T], strategy CloseChannelStrategy, items ...any,
 ) {
 	if strategy == CloseChannel {
 		defer close(ch)
 	}
 
-	sendItems(ctx, ch, items...)
+	send(ctx, ch, items...)
 }
 
-func sendItems[T any](ctx context.Context, ch chan<- Item[T], items ...Item[T]) {
-	for _, item := range items {
-		item.SendContext(ctx, ch)
+func send[T any](ctx context.Context, ch chan<- Item[T], items ...any) {
+	for _, current := range items {
+		switch item := current.(type) {
+		default:
+			rt := reflect.TypeOf(item)
+
+			switch rt.Kind() { //nolint:exhaustive // foo
+			default:
+				switch v := item.(type) {
+				case error:
+					Error[T](v).SendContext(ctx, ch)
+
+				case Item[T]:
+					v.SendContext(ctx, ch)
+
+				case T:
+					Of(v).SendContext(ctx, ch)
+				}
+
+			case reflect.Chan:
+				inCh := reflect.ValueOf(current)
+
+				for {
+					v, ok := inCh.Recv()
+
+					if !ok {
+						return
+					}
+
+					vItem := v.Interface()
+
+					switch item := vItem.(type) {
+					default:
+						Ch[T](item).SendContext(ctx, ch)
+
+					case error:
+						Error[T](item).SendContext(ctx, ch)
+					}
+				}
+
+			case reflect.Slice:
+				s := reflect.ValueOf(current)
+
+				for i := 0; i < s.Len(); i++ {
+					send(ctx, ch, s.Index(i).Interface())
+				}
+			}
+
+		case error:
+			Error[T](item).SendContext(ctx, ch)
+		}
 	}
+}
+
+// IsCh checks if an item is an error.
+func (i Item[T]) IsCh() bool {
+	return i.C != nil
 }
 
 // IsError checks if an item is an error.

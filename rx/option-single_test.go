@@ -58,15 +58,10 @@ var _ = Describe("OptionSingle", func() {
 		})
 
 		When("Error", func() {
-			XIt("🧪 should: get error value", func() {
+			It("🧪 should: get error value", func() {
 				defer leaktest.Check(GinkgoT())()
-				// should be NewOptionalSingleImpl[int]
-				//
-				// TODO: why don't we invoke a function: rx.JustItem(rx.Item[int]{E: errFoo})
-				// compared to Just: rx.Just(int(1))()
-				// this discrepancy needs a resolution
-				//
-				single := rx.NewOptionalSingleImpl(rx.JustItem(rx.Error[int](errFoo)))
+
+				single := rx.NewOptionalSingleImpl(rx.JustError[int](errFoo)())
 				get, err := single.Get()
 				Expect(err).Error().To(BeNil())
 				Expect(get.E).To(Equal(errFoo))
