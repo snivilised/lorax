@@ -5,6 +5,7 @@
   ],
   "cSpell.words": [
     "Assistable",
+    "binaryheap",
     "bodyclose",
     "cmds",
     "coverpkg",
@@ -15,6 +16,7 @@
     "dogsled",
     "dotenv",
     "dupl",
+    "emirpasic",
     "errcheck",
     "exportloopref",
     "extendio",
@@ -46,6 +48,7 @@
     "nakedret",
     "nolint",
     "nolintlint",
+    "notif",
     "onecontext",
     "onsi",
     "outdir",

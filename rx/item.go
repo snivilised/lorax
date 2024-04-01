@@ -12,7 +12,13 @@ type (
 	Item[T any] struct {
 		V T
 		E error
-		C chan<- Item[T]
+		//
+		C       chan<- Item[T]
+		tick    bool
+		tickV   bool
+		numeric bool
+		TV      int
+		N       int
 	}
 
 	// TimestampItem attach a timestamp to an item.
@@ -45,6 +51,27 @@ func Ch[T any](ch any) Item[T] {
 	}
 
 	panic("invalid ch type")
+}
+
+// Tick creates a type safe tick instance
+func Tick[T any]() Item[T] {
+	return Item[T]{tick: true}
+}
+
+// Tv creates a type safe tick value instance
+func Tv[T any](tv int) Item[T] {
+	return Item[T]{
+		TV:    tv,
+		tickV: true,
+	}
+}
+
+// Num creates a type safe tick value instance
+func Num[T any](n int) Item[T] {
+	return Item[T]{
+		N:       n,
+		numeric: true,
+	}
 }
 
 // Error creates an item from an error.
@@ -126,6 +153,21 @@ func (i Item[T]) IsCh() bool {
 // IsError checks if an item is an error.
 func (i Item[T]) IsError() bool {
 	return i.E != nil
+}
+
+// IsTick checks if an item is a tick instance.
+func (i Item[T]) IsTick() bool {
+	return i.tick
+}
+
+// IsTickValue checks if an item is a tick instance.
+func (i Item[T]) IsTickValue() bool {
+	return i.tickV
+}
+
+// IsTickValue checks if an item is a tick instance.
+func (i Item[T]) IsNumeric() bool {
+	return i.numeric
 }
 
 // SendBlocking sends an item and blocks until it is sent.

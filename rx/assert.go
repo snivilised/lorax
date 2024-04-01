@@ -127,6 +127,11 @@ loop:
 				break loop
 			}
 
+			// TODO: needs to accommodate item.N, ie the numeric aux value
+			// and also should be modified to support all the other
+			// new ways of interpreting an item (Ch, Tick, Tv), possibly
+			// with new assertions, ie: HasCh, HasTick, HasTv.
+			//
 			if item.IsError() {
 				errs = append(errs, item.E)
 			} else {
@@ -226,6 +231,14 @@ func HasItem[T any](i T) RxAssert[T] {
 	})
 }
 
+// HasItemsNoOrder checks that an observable produces the corresponding items regardless of the order.
+func HasItemsNoOrder[T any](items ...T) RxAssert[T] {
+	return newAssertion(func(a *rxAssert[T]) {
+		a.checkHasItemsNoOrder = true
+		a.itemsNoOrder = items
+	})
+}
+
 // IsNotEmpty checks that the observable produces some items.
 func IsNotEmpty[T any]() RxAssert[T] {
 	return newAssertion(func(a *rxAssert[T]) {
@@ -257,5 +270,17 @@ func HasAnError[T any]() RxAssert[T] {
 func HasNoError[T any]() RxAssert[T] {
 	return newAssertion(func(ra *rxAssert[T]) {
 		ra.checkHasNotRaisedError = true
+	})
+}
+
+// CustomPredicate checks a custom predicate.
+func CustomPredicate[T any](predicate AssertPredicate[T]) RxAssert[T] {
+	return newAssertion(func(a *rxAssert[T]) {
+		if !a.checkHasCustomPredicate {
+			a.checkHasCustomPredicate = true
+			a.customPredicates = make([]AssertPredicate[T], 0)
+		}
+
+		a.customPredicates = append(a.customPredicates, predicate)
 	})
 }
