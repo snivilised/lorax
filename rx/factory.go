@@ -13,9 +13,61 @@ import (
 // Amb takes several Observables, emit all of the items from only the first of these Observables
 // to emit an item or notification.
 func Amb[T any](observables []Observable[T], opts ...Option[T]) Observable[T] {
-	_, _ = observables, opts
+	option := parseOptions(opts...)
+	ctx := option.buildContext(emptyContext)
+	next := option.buildChannel()
+	once := sync.Once{}
 
-	panic("Amb: NOT-IMPL")
+	f := func(o Observable[T]) {
+		it := o.Observe(opts...)
+
+		select {
+		case <-ctx.Done():
+			return
+		case item, ok := <-it:
+			if !ok {
+				return
+			}
+
+			once.Do(func() {
+				defer close(next)
+
+				if item.IsError() {
+					next <- item
+
+					return
+				}
+
+				next <- item
+
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case item, ok := <-it:
+						if !ok {
+							return
+						}
+
+						if item.IsError() {
+							next <- item
+
+							return
+						}
+						next <- item
+					}
+				}
+			})
+		}
+	}
+
+	for _, o := range observables {
+		go f(o)
+	}
+
+	return &ObservableImpl[T]{
+		iterable: newChannelIterable(next),
+	}
 }
 
 // CombineLatest combines the latest item emitted by each Observable via a specified function
