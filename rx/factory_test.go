@@ -36,7 +36,39 @@ func collect[T any](ctx context.Context, ch <-chan rx.Item[T]) ([]any, error) {
 }
 
 var _ = Describe("Factory", func() {
-	// TODO: Amb1, Amb2
+	Context("Amb", func() {
+		When("Amb1??", func() {
+			It("🧪 should: emit from first responding observer only", func() {
+				defer leaktest.Check(GinkgoT())()
+
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				obs := rx.Amb([]rx.Observable[int]{
+					testObservable[int](ctx, 1, 2, 3),
+					rx.Empty[int](),
+				})
+				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}))
+			})
+		})
+
+		When("Amb2??", func() {
+			It("🧪 should: emit from first responding observer only", func() {
+				defer leaktest.Check(GinkgoT())()
+
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				obs := rx.Amb([]rx.Observable[int]{
+					rx.Empty[int](),
+					testObservable[int](ctx, 1, 2, 3),
+					rx.Empty[int](),
+					rx.Empty[int](),
+				})
+				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}))
+			})
+		})
+	})
 
 	Context("CombineLatest", func() {
 		When("Multiple observables", func() {
