@@ -18,23 +18,37 @@ type RxAssert[T any] interface { //nolint:revive // foo
 	itemsNoOrderedToBeChecked() (bool, []T)
 	noItemsToBeChecked() bool
 	someItemsToBeChecked() bool
+	numbersToBeChecked() (bool, []int)
+	numbersNoOrderedToBeChecked() (bool, []int)
+	noNumbersToBeChecked() bool
+	someNumbersToBeChecked() bool
 	raisedErrorToBeChecked() (bool, error)
 	raisedErrorsToBeChecked() (bool, []error)
 	raisedAnErrorToBeChecked() (bool, error)
 	notRaisedErrorToBeChecked() bool
 	itemToBeChecked() (bool, T)
 	noItemToBeChecked() (bool, T)
+	numberToBeChecked() (b bool, i int)
+	noNumberToBeChecked() (b bool, i int)
 	customPredicatesToBeChecked() (bool, []AssertPredicate[T])
 }
 
 type rxAssert[T any] struct {
-	f                       func(*rxAssert[T])
-	checkHasItems           bool
-	checkHasNoItems         bool
-	checkHasSomeItems       bool
-	items                   []T
-	checkHasItemsNoOrder    bool
-	itemsNoOrder            []T
+	f                    func(*rxAssert[T])
+	checkHasItems        bool
+	checkHasNoItems      bool
+	checkHasSomeItems    bool
+	items                []T
+	checkHasItemsNoOrder bool
+	itemsNoOrder         []T
+
+	checkHasNumbers        bool
+	checkHasNoNumbers      bool
+	checkHasSomeNumbers    bool
+	numbers                []int
+	checkHasNumbersNoOrder bool
+	numbersNoOrder         []int
+
 	checkHasRaisedError     bool
 	err                     error
 	checkHasRaisedErrors    bool
@@ -42,8 +56,11 @@ type rxAssert[T any] struct {
 	checkHasRaisedAnError   bool
 	checkHasNotRaisedError  bool
 	checkHasItem            bool
+	checkHasNumber          bool
 	item                    T
+	number                  int
 	checkHasNoItem          bool
+	checkHasNoNumber        bool
 	checkHasCustomPredicate bool
 	customPredicates        []AssertPredicate[T]
 }
@@ -67,6 +84,23 @@ func (ass *rxAssert[T]) noItemsToBeChecked() bool {
 func (ass *rxAssert[T]) someItemsToBeChecked() bool {
 	return ass.checkHasSomeItems
 }
+
+func (ass *rxAssert[T]) numbersToBeChecked() (b bool, i []int) {
+	return ass.checkHasNumbers, ass.numbers
+}
+
+func (ass *rxAssert[T]) numbersNoOrderedToBeChecked() (b bool, i []int) {
+	return ass.checkHasNumbersNoOrder, ass.numbersNoOrder
+}
+
+func (ass *rxAssert[T]) noNumbersToBeChecked() bool {
+	return ass.checkHasNoNumbers
+}
+
+func (ass *rxAssert[T]) someNumbersToBeChecked() bool {
+	return ass.checkHasSomeNumbers
+}
+
 func (ass *rxAssert[T]) raisedErrorToBeChecked() (bool, error) {
 	return ass.checkHasRaisedError, ass.err
 }
@@ -91,6 +125,14 @@ func (ass *rxAssert[T]) noItemToBeChecked() (b bool, i T) {
 	return ass.checkHasNoItem, ass.item
 }
 
+func (ass *rxAssert[T]) numberToBeChecked() (b bool, i int) {
+	return ass.checkHasNumber, ass.number
+}
+
+func (ass *rxAssert[T]) noNumberToBeChecked() (b bool, i int) {
+	return ass.checkHasNoNumber, ass.number
+}
+
 func (ass *rxAssert[T]) customPredicatesToBeChecked() (bool, []AssertPredicate[T]) {
 	return ass.checkHasCustomPredicate, ass.customPredicates
 }
@@ -111,9 +153,12 @@ func parseAssertions[T any](assertions ...RxAssert[T]) RxAssert[T] {
 	return ass
 }
 
-func Assert[T any](ctx context.Context, iterable Iterable[T], assertions ...RxAssert[T]) {
+func Assert[T any](ctx context.Context, iterable Iterable[T], assertions ...RxAssert[T]) { //nolint:gocyclo // to be fixed
+	// TODO(fix): cyclo complexity of this function is too high, needs a refactoring
+	//
 	ass := parseAssertions(assertions...)
 	got := make([]T, 0)
+	gotN := make([]int, 0)
 	errs := make([]error, 0)
 	observe := iterable.Observe()
 
@@ -127,18 +172,25 @@ loop:
 				break loop
 			}
 
-			// TODO: needs to accommodate item.N, ie the numeric aux value
-			// and also should be modified to support all the other
-			// new ways of interpreting an item (Ch, Tick, Tv), possibly
-			// with new assertions, ie: HasCh, HasTick, HasTv.
-			//
-			if item.IsError() {
+			switch {
+			case item.IsError():
 				errs = append(errs, item.E)
-			} else {
+
+			case item.IsNumeric():
+				gotN = append(gotN, item.N)
+
+			default:
 				got = append(got, item.V)
 			}
 		}
 	}
+
+	// TODO: I wonder if we can re-design this somewhat. The problem with this current
+	// implementation, is that it speculatively checks the conditions on the Assert
+	// object to determine wether or not to invoke the check. If we delegated the
+	// checking to the assertions and then iterate the assertions, that would
+	// surely be a better option. For now, there is quite a bit of cloned code
+	// just waiting to be cleaned up.
 
 	if checked, predicates := ass.customPredicatesToBeChecked(); checked {
 		for _, predicate := range predicates {
@@ -151,6 +203,10 @@ loop:
 
 	if checkHasItems, expectedItems := ass.itemsToBeChecked(); checkHasItems {
 		Expect(got).To(ContainElements(expectedItems))
+	}
+
+	if checkHasNumbers, expectedItems := ass.numbersToBeChecked(); checkHasNumbers {
+		Expect(gotN).To(ContainElements(expectedItems))
 	}
 
 	if checkHasItemsNoOrder, itemsNoOrder := ass.itemsNoOrderedToBeChecked(); checkHasItemsNoOrder {
@@ -168,6 +224,21 @@ loop:
 		}
 	}
 
+	if checkHasNumbersNoOrder, numbersNoOrder := ass.numbersNoOrderedToBeChecked(); checkHasNumbersNoOrder {
+		m := make(map[int]int)
+		for _, v := range numbersNoOrder { // what is this loop doing?
+			m[v] = 0 // ?? nil
+		}
+
+		for _, v := range gotN {
+			delete(m, v)
+		}
+
+		if len(m) != 0 {
+			Fail(fmt.Sprintf("missing elements: '%v'", gotN))
+		}
+	}
+
 	if checkHasItem, value := ass.itemToBeChecked(); checkHasItem {
 		length := len(got)
 		if length != 1 {
@@ -179,12 +250,31 @@ loop:
 		}
 	}
 
+	if checkHasNumber, value := ass.numberToBeChecked(); checkHasNumber {
+		length := len(gotN)
+		if length != 1 {
+			Fail(fmt.Sprintf("wrong number of items, expected 1, got %d", length))
+		}
+
+		if length > 0 {
+			Expect(gotN[0]).To(Equal(value))
+		}
+	}
+
 	if ass.noItemsToBeChecked() {
 		Expect(got).To(BeEmpty())
 	}
 
+	if ass.noNumbersToBeChecked() {
+		Expect(gotN).To(BeEmpty())
+	}
+
 	if ass.someItemsToBeChecked() {
 		Expect(got).NotTo(BeEmpty())
+	}
+
+	if ass.someNumbersToBeChecked() {
+		Expect(gotN).NotTo(BeEmpty())
 	}
 
 	if checkHasRaisedError, expectedError := ass.raisedErrorToBeChecked(); checkHasRaisedError {
@@ -231,11 +321,34 @@ func HasItem[T any](i T) RxAssert[T] {
 	})
 }
 
+func HasNumbers[T any](expectedNumbers []int) RxAssert[T] {
+	return newAssertion(func(ra *rxAssert[T]) {
+		ra.checkHasNumbers = true
+		ra.numbers = expectedNumbers
+	})
+}
+
+// HasItem checks if a single or optional single has a specific item.
+func HasNumber[T any](i int) RxAssert[T] {
+	return newAssertion(func(a *rxAssert[T]) {
+		a.checkHasNumber = true
+		a.number = i
+	})
+}
+
 // HasItemsNoOrder checks that an observable produces the corresponding items regardless of the order.
-func HasItemsNoOrder[T any](items ...T) RxAssert[T] {
+func HasItemsNoOrder[T any](numbers ...T) RxAssert[T] {
 	return newAssertion(func(a *rxAssert[T]) {
 		a.checkHasItemsNoOrder = true
-		a.itemsNoOrder = items
+		a.itemsNoOrder = numbers
+	})
+}
+
+// HasNumbersNoOrder checks that an observable produces the corresponding items regardless of the order.
+func HasNumbersNoOrder[T any](numbers ...int) RxAssert[T] {
+	return newAssertion(func(a *rxAssert[T]) {
+		a.checkHasNumbersNoOrder = true
+		a.numbersNoOrder = numbers
 	})
 }
 
@@ -246,7 +359,7 @@ func IsNotEmpty[T any]() RxAssert[T] {
 	})
 }
 
-// IsEmpty checks that the observable has not produce any item.
+// IsEmpty checks that the observable has not produced any items.
 func IsEmpty[T any]() RxAssert[T] {
 	return newAssertion(func(a *rxAssert[T]) {
 		a.checkHasNoItems = true

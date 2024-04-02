@@ -82,7 +82,7 @@ var _ = Describe("OptionSingle", func() {
 	})
 
 	Context("Map", Ordered, func() {
-		var increment rx.Func[int]
+		var increment rx.FuncIntM[int]
 
 		BeforeAll(func() {
 			increment = func(_ context.Context, i int) (int, error) {
@@ -91,19 +91,35 @@ var _ = Describe("OptionSingle", func() {
 		})
 
 		When("Just", func() {
-			It("🧪 should: Map the single entity iterator", func() {
-				defer leaktest.Check(GinkgoT())()
+			Context("foo ???", func() {
+				XIt("🧪 should: Map the single entity iterator", func() {
+					defer leaktest.Check(GinkgoT())()
 
-				single := rx.Just(42)().Max(rx.LimitComparator).Map(increment)
-				rx.Assert(context.Background(), single, rx.HasItem(43), rx.HasNoError[int]())
+					// This can't work because Max has been modified to work only
+					// with numbers (JustN, FuncN, ...)
+					//
+					single := rx.Just(42)().Max(rx.LimitComparator).Map(increment)
+					rx.Assert(context.Background(), single, rx.HasItem(43), rx.HasNoError[int]())
+				})
+			})
+		})
+
+		When("JustN", func() {
+			Context("foo ???", func() {
+				It("🧪 should: Map the single entity iterator", func() {
+					defer leaktest.Check(GinkgoT())()
+
+					single := rx.JustN[int](42)().Max(rx.LimitComparator).Map(increment)
+					rx.Assert(context.Background(), single, rx.HasNumber[int](43), rx.HasNoError[int]())
+				})
 			})
 
 			Context("Max", decorators.Label("comprehension"), func() {
 				It("🧪 should: turn the sequence into a Single iterable", func() {
 					defer leaktest.Check(GinkgoT())()
 
-					single := rx.Just(42, 48)().Max(rx.LimitComparator)
-					rx.Assert(context.Background(), single, rx.HasItem(48), rx.HasNoError[int]())
+					single := rx.JustN[int](42, 48)().Max(rx.LimitComparator)
+					rx.Assert(context.Background(), single, rx.HasNumber[int](48), rx.HasNoError[int]())
 				})
 			})
 
@@ -111,8 +127,8 @@ var _ = Describe("OptionSingle", func() {
 				It("🧪 should: turn the sequence into a Single iterable", func() {
 					defer leaktest.Check(GinkgoT())()
 
-					single := rx.Just(42, 48)().Min(rx.LimitComparator)
-					rx.Assert(context.Background(), single, rx.HasItem(42), rx.HasNoError[int]())
+					single := rx.JustN[int](42, 48)().Min(rx.LimitComparator)
+					rx.Assert(context.Background(), single, rx.HasNumber[int](42), rx.HasNoError[int]())
 				})
 			})
 		})

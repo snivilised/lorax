@@ -19,9 +19,14 @@ type SingleImpl[T any] struct {
 
 // Filter emits only those items from an Observable that pass a predicate test.
 func (s *SingleImpl[T]) Filter(apply Predicate[T], opts ...Option[T]) OptionalSingle[T] {
+	const (
+		forceSeq     = true
+		bypassGather = true
+	)
+
 	return optionalSingle(s.parent, s, func() operator[T] {
 		return &filterOperatorSingle[T]{apply: apply}
-	}, true, true, opts...)
+	}, forceSeq, bypassGather, opts...)
 }
 
 // Get returns the item. The error returned is if the context has been cancelled.
@@ -44,9 +49,14 @@ func (s *SingleImpl[T]) Get(opts ...Option[T]) (Item[T], error) {
 
 // Map transforms the items emitted by a Single by applying a function to each item.
 func (s *SingleImpl[T]) Map(apply Func[T], opts ...Option[T]) Single[T] {
+	const (
+		forceSeq     = false
+		bypassGather = true
+	)
+
 	return single(s.parent, s, func() operator[T] {
 		return &mapOperatorSingle[T]{apply: apply}
-	}, false, true, opts...)
+	}, forceSeq, bypassGather, opts...)
 }
 
 type mapOperatorSingle[T any] struct {

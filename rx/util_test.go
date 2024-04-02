@@ -35,12 +35,17 @@ func channelValue[T any](ctx context.Context, items ...any) chan rx.Item[T] {
 	return next
 }
 
-func convertAllItemsToAny[T any](items []T) []any {
-	return lo.Map(items, func(it T, _ int) any {
-		return it
+func convertAllItemsToAny[T any](values []T) []any {
+	return lo.Map(values, func(value T, _ int) any {
+		return value
 	})
 }
 
 func testObservable[T any](ctx context.Context, items ...any) rx.Observable[T] {
 	return rx.FromChannel(channelValue[T](ctx, convertAllItemsToAny(items)...))
+}
+
+type widget struct {
+	name   string
+	amount int
 }

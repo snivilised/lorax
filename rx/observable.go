@@ -24,8 +24,10 @@ func LimitComparator[T constraints.Ordered](a, b T) int {
 type Observable[T any] interface {
 	Iterable[T]
 
+	Connect(ctx context.Context) (context.Context, Disposable)
+
 	Max(comparator Comparator[T], opts ...Option[T]) OptionalSingle[T]
-	Map(apply Func[T], opts ...Option[T]) Observable[T]
+	Map(apply FuncIntM[T], opts ...Option[T]) Observable[T]
 	Min(comparator Comparator[T], opts ...Option[T]) OptionalSingle[T]
 
 	Run(opts ...Option[T]) Disposed
