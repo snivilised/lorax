@@ -108,7 +108,7 @@ func CombineLatest[T any](f FuncN[T], observables []Observable[T], opts ...Optio
 						return
 					}
 
-					if isZero(s[i]) { // s[i] == nil
+					if isZero(s[i]) { // TODO(check): s[i] == nil
 						atomic.AddUint32(&counter, 1)
 					}
 
@@ -167,6 +167,7 @@ func Concat[T any](observables []Observable[T], opts ...Option[T]) Observable[T]
 					}
 					if item.IsError() {
 						next <- item
+
 						return
 					}
 					next <- item
@@ -262,9 +263,18 @@ func Interval[T any](interval Duration, opts ...Option[T]) Observable[T] {
 func Just[T any](values ...T) func(opts ...Option[T]) Observable[T] {
 	return func(opts ...Option[T]) Observable[T] {
 		return &ObservableImpl[T]{
-			iterable: newJustIterable[T](lo.Map(values, func(it T, _ int) any {
-				return it
+			iterable: newJustIterable[T](lo.Map(values, func(value T, _ int) any {
+				return value
 			})...)(opts...),
+		}
+	}
+}
+
+// JustN creates an Observable with the provided numbers.
+func JustN[T any](numbers ...int) func(opts ...Option[T]) Observable[T] {
+	return func(opts ...Option[T]) Observable[T] {
+		return &ObservableImpl[T]{
+			iterable: newJustNIterable[T](numbers...)(opts...),
 		}
 	}
 }

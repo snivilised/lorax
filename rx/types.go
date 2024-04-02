@@ -21,6 +21,26 @@ type (
 	Func[T any] func(context.Context, T) (T, error)
 	// Func2 defines a function that computes a value from two input values.
 	Func2[T any] func(context.Context, T, T) (T, error)
+	// FuncIntM defines a function that's specialised for Map
+	// To solve the problem of being able to map values across different
+	// types, the FuncIntM type will be modified to take an extra type
+	// parameter 'O' which represents the 'Other' type, ie we map from
+	// a value of type 'T' to a value of type 'O' (FuncIntM[T, O any]). With
+	// this in place, we should be able to define a pipeline that starts
+	// off with values of type T, and end up with values of type O via a
+	// Map operator. We'll have to make sure that any intermediate
+	// channels can be appropriately defined. If we want to map between
+	// values within the same type, we need to use a separate definition,
+	// and in fact the original definition Func, should suffice.
+	//
+	// The problem with Map is that it introduces a new Type. Perhaps we need
+	// a separate observer interface that can bridge from T to O. We can't
+	// introduce the type O, because that would have a horrendous cascading
+	// impact on every type, when most operations would not need this type O.
+	// With generics, Map is a very awkward operator that needs special attention.
+	// In the short term, what we can say is that the base functionality only
+	// allows mapping to different values within the same type.
+	FuncIntM[T any] func(context.Context, int) (int, error)
 	// FuncN defines a function that computes a value from N input values.
 	FuncN[T any] func(...T) T
 	// ErrorFunc defines a function that computes a value from an error.
