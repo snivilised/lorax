@@ -50,7 +50,7 @@ func Ch[T any](ch any) Item[T] {
 		return Item[T]{C: c}
 	}
 
-	panic("invalid ch type")
+	panic("temp: invalid ch type")
 }
 
 // Tick creates a type safe tick instance

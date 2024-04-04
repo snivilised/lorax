@@ -80,11 +80,10 @@ func testConnectableSingle[T any](obs Observable[T]) {
 	defer cancel()
 
 	eg, _ := errgroup.WithContext(ctx)
-
 	expected := []interface{}{1, 2, 3}
-
 	nbConsumers := 3
 	wg := sync.WaitGroup{}
+
 	wg.Add(nbConsumers)
 	// Before Connect() is called we create multiple observers
 	// We check all observers receive the same items
@@ -114,9 +113,9 @@ func testConnectableSingle[T any](obs Observable[T]) {
 	Expect(eg.Wait()).Error().To(BeNil())
 }
 
-func testConnectableComposed[T any](obs Observable[T]) {
-	obs = obs.Map(func(_ context.Context, v int) (int, error) {
-		return v + 1, nil
+func testConnectableComposed[T any](obs Observable[T], increment Func[T]) {
+	obs = obs.Map(func(ctx context.Context, v T) (T, error) {
+		return increment(ctx, v) // expect client to implement with with v+1
 	}, WithPublishStrategy[T]())
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

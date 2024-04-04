@@ -270,15 +270,6 @@ func Just[T any](values ...T) func(opts ...Option[T]) Observable[T] {
 	}
 }
 
-// JustN creates an Observable with the provided numbers.
-func JustN[T any](numbers ...int) func(opts ...Option[T]) Observable[T] {
-	return func(opts ...Option[T]) Observable[T] {
-		return &ObservableImpl[T]{
-			iterable: newJustNIterable[T](numbers...)(opts...),
-		}
-	}
-}
-
 // JustSingle is like JustItem in that it is defined for a single item iterable
 // but behaves like Just in that it returns a func.
 // This is probably not required, just defined for experimental purposes for now.

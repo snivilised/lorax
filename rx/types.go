@@ -13,6 +13,12 @@ type (
 	// - A negative value if the first argument is less than the second
 	// - A positive value if the first argument is greater than the second
 	Comparator[T any] func(T, T) int
+
+	// InitLimit defines a function to be used with Min and Max operators that defines
+	// a limit initialiser, that is to say, for Max we need to initialise the internal
+	// maximum reference point to be minimum value for type T and the reverse for the
+	// Min operator.
+	InitLimit[T any] func() T
 	// ItemToObservable defines a function that computes an observable from an item.
 	ItemToObservable[T any] func(Item[T]) Observable[T]
 	// ErrorToObservable defines a function that transforms an observable from an error.
@@ -25,7 +31,7 @@ type (
 	// To solve the problem of being able to map values across different
 	// types, the FuncIntM type will be modified to take an extra type
 	// parameter 'O' which represents the 'Other' type, ie we map from
-	// a value of type 'T' to a value of type 'O' (FuncIntM[T, O any]). With
+	// a value of type 'T' to a value of type 'O' (Func[T, O any]). With
 	// this in place, we should be able to define a pipeline that starts
 	// off with values of type T, and end up with values of type O via a
 	// Map operator. We'll have to make sure that any intermediate
@@ -40,7 +46,7 @@ type (
 	// With generics, Map is a very awkward operator that needs special attention.
 	// In the short term, what we can say is that the base functionality only
 	// allows mapping to different values within the same type.
-	FuncIntM[T any] func(context.Context, int) (int, error)
+	// FuncIntM[T any] func(context.Context, int) (int, error)
 	// FuncN defines a function that computes a value from N input values.
 	FuncN[T any] func(...T) T
 	// ErrorFunc defines a function that computes a value from an error.

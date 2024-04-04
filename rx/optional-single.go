@@ -2,14 +2,13 @@ package rx
 
 import (
 	"context"
-	"fmt"
 )
 
 // OptionalSingle is an optional single.
 type OptionalSingle[T any] interface {
 	Iterable[T]
 	Get(opts ...Option[T]) (Item[T], error)
-	Map(apply FuncIntM[T], opts ...Option[T]) OptionalSingle[T]
+	Map(apply Func[T], opts ...Option[T]) OptionalSingle[T]
 	Run(opts ...Option[T]) Disposed
 }
 
@@ -39,7 +38,7 @@ func (o *OptionalSingleImpl[T]) Get(opts ...Option[T]) (Item[T], error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return Item[T]{}, ctx.Err()
+			return optionalSingleEmpty, ctx.Err()
 		case v, ok := <-observe:
 			if !ok {
 				return optionalSingleEmpty, nil
@@ -51,7 +50,7 @@ func (o *OptionalSingleImpl[T]) Get(opts ...Option[T]) (Item[T], error) {
 }
 
 // Map transforms the items emitted by an OptionalSingle by applying a function to each item.
-func (o *OptionalSingleImpl[T]) Map(apply FuncIntM[T], opts ...Option[T]) OptionalSingle[T] {
+func (o *OptionalSingleImpl[T]) Map(apply Func[T], opts ...Option[T]) OptionalSingle[T] {
 	const (
 		forceSeq     = false
 		bypassGather = true
@@ -68,17 +67,17 @@ func (o *OptionalSingleImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 }
 
 type mapOperatorOptionalSingle[T any] struct {
-	apply FuncIntM[T]
+	apply Func[T]
 }
 
 func (op *mapOperatorOptionalSingle[T]) next(ctx context.Context,
 	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	if !item.IsNumeric() {
-		panic(fmt.Errorf("not a number (%v)", item))
-	}
-
-	res, err := op.apply(ctx, item.N)
+	// no longer needed: if !item.IsNumeric() {
+	// 	panic(fmt.Errorf("not a number (%v)", item))
+	// }
+	//
+	res, err := op.apply(ctx, item.V)
 	if err != nil {
 		dst <- Error[T](err)
 
@@ -87,7 +86,7 @@ func (op *mapOperatorOptionalSingle[T]) next(ctx context.Context,
 		return
 	}
 
-	dst <- Num[T](res)
+	dst <- Of(res)
 }
 
 func (op *mapOperatorOptionalSingle[T]) err(ctx context.Context,

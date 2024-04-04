@@ -325,16 +325,16 @@ var _ = Describe("Factory", func() {
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Defer([]rx.Producer[int]{func(_ context.Context, next chan<- rx.Item[int]) {
-					next <- rx.Num[int](1)
-					next <- rx.Num[int](2)
-					next <- rx.Num[int](3)
+					next <- rx.Of(1)
+					next <- rx.Of(2)
+					next <- rx.Of(3)
 				}}).Map(func(_ context.Context, i int) (_ int, _ error) {
 					return i + 1, nil
 				}).Map(func(_ context.Context, i int) (_ int, _ error) {
 					return i + 1, nil
 				})
-				rx.Assert(context.Background(), obs, rx.HasNumbers[int]([]int{3, 4, 5}), rx.HasNoError[int]())
-				rx.Assert(context.Background(), obs, rx.HasNumbers[int]([]int{3, 4, 5}), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs, rx.HasItems([]int{3, 4, 5}), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs, rx.HasItems([]int{3, 4, 5}), rx.HasNoError[int]())
 			})
 		})
 
@@ -343,15 +343,15 @@ var _ = Describe("Factory", func() {
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Defer([]rx.Producer[int]{func(_ context.Context, next chan<- rx.Item[int]) {
-					next <- rx.Num[int](1)
-					next <- rx.Num[int](2)
-					next <- rx.Num[int](3)
+					next <- rx.Of(1)
+					next <- rx.Of(2)
+					next <- rx.Of(3)
 				}}).Map(func(_ context.Context, i int) (_ int, _ error) {
 					return i + 1, nil
 				}, rx.WithObservationStrategy[int](rx.Eager)).Map(func(_ context.Context, i int) (_ int, _ error) {
 					return i + 1, nil
 				})
-				rx.Assert(context.Background(), obs, rx.HasNumbers[int]([]int{3, 4, 5}), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs, rx.HasItems([]int{3, 4, 5}), rx.HasNoError[int]())
 				// In the case of an eager observation, we already consumed the items produced by Defer
 				// So if we create another subscription, it will be empty
 				rx.Assert(context.Background(), obs, rx.IsEmpty[int](), rx.HasNoError[int]())

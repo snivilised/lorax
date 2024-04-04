@@ -2,10 +2,15 @@ package rx
 
 import (
 	"context"
-	"fmt"
-	"math"
 	"reflect"
 )
+
+func isZero[T any](limit T) bool {
+	val := reflect.ValueOf(limit).Interface()
+	zero := reflect.Zero(reflect.TypeOf(limit)).Interface()
+
+	return val != zero
+}
 
 func (o *ObservableImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	return o.iterable.Observe(opts...)
@@ -46,7 +51,7 @@ func (o *ObservableImpl[T]) Run(opts ...Option[T]) Disposed {
 }
 
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
-func (o *ObservableImpl[T]) Max(comparator Comparator[T],
+func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
 	opts ...Option[T],
 ) OptionalSingle[T] {
 	const (
@@ -57,24 +62,16 @@ func (o *ObservableImpl[T]) Max(comparator Comparator[T],
 	return optionalSingle(o.parent, o, func() operator[T] {
 		return &maxOperator[T]{
 			comparator: comparator,
+			max:        initLimit(),
 			empty:      true,
-			maxN:       math.MinInt,
 		}
 	}, forceSeq, bypassGather, opts...)
-}
-
-func isZero[T any](limit T) bool {
-	val := reflect.ValueOf(limit).Interface()
-	zero := reflect.Zero(reflect.TypeOf(limit)).Interface()
-
-	return val != zero
 }
 
 type maxOperator[T any] struct {
 	comparator Comparator[T]
 	empty      bool
 	max        T
-	maxN       int
 }
 
 func (op *maxOperator[T]) next(_ context.Context,
@@ -82,23 +79,7 @@ func (op *maxOperator[T]) next(_ context.Context,
 ) {
 	op.empty = false
 
-	// TODO(check): if op.max == nil {
-	// 	op.max = item.V
-	// } else {
-	// 	if op.comparator(op.max, item.V) < 0 {
-	// 		op.max = item.V
-	// 	}
-	// }
-
-	if item.IsNumeric() {
-		if item.N > op.maxN {
-			op.maxN = item.N
-		}
-
-		return
-	}
-
-	if isZero(op.max) || (op.comparator(op.max, item.V) < 0) {
+	if op.comparator(op.max, item.V) < 0 {
 		op.max = item.V
 	}
 }
@@ -135,7 +116,7 @@ func (op *maxOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 		// there should be a way for the client to implement these types of checks
 		// themselves, probably by passing in a new function like comparator.
 		//
-		Num[T](op.maxN).SendContext(ctx, dst)
+		Of(op.max).SendContext(ctx, dst)
 	}
 }
 
@@ -143,12 +124,14 @@ func (op *maxOperator[T]) gatherNext(ctx context.Context,
 	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	// TODO(check): op.next(ctx, Of(item.V.(*maxOperator).max), dst, operatorOptions)÷
-	op.next(ctx, Num[T](item.N), dst, operatorOptions)
+	op.next(ctx, Of(item.V), dst, operatorOptions)
 }
 
 // Min determines and emits the minimum-valued item emitted by an Observable
 // according to a comparator.
-func (o *ObservableImpl[T]) Min(comparator Comparator[T], opts ...Option[T]) OptionalSingle[T] {
+func (o *ObservableImpl[T]) Min(comparator Comparator[T], initLimit InitLimit[T],
+	opts ...Option[T],
+) OptionalSingle[T] {
 	const (
 		forceSeq     = false
 		bypassGather = false
@@ -156,15 +139,15 @@ func (o *ObservableImpl[T]) Min(comparator Comparator[T], opts ...Option[T]) Opt
 
 	return optionalSingle(o.parent, o, func() operator[T] {
 		return &minOperator[T]{
+			min:        initLimit(),
 			comparator: comparator,
 			empty:      true,
-			minN:       math.MaxInt,
 		}
 	}, forceSeq, bypassGather, opts...)
 }
 
 // Map transforms the items emitted by an Observable by applying a function to each item.
-func (o *ObservableImpl[T]) Map(apply FuncIntM[T], opts ...Option[T]) Observable[T] {
+func (o *ObservableImpl[T]) Map(apply Func[T], opts ...Option[T]) Observable[T] {
 	const (
 		forceSeq     = false
 		bypassGather = true
@@ -178,17 +161,17 @@ func (o *ObservableImpl[T]) Map(apply FuncIntM[T], opts ...Option[T]) Observable
 }
 
 type mapOperator[T any] struct {
-	apply FuncIntM[T]
+	apply Func[T]
 }
 
 func (op *mapOperator[T]) next(ctx context.Context,
 	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	if !item.IsNumeric() {
-		panic(fmt.Errorf("not a number (%v)", item))
-	}
-
-	res, err := op.apply(ctx, item.N)
+	// no longer needed: if !item.IsNumeric() {
+	// 	panic(fmt.Errorf("not a number (%v)", item))
+	// }
+	//
+	res, err := op.apply(ctx, item.V)
 
 	if err != nil {
 		Error[T](err).SendContext(ctx, dst)
@@ -197,7 +180,7 @@ func (op *mapOperator[T]) next(ctx context.Context,
 		return
 	}
 
-	Num[T](res).SendContext(ctx, dst)
+	Of(res).SendContext(ctx, dst)
 }
 
 func (op *mapOperator[T]) err(ctx context.Context,
@@ -224,7 +207,6 @@ type minOperator[T any] struct {
 	comparator Comparator[T]
 	empty      bool
 	min        T
-	minN       int
 	limit      func(value T) bool // represents min or max
 }
 
@@ -233,23 +215,7 @@ func (op *minOperator[T]) next(_ context.Context,
 ) {
 	op.empty = false
 
-	// TODO(check): if op.min == nil {
-	// 	op.min = item.V
-	// } else {
-	// 	if op.comparator(op.min, item.V) > 0 {
-	// 		op.min = item.V
-	// 	}
-	// }
-
-	if item.IsNumeric() {
-		if item.N < op.minN {
-			op.minN = item.N
-		}
-
-		return
-	}
-
-	if !isZero(op.min) || (op.comparator(op.min, item.V) > 0) {
+	if op.comparator(op.min, item.V) > 0 {
 		op.min = item.V
 	}
 }
@@ -262,7 +228,7 @@ func (op *minOperator[T]) err(ctx context.Context,
 
 func (op *minOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 	if !op.empty {
-		Num[T](op.minN).SendContext(ctx, dst)
+		Of(op.min).SendContext(ctx, dst)
 	}
 }
 
@@ -270,5 +236,5 @@ func (op *minOperator[T]) gatherNext(ctx context.Context,
 	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	// TODO(check): op.next(ctx, Of(item.V.(*minOperator).min), dst, operatorOptions)
-	op.next(ctx, Num[T](item.N), dst, operatorOptions)
+	op.next(ctx, Of(item.V), dst, operatorOptions)
 }

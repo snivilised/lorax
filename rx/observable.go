@@ -6,29 +6,16 @@ import (
 	"sync/atomic"
 
 	"github.com/emirpasic/gods/trees/binaryheap"
-	"golang.org/x/exp/constraints"
 )
-
-func LimitComparator[T constraints.Ordered](a, b T) int {
-	if a == b {
-		return 0
-	}
-
-	if a < b {
-		return -1
-	}
-
-	return 1
-}
 
 type Observable[T any] interface {
 	Iterable[T]
 
 	Connect(ctx context.Context) (context.Context, Disposable)
 
-	Max(comparator Comparator[T], opts ...Option[T]) OptionalSingle[T]
-	Map(apply FuncIntM[T], opts ...Option[T]) Observable[T]
-	Min(comparator Comparator[T], opts ...Option[T]) OptionalSingle[T]
+	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
+	Map(apply Func[T], opts ...Option[T]) Observable[T]
+	Min(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
 
 	Run(opts ...Option[T]) Disposed
 }
