@@ -11,7 +11,7 @@ import (
 )
 
 // Amb takes several Observables, emit all of the items from only the first of these Observables
-// to emit an item or notification.
+// to emit an item or notification. (What the hell is an Amb, WTF)
 func Amb[T any](observables []Observable[T], opts ...Option[T]) Observable[T] {
 	option := parseOptions(opts...)
 	ctx := option.buildContext(emptyContext)
@@ -242,7 +242,7 @@ func Interval[T any](interval Duration, opts ...Option[T]) Observable[T] {
 		for {
 			select {
 			case <-time.After(interval.duration()):
-				if !Tv[T](i).SendContext(ctx, next) {
+				if !TV[T](i).SendContext(ctx, next) {
 					return
 				}
 
