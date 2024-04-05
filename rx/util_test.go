@@ -42,6 +42,10 @@ func convertAllItemsToAny[T any](values []T) []any {
 }
 
 func testObservable[T any](ctx context.Context, items ...any) rx.Observable[T] {
+	// items is a collection of any because we need the ability to send a stream
+	// of events that may include errors; 1, 2, err, 4, ..., without enforcing
+	// that the client should manufacture Item[T]s; Of(1), Of(2), Error(err), Of(4).
+	//
 	return rx.FromChannel(channelValue[T](ctx, convertAllItemsToAny(items)...))
 }
 

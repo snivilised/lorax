@@ -4,21 +4,20 @@ import (
 	"context"
 	"reflect"
 	"time"
+
+	"github.com/snivilised/lorax/enums"
 )
 
 type (
 	// Item is a wrapper having either a value, error or channel.
 	//
 	Item[T any] struct {
-		V T
-		E error
+		Disc enums.ItemDiscriminator
+		V    T
+		E    error
 		//
-		C       chan<- Item[T]
-		tick    bool
-		tickV   bool
-		numeric bool
-		TV      int
-		N       int
+		C chan<- Item[T]
+		N int
 	}
 
 	// TimestampItem attach a timestamp to an item.
@@ -41,45 +40,57 @@ const (
 
 // Of creates an item from a value.
 func Of[T any](v T) Item[T] {
-	return Item[T]{V: v}
+	return Item[T]{
+		V:    v,
+		Disc: enums.ItemDiscNative,
+	}
 }
 
 // Ch creates an item from a channel
 func Ch[T any](ch any) Item[T] {
 	if c, ok := ch.(chan<- Item[T]); ok {
-		return Item[T]{C: c}
+		return Item[T]{
+			C:    c,
+			Disc: enums.ItemDiscChan,
+		}
 	}
 
 	panic("temp: invalid ch type")
 }
 
-// Tick creates a type safe tick instance
-func Tick[T any]() Item[T] {
-	return Item[T]{tick: true}
+// Error creates an item from an error.
+func Error[T any](err error) Item[T] {
+	return Item[T]{
+		E:    err,
+		Disc: enums.ItemDiscError,
+	}
 }
 
-// Tv creates a type safe tick value instance
-func Tv[T any](tv int) Item[T] {
+// Pulse creates a type safe tick instance that doesn't contain a value
+// thats acts like a heartbeat.
+func Pulse[T any]() Item[T] {
 	return Item[T]{
-		TV:    tv,
-		tickV: true,
+		Disc: enums.ItemDiscPulse,
+	}
+}
+
+// TV creates a type safe tick value instance
+func TV[T any](tv int) Item[T] {
+	return Item[T]{
+		N:    tv,
+		Disc: enums.ItemDiscTickValue,
 	}
 }
 
 // Num creates a type safe tick value instance
 func Num[T any](n int) Item[T] {
 	return Item[T]{
-		N:       n,
-		numeric: true,
+		N:    n,
+		Disc: enums.ItemDiscNumeric,
 	}
 }
 
-// Error creates an item from an error.
-func Error[T any](err error) Item[T] {
-	return Item[T]{E: err}
-}
-
-// SendItems is an utility function that send a list of items and indicate a
+// SendItems is a utility function that sends a list of items and indicates a
 // strategy on whether to close the channel once the function completes.
 func SendItems[T any](ctx context.Context,
 	ch chan<- Item[T], strategy CloseChannelStrategy, items ...any,
@@ -92,52 +103,59 @@ func SendItems[T any](ctx context.Context,
 }
 
 func send[T any](ctx context.Context, ch chan<- Item[T], items ...any) {
+	// can we revert items to be Item[T]?
 	for _, current := range items {
 		switch item := current.(type) {
 		default:
 			rt := reflect.TypeOf(item)
+			sendItemByType(ctx, ch, rt, item)
 
-			switch rt.Kind() { //nolint:exhaustive // foo
-			default:
-				switch v := item.(type) {
-				case error:
-					Error[T](v).SendContext(ctx, ch)
+		case error:
+			Error[T](item).SendContext(ctx, ch)
+		}
+	}
+}
 
-				case Item[T]:
-					v.SendContext(ctx, ch)
+func sendItemByType[T any](ctx context.Context, ch chan<- Item[T], rt reflect.Type, item any) {
+	switch rt.Kind() { //nolint:exhaustive // foo
+	default:
+		switch v := item.(type) {
+		case error:
+			Error[T](v).SendContext(ctx, ch)
 
-				case T:
-					Of(v).SendContext(ctx, ch)
-				}
+		case Item[T]:
+			v.SendContext(ctx, ch)
 
-			case reflect.Chan:
-				inCh := reflect.ValueOf(current)
+		case T:
+			Of(v).SendContext(ctx, ch)
+		}
 
-				for {
-					v, ok := inCh.Recv()
+	case reflect.Chan:
+		inCh := reflect.ValueOf(item) // current
+		sendViaRefCh(ctx, inCh, ch)
 
-					if !ok {
-						return
-					}
+	case reflect.Slice:
+		s := reflect.ValueOf(item) // current
 
-					vItem := v.Interface()
+		for i := 0; i < s.Len(); i++ {
+			send(ctx, ch, s.Index(i).Interface())
+		}
+	}
+}
 
-					switch item := vItem.(type) {
-					default:
-						Ch[T](item).SendContext(ctx, ch)
+func sendViaRefCh[T any](ctx context.Context, inCh reflect.Value, ch chan<- Item[T]) {
+	for {
+		v, ok := inCh.Recv()
 
-					case error:
-						Error[T](item).SendContext(ctx, ch)
-					}
-				}
+		if !ok {
+			return
+		}
 
-			case reflect.Slice:
-				s := reflect.ValueOf(current)
+		vItem := v.Interface()
 
-				for i := 0; i < s.Len(); i++ {
-					send(ctx, ch, s.Index(i).Interface())
-				}
-			}
+		switch item := vItem.(type) {
+		default:
+			Ch[T](item).SendContext(ctx, ch)
 
 		case error:
 			Error[T](item).SendContext(ctx, ch)
@@ -147,27 +165,27 @@ func send[T any](ctx context.Context, ch chan<- Item[T], items ...any) {
 
 // IsCh checks if an item is an error.
 func (i Item[T]) IsCh() bool {
-	return i.C != nil
+	return (i.Disc & enums.ItemDiscChan) > 0
 }
 
 // IsError checks if an item is an error.
 func (i Item[T]) IsError() bool {
-	return i.E != nil
+	return (i.Disc & enums.ItemDiscError) > 0
 }
 
 // IsTick checks if an item is a tick instance.
 func (i Item[T]) IsTick() bool {
-	return i.tick
+	return (i.Disc & enums.ItemDiscPulse) > 0
 }
 
 // IsTickValue checks if an item is a tick instance.
 func (i Item[T]) IsTickValue() bool {
-	return i.tickV
+	return (i.Disc & enums.ItemDiscTickValue) > 0
 }
 
 // IsTickValue checks if an item is a tick instance.
 func (i Item[T]) IsNumeric() bool {
-	return i.numeric
+	return (i.Disc & enums.ItemDiscNumeric) > 0
 }
 
 // SendBlocking sends an item and blocks until it is sent.
