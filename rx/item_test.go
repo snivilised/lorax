@@ -24,8 +24,11 @@ var _ = Describe("Item", Ordered, func() {
 
 					rx.Assert(context.Background(),
 						rx.FromChannel(ch),
-						rx.HasItems([]int{1, 2, 3}),
-						rx.HasNoError[int]())
+						rx.HasItems[int]{
+							Expected: []int{1, 2, 3},
+						},
+						rx.HasNoError[int]{},
+					)
 				})
 			})
 
@@ -43,8 +46,11 @@ var _ = Describe("Item", Ordered, func() {
 
 					rx.Assert(context.Background(),
 						rx.FromChannel(ch),
-						rx.HasItems([]int{1, 3}),
-						rx.HasAnError[int]())
+						rx.HasItems[int]{
+							Expected: []int{1, 3},
+						},
+						rx.HasAnError[int]{},
+					)
 				})
 			})
 
@@ -62,8 +68,13 @@ var _ = Describe("Item", Ordered, func() {
 
 					rx.Assert(context.Background(),
 						rx.FromChannel(ch),
-						rx.HasItems([]int{1, 3}),
-						rx.HasError[int](errFoo))
+						rx.HasItems[int]{
+							Expected: []int{1, 3},
+						},
+						rx.HasError[int]{
+							Expected: []error{errFoo},
+						},
+					)
 				})
 			})
 		})

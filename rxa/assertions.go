@@ -1,1 +1,1 @@
-package rxa
+package rx
