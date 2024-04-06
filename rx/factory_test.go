@@ -26,7 +26,9 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, 1, 2, 3),
 					rx.Empty[int](),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}))
+				rx.Assert(context.Background(), obs, rx.HasItems[int]{
+					Expected: []int{1, 2, 3},
+				})
 			})
 		})
 
@@ -43,7 +45,9 @@ var _ = Describe("Factory", func() {
 					rx.Empty[int](),
 					rx.Empty[int](),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}))
+				rx.Assert(context.Background(), obs, rx.HasItems[int]{
+					Expected: []int{1, 2, 3},
+				})
 			})
 		})
 	})
@@ -65,7 +69,7 @@ var _ = Describe("Factory", func() {
 					return it
 				}))
 
-				rx.Assert(context.Background(), obs, rx.IsNotEmpty[int]())
+				rx.Assert(context.Background(), obs, rx.IsNotEmpty[int]{})
 			})
 		})
 
@@ -85,7 +89,7 @@ var _ = Describe("Factory", func() {
 					return it
 				}))
 
-				rx.Assert(context.Background(), obs, rx.IsEmpty[int]())
+				rx.Assert(context.Background(), obs, rx.IsEmpty[int]{})
 			})
 		})
 
@@ -105,7 +109,12 @@ var _ = Describe("Factory", func() {
 					return it
 				}))
 
-				rx.Assert(context.Background(), obs, rx.IsEmpty[int](), rx.HasError[int](errFoo))
+				rx.Assert(context.Background(), obs,
+					rx.IsEmpty[int]{},
+					rx.HasError[int]{
+						Expected: []error{errFoo},
+					},
+				)
 			})
 		})
 	})
@@ -121,7 +130,11 @@ var _ = Describe("Factory", func() {
 				obs := rx.Concat([]rx.Observable[int]{
 					testObservable[int](ctx, 1, 2, 3),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}))
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					},
+				)
 			})
 		})
 
@@ -136,7 +149,11 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, 1, 2, 3),
 					testObservable[int](ctx, 4, 5, 6),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3, 4, 5, 6}))
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3, 4, 5, 6},
+					},
+				)
 			})
 		})
 
@@ -152,7 +169,11 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, 4, 5, 6),
 					testObservable[int](ctx, 7, 8, 9),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3, 4, 5, 6, 7, 8, 9}))
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+					},
+				)
 			})
 		})
 
@@ -165,7 +186,9 @@ var _ = Describe("Factory", func() {
 					rx.Empty[int](),
 					rx.Empty[int](),
 				})
-				rx.Assert(context.Background(), obs, rx.IsEmpty[int]())
+				rx.Assert(context.Background(), obs,
+					rx.IsEmpty[int]{},
+				)
 			})
 		})
 
@@ -180,13 +203,20 @@ var _ = Describe("Factory", func() {
 					rx.Empty[int](),
 					testObservable[int](ctx, 1, 2, 3),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}))
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					},
+				)
 
 				obs = rx.Concat([]rx.Observable[int]{
 					testObservable[int](ctx, 1, 2, 3),
 					rx.Empty[int](),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}))
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					})
 			})
 		})
 	})
@@ -201,7 +231,12 @@ var _ = Describe("Factory", func() {
 					next <- rx.Of(2)
 					next <- rx.Of(3)
 				}})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					},
+					rx.HasNoError[int]{},
+				)
 			})
 		})
 
@@ -214,8 +249,15 @@ var _ = Describe("Factory", func() {
 					next <- rx.Of(2)
 					next <- rx.Of(3)
 				}})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}), rx.HasNoError[int]())
-				rx.Assert(context.Background(), obs, rx.IsEmpty[int](), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					},
+					rx.HasNoError[int]{})
+				rx.Assert(context.Background(), obs,
+					rx.IsEmpty[int]{},
+					rx.HasNoError[int]{},
+				)
 			})
 		})
 
@@ -257,7 +299,12 @@ var _ = Describe("Factory", func() {
 						next <- rx.Of(2)
 						next <- rx.Of(3)
 					}})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					},
+					rx.HasNoError[int]{},
+				)
 			})
 		})
 
@@ -276,7 +323,11 @@ var _ = Describe("Factory", func() {
 					},
 				})
 
-				rx.Assert(context.Background(), obs, rx.HasItemsNoOrder(1, 2, 10, 20), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasItemsNoOrder[int]{
+						Expected: []int{1, 2, 10, 20},
+					},
+					rx.HasNoError[int]{})
 			})
 		})
 
@@ -315,8 +366,17 @@ var _ = Describe("Factory", func() {
 					next <- rx.Of(2)
 					next <- rx.Of(3)
 				}})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}), rx.HasNoError[int]())
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					},
+					rx.HasNoError[int]{})
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					},
+					rx.HasNoError[int]{},
+				)
 			})
 		})
 
@@ -333,8 +393,18 @@ var _ = Describe("Factory", func() {
 				}).Map(func(_ context.Context, i int) (_ int, _ error) {
 					return i + 1, nil
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{3, 4, 5}), rx.HasNoError[int]())
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{3, 4, 5}), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{3, 4, 5},
+					},
+					rx.HasNoError[int]{},
+				)
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{3, 4, 5},
+					},
+					rx.HasNoError[int]{},
+				)
 			})
 		})
 
@@ -351,10 +421,18 @@ var _ = Describe("Factory", func() {
 				}, rx.WithObservationStrategy[int](rx.Eager)).Map(func(_ context.Context, i int) (_ int, _ error) {
 					return i + 1, nil
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{3, 4, 5}), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{3, 4, 5},
+					},
+					rx.HasNoError[int]{},
+				)
 				// In the case of an eager observation, we already consumed the items produced by Defer
 				// So if we create another subscription, it will be empty
-				rx.Assert(context.Background(), obs, rx.IsEmpty[int](), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.IsEmpty[int]{},
+					rx.HasNoError[int]{},
+				)
 			})
 		})
 
@@ -367,7 +445,13 @@ var _ = Describe("Factory", func() {
 					next <- rx.Of(2)
 					next <- rx.Error[int](errFoo)
 				}})
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2}), rx.HasError[int](errFoo))
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2},
+					},
+					rx.HasError[int]{
+						Expected: []error{errFoo},
+					})
 			})
 		})
 	})
@@ -377,7 +461,9 @@ var _ = Describe("Factory", func() {
 			defer leaktest.Check(GinkgoT())()
 
 			obs := rx.Empty[int]()
-			rx.Assert(context.Background(), obs, rx.IsEmpty[int]())
+			rx.Assert(context.Background(), obs,
+				rx.IsEmpty[int]{},
+			)
 		})
 	})
 
@@ -394,7 +480,12 @@ var _ = Describe("Factory", func() {
 			}()
 
 			obs := rx.FromChannel(ch)
-			rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}), rx.HasNoError[int]())
+			rx.Assert(context.Background(), obs,
+				rx.HasItems[int]{
+					Expected: []int{1, 2, 3},
+				},
+				rx.HasNoError[int]{},
+			)
 		})
 
 		When("SimpleCapacity", func() {
@@ -447,13 +538,16 @@ var _ = Describe("Factory", func() {
 				}()
 				time.Sleep(50 * time.Millisecond)
 
-				rx.Assert(context.Background(), obs, rx.CustomPredicate(func(items []int) error {
-					if len(items) != 0 {
-						return errors.New("items should be nil")
-					}
+				rx.Assert(context.Background(), obs,
+					rx.CustomPredicate[int]{
+						Expected: func(actual rx.AssertResources[int]) error {
+							if len(actual.Values()) != 0 {
+								return errors.New("items should be nil")
+							}
 
-					return nil
-				}))
+							return nil
+						},
+					})
 			})
 		})
 
@@ -472,16 +566,20 @@ var _ = Describe("Factory", func() {
 					close(next)
 				}()
 
-				rx.Assert(context.Background(), obs, rx.CustomPredicate(func(items []int) error {
-					if len(items) == max {
-						return errors.New("some items should be dropped")
-					}
-					if len(items) == 0 {
-						return errors.New("no items")
-					}
+				rx.Assert(context.Background(), obs,
+					rx.CustomPredicate[int]{
+						Expected: func(actual rx.AssertResources[int]) error {
+							items := actual.Values()
+							if len(items) == max {
+								return errors.New("some items should be dropped")
+							}
+							if len(items) == 0 {
+								return errors.New("no items")
+							}
 
-					return nil
-				}))
+							return nil
+						},
+					})
 			})
 		})
 	})
@@ -491,9 +589,18 @@ var _ = Describe("Factory", func() {
 			It("🧪 should: return a single item observable containing value", func() {
 				defer leaktest.Check(GinkgoT())()
 
-				single := rx.JustItem(1)
-				rx.Assert(context.Background(), single, rx.HasItem(1), rx.HasNoError[int]())
-				rx.Assert(context.Background(), single, rx.HasItem(1), rx.HasNoError[int]())
+				single := rx.JustItem(42)
+				rx.Assert(context.Background(), single,
+					rx.HasItem[int]{
+						Expected: 42,
+					},
+					rx.HasNoError[int]{})
+				rx.Assert(context.Background(), single,
+					rx.HasItem[int]{
+						Expected: 42,
+					},
+					rx.HasNoError[int]{},
+				)
 			})
 		})
 	})
@@ -504,8 +611,18 @@ var _ = Describe("Factory", func() {
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Just(1, 2, 3)()
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}), rx.HasNoError[int]())
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{1, 2, 3}), rx.HasNoError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					},
+					rx.HasNoError[int]{},
+				)
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{1, 2, 3},
+					},
+					rx.HasNoError[int]{},
+				)
 			})
 		})
 
@@ -519,13 +636,17 @@ var _ = Describe("Factory", func() {
 
 				obs := rx.Just([]customer{{id: 1}, {id: 2}, {id: 3}}...)()
 				rx.Assert(context.Background(), obs,
-					rx.HasItems([]customer{{id: 1}, {id: 2}, {id: 3}}),
-					rx.HasNoError[customer](),
+					rx.HasItems[customer]{
+						Expected: []customer{{id: 1}, {id: 2}, {id: 3}},
+					},
+					rx.HasNoError[customer]{},
 				)
 
 				rx.Assert(context.Background(), obs,
-					rx.HasItems([]customer{{id: 1}, {id: 2}, {id: 3}}),
-					rx.HasNoError[customer](),
+					rx.HasItems[customer]{
+						Expected: []customer{{id: 1}, {id: 2}, {id: 3}},
+					},
+					rx.HasNoError[customer]{},
 				)
 			})
 		})
@@ -588,7 +709,10 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, 1, 2),
 					testObservable[int](ctx, 3, 4),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItemsNoOrder(1, 2, 3, 4))
+				rx.Assert(context.Background(), obs,
+					rx.HasItemsNoOrder[int]{
+						Expected: []int{1, 2, 3, 4},
+					})
 			})
 		})
 
@@ -605,7 +729,11 @@ var _ = Describe("Factory", func() {
 				})
 
 				// The content is not deterministic, hence we just test if we have some items
-				rx.Assert(context.Background(), obs, rx.IsNotEmpty[int](), rx.HasError[int](errFoo))
+				rx.Assert(context.Background(), obs,
+					rx.IsNotEmpty[int]{},
+					rx.HasError[int]{
+						Expected: []error{errFoo},
+					})
 			})
 		})
 	})
@@ -633,9 +761,16 @@ var _ = Describe("Factory", func() {
 				)
 
 				obs := rx.Range[int](start, count)
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{5, 6, 7}))
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{5, 6, 7},
+					},
+				)
 				// Test whether the observable is reproducible
-				rx.Assert(context.Background(), obs, rx.HasItems([]int{5, 6, 7}))
+				rx.Assert(context.Background(), obs,
+					rx.HasItems[int]{
+						Expected: []int{5, 6, 7},
+					})
 			})
 		})
 
@@ -644,7 +779,9 @@ var _ = Describe("Factory", func() {
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Range[int](1, -5)
-				rx.Assert(context.Background(), obs, rx.HasAnError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasAnError[int]{},
+				)
 			})
 		})
 
@@ -658,7 +795,9 @@ var _ = Describe("Factory", func() {
 				)
 
 				obs := rx.Range[int](start, count)
-				rx.Assert(context.Background(), obs, rx.HasAnError[int]())
+				rx.Assert(context.Background(), obs,
+					rx.HasAnError[int]{},
+				)
 			})
 		})
 	})
@@ -673,7 +812,10 @@ var _ = Describe("Factory", func() {
 				}, func(_ context.Context) rx.Item[int] {
 					return rx.Of(2)
 				}})
-				rx.Assert(context.Background(), obs, rx.HasItemsNoOrder(1, 2))
+				rx.Assert(context.Background(), obs,
+					rx.HasItemsNoOrder[int]{
+						Expected: []int{1, 2},
+					})
 			})
 		})
 	})
@@ -684,7 +826,11 @@ var _ = Describe("Factory", func() {
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Thrown[int](errFoo)
-				rx.Assert(context.Background(), obs, rx.HasError[int](errFoo))
+				rx.Assert(context.Background(), obs,
+					rx.HasError[int]{
+						Expected: []error{errFoo},
+					},
+				)
 			})
 		})
 	})

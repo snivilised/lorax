@@ -160,5 +160,6 @@ func testConnectableComposed[T any](obs Observable[T], increment Func[T]) {
 func testConnectableWithoutConnect[T any](obs Observable[T]) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	Assert(ctx, obs, IsEmpty[T]())
+
+	Assert(ctx, obs, IsEmpty[T]{})
 }

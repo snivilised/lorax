@@ -9,157 +9,51 @@ import (
 )
 
 // AssertPredicate is a custom predicate based on the items.
-type AssertPredicate[T any] func(items []T) error
+type AssertPredicate[T any] func(actual AssertResources[T]) error
 
-// RxAssert lists the Observable assertions.
-type RxAssert[T any] interface { //nolint:revive // foo
-	apply(*rxAssert[T])
-	itemsToBeChecked() (bool, []T)
-	itemsNoOrderedToBeChecked() (bool, []T)
-	noItemsToBeChecked() bool
-	someItemsToBeChecked() bool
-	numbersToBeChecked() (bool, []int)
-	numbersNoOrderedToBeChecked() (bool, []int)
-	noNumbersToBeChecked() bool
-	someNumbersToBeChecked() bool
-	raisedErrorToBeChecked() (bool, error)
-	raisedErrorsToBeChecked() (bool, []error)
-	raisedAnErrorToBeChecked() (bool, error)
-	notRaisedErrorToBeChecked() bool
-	itemToBeChecked() (bool, T)
-	noItemToBeChecked() (bool, T)
-	numberToBeChecked() (b bool, i int)
-	noNumberToBeChecked() (b bool, i int)
-	customPredicatesToBeChecked() (bool, []AssertPredicate[T])
+func reason(s string) string {
+	return fmt.Sprintf("🔥🔥🔥 %v", s)
 }
 
-type rxAssert[T any] struct {
-	f                    func(*rxAssert[T])
-	checkHasItems        bool
-	checkHasNoItems      bool
-	checkHasSomeItems    bool
-	items                []T
-	checkHasItemsNoOrder bool
-	itemsNoOrder         []T
-
-	checkHasNumbers        bool
-	checkHasNoNumbers      bool
-	checkHasSomeNumbers    bool
-	numbers                []int
-	checkHasNumbersNoOrder bool
-	numbersNoOrder         []int
-
-	checkHasRaisedError     bool
-	err                     error
-	checkHasRaisedErrors    bool
-	errs                    []error
-	checkHasRaisedAnError   bool
-	checkHasNotRaisedError  bool
-	checkHasItem            bool
-	checkHasNumber          bool
-	item                    T
-	number                  int
-	checkHasNoItem          bool
-	checkHasNoNumber        bool
-	checkHasCustomPredicate bool
-	customPredicates        []AssertPredicate[T]
+type AssertResources[T any] interface {
+	Values() []T
+	Numbers() []int
+	Errors() []error
 }
 
-func (ass *rxAssert[T]) apply(do *rxAssert[T]) {
-	ass.f(do)
+type actualResources[T any] struct {
+	values  []T
+	numbers []int
+	errors  []error
 }
 
-func (ass *rxAssert[T]) itemsToBeChecked() (b bool, i []T) {
-	return ass.checkHasItems, ass.items
+func (r *actualResources[T]) Values() []T {
+	return r.values
 }
 
-func (ass *rxAssert[T]) itemsNoOrderedToBeChecked() (b bool, i []T) {
-	return ass.checkHasItemsNoOrder, ass.itemsNoOrder
+func (r *actualResources[T]) Numbers() []int {
+	return r.numbers
 }
 
-func (ass *rxAssert[T]) noItemsToBeChecked() bool {
-	return ass.checkHasNoItems
+func (r *actualResources[T]) Errors() []error {
+	return r.errors
 }
 
-func (ass *rxAssert[T]) someItemsToBeChecked() bool {
-	return ass.checkHasSomeItems
-}
+func Assert[T any](ctx context.Context, iterable Iterable[T], asserters ...Asserter[T]) {
+	resources := assertObserver(ctx, iterable)
 
-func (ass *rxAssert[T]) numbersToBeChecked() (b bool, i []int) {
-	return ass.checkHasNumbers, ass.numbers
-}
-
-func (ass *rxAssert[T]) numbersNoOrderedToBeChecked() (b bool, i []int) {
-	return ass.checkHasNumbersNoOrder, ass.numbersNoOrder
-}
-
-func (ass *rxAssert[T]) noNumbersToBeChecked() bool {
-	return ass.checkHasNoNumbers
-}
-
-func (ass *rxAssert[T]) someNumbersToBeChecked() bool {
-	return ass.checkHasSomeNumbers
-}
-
-func (ass *rxAssert[T]) raisedErrorToBeChecked() (bool, error) {
-	return ass.checkHasRaisedError, ass.err
-}
-
-func (ass *rxAssert[T]) raisedErrorsToBeChecked() (bool, []error) {
-	return ass.checkHasRaisedErrors, ass.errs
-}
-
-func (ass *rxAssert[T]) raisedAnErrorToBeChecked() (bool, error) {
-	return ass.checkHasRaisedAnError, ass.err
-}
-
-func (ass *rxAssert[T]) notRaisedErrorToBeChecked() bool {
-	return ass.checkHasNotRaisedError
-}
-
-func (ass *rxAssert[T]) itemToBeChecked() (b bool, i T) {
-	return ass.checkHasItem, ass.item
-}
-
-func (ass *rxAssert[T]) noItemToBeChecked() (b bool, i T) {
-	return ass.checkHasNoItem, ass.item
-}
-
-func (ass *rxAssert[T]) numberToBeChecked() (b bool, i int) {
-	return ass.checkHasNumber, ass.number
-}
-
-func (ass *rxAssert[T]) noNumberToBeChecked() (b bool, i int) {
-	return ass.checkHasNoNumber, ass.number
-}
-
-func (ass *rxAssert[T]) customPredicatesToBeChecked() (bool, []AssertPredicate[T]) {
-	return ass.checkHasCustomPredicate, ass.customPredicates
-}
-
-func newAssertion[T any](f func(*rxAssert[T])) *rxAssert[T] {
-	return &rxAssert[T]{
-		f: f,
+	for _, a := range asserters {
+		a.Check(resources)
 	}
 }
 
-func parseAssertions[T any](assertions ...RxAssert[T]) RxAssert[T] {
-	ass := new(rxAssert[T])
-
-	for _, assertion := range assertions {
-		assertion.apply(ass)
+func assertObserver[T any](ctx context.Context, iterable Iterable[T]) *actualResources[T] {
+	resources := &actualResources[T]{
+		values:  make([]T, 0),
+		numbers: make([]int, 0),
+		errors:  make([]error, 0),
 	}
 
-	return ass
-}
-
-func Assert[T any](ctx context.Context, iterable Iterable[T], assertions ...RxAssert[T]) { //nolint:gocyclo // to be fixed
-	// TODO(fix): cyclo complexity of this function is too high, needs a refactoring
-	//
-	ass := parseAssertions(assertions...)
-	got := make([]T, 0)
-	gotN := make([]int, 0)
-	errs := make([]error, 0)
 	observe := iterable.Observe()
 
 loop:
@@ -174,226 +68,201 @@ loop:
 
 			switch {
 			case item.IsError():
-				errs = append(errs, item.E)
+				resources.errors = append(resources.errors, item.E)
 
 			case item.IsNumeric():
-				gotN = append(gotN, item.N)
+				resources.numbers = append(resources.numbers, item.N)
 
 			default:
-				got = append(got, item.V)
+				resources.values = append(resources.values, item.V)
 			}
 		}
 	}
 
-	// TODO: I wonder if we can re-design this somewhat. The problem with this current
-	// implementation, is that it speculatively checks the conditions on the Assert
-	// object to determine wether or not to invoke the check. If we delegated the
-	// checking to the assertions and then iterate the assertions, that would
-	// surely be a better option. For now, there is quite a bit of cloned code
-	// just waiting to be cleaned up.
-
-	if checked, predicates := ass.customPredicatesToBeChecked(); checked {
-		for _, predicate := range predicates {
-			err := predicate(got)
-			if err != nil {
-				Fail(err.Error())
-			}
-		}
-	}
-
-	if checkHasItems, expectedItems := ass.itemsToBeChecked(); checkHasItems {
-		Expect(got).To(ContainElements(expectedItems))
-	}
-
-	if checkHasNumbers, expectedItems := ass.numbersToBeChecked(); checkHasNumbers {
-		Expect(gotN).To(ContainElements(expectedItems))
-	}
-
-	if checkHasItemsNoOrder, itemsNoOrder := ass.itemsNoOrderedToBeChecked(); checkHasItemsNoOrder {
-		m := make(map[interface{}]interface{})
-		for _, v := range itemsNoOrder {
-			m[v] = nil
-		}
-
-		for _, v := range got {
-			delete(m, v)
-		}
-
-		if len(m) != 0 {
-			Fail(fmt.Sprintf("missing elements: '%v'", got))
-		}
-	}
-
-	if checkHasNumbersNoOrder, numbersNoOrder := ass.numbersNoOrderedToBeChecked(); checkHasNumbersNoOrder {
-		m := make(map[int]int)
-		for _, v := range numbersNoOrder { // what is this loop doing?
-			m[v] = 0 // ?? nil
-		}
-
-		for _, v := range gotN {
-			delete(m, v)
-		}
-
-		if len(m) != 0 {
-			Fail(fmt.Sprintf("missing elements: '%v'", gotN))
-		}
-	}
-
-	if checkHasItem, value := ass.itemToBeChecked(); checkHasItem {
-		length := len(got)
-		if length != 1 {
-			Fail(fmt.Sprintf("wrong number of items, expected 1, got %d", length))
-		}
-
-		if length > 0 {
-			Expect(got[0]).To(Equal(value))
-		}
-	}
-
-	if checkHasNumber, value := ass.numberToBeChecked(); checkHasNumber {
-		length := len(gotN)
-		if length != 1 {
-			Fail(fmt.Sprintf("wrong number of items, expected 1, got %d", length))
-		}
-
-		if length > 0 {
-			Expect(gotN[0]).To(Equal(value))
-		}
-	}
-
-	if ass.noItemsToBeChecked() {
-		Expect(got).To(BeEmpty())
-	}
-
-	if ass.noNumbersToBeChecked() {
-		Expect(gotN).To(BeEmpty())
-	}
-
-	if ass.someItemsToBeChecked() {
-		Expect(got).NotTo(BeEmpty())
-	}
-
-	if ass.someNumbersToBeChecked() {
-		Expect(gotN).NotTo(BeEmpty())
-	}
-
-	if checkHasRaisedError, expectedError := ass.raisedErrorToBeChecked(); checkHasRaisedError {
-		if expectedError == nil {
-			Expect(errs).To(BeEmpty())
-		} else {
-			length := len(errs)
-
-			if length == 0 {
-				Fail(fmt.Sprintf("no error raised; expected: %v", expectedError))
-			}
-
-			if length > 0 {
-				Expect(errs[0]).Error().To(Equal(expectedError))
-			}
-		}
-	}
-
-	if checkHasRaisedErrors, expectedErrors := ass.raisedErrorsToBeChecked(); checkHasRaisedErrors {
-		Expect(errs).To(ContainElements(expectedErrors))
-	}
-
-	if checkHasRaisedAnError, expectedError := ass.raisedAnErrorToBeChecked(); checkHasRaisedAnError {
-		Expect(expectedError).Error().To(BeNil()) // this might not be right
-	}
-
-	if ass.notRaisedErrorToBeChecked() {
-		Expect(errs).To(BeEmpty())
-	}
+	return resources
 }
 
-func HasItems[T any](expectedItems []T) RxAssert[T] {
-	return newAssertion(func(ra *rxAssert[T]) {
-		ra.checkHasItems = true
-		ra.items = expectedItems
-	})
+// Asserter
+type Asserter[T any] interface {
+	Check(actual AssertResources[T])
+}
+
+type AssertFunc[T any] func(actual AssertResources[T])
+
+func (f AssertFunc[T]) Check(actual AssertResources[T]) {
+	f(actual)
+}
+
+// HasItems
+type HasItems[T any] struct {
+	Expected []T
+}
+
+// HasItems checks if an observable has an exact set of items.
+func (a HasItems[T]) Check(actual AssertResources[T]) {
+	Expect(actual.Values()).To(ContainElements(a.Expected), reason("HasItems"))
+}
+
+// HasItem
+type HasItem[T any] struct {
+	Expected T
 }
 
 // HasItem checks if a single or optional single has a specific item.
-func HasItem[T any](i T) RxAssert[T] {
-	return newAssertion(func(a *rxAssert[T]) {
-		a.checkHasItem = true
-		a.item = i
-	})
+func (a HasItem[T]) Check(actual AssertResources[T]) {
+	values := actual.Values()
+	length := len(values)
+
+	if length != 1 {
+		Fail(reason(fmt.Sprintf("HasItem: wrong number of items, expected 1, got %d", length)))
+	}
+
+	if length > 0 {
+		Expect(values[0]).To(Equal(a.Expected), reason("HasItem"))
+	}
 }
 
-func HasNumbers[T any](expectedNumbers []int) RxAssert[T] {
-	return newAssertion(func(ra *rxAssert[T]) {
-		ra.checkHasNumbers = true
-		ra.numbers = expectedNumbers
-	})
+// HasNumbers
+type HasNumbers[T any] struct {
+	Expected []T
 }
 
-// HasItem checks if a single or optional single has a specific item.
-func HasNumber[T any](i int) RxAssert[T] {
-	return newAssertion(func(a *rxAssert[T]) {
-		a.checkHasNumber = true
-		a.number = i
-	})
+// HasNumbers checks if an observable has an exact set of numeric items.
+func (a HasNumbers[T]) Check(actual AssertResources[T]) {
+	Expect(actual.Numbers()).To(ContainElements(a.Expected), reason("HasNumbers"))
 }
 
-// HasItemsNoOrder checks that an observable produces the corresponding items regardless of the order.
-func HasItemsNoOrder[T any](numbers ...T) RxAssert[T] {
-	return newAssertion(func(a *rxAssert[T]) {
-		a.checkHasItemsNoOrder = true
-		a.itemsNoOrder = numbers
-	})
+// HasNumber
+type HasNumber[T any] struct {
+	Expected int
 }
 
-// HasNumbersNoOrder checks that an observable produces the corresponding items regardless of the order.
-func HasNumbersNoOrder[T any](numbers ...int) RxAssert[T] {
-	return newAssertion(func(a *rxAssert[T]) {
-		a.checkHasNumbersNoOrder = true
-		a.numbersNoOrder = numbers
-	})
+// HasNumber checks if a single or optional single has a specific numeric item.
+func (a HasNumber[T]) Check(actual AssertResources[T]) {
+	values := actual.Numbers()
+	length := len(values)
+
+	if length != 1 {
+		Fail(reason(fmt.Sprintf("HasNumber: wrong number of items, expected 1, got %d", length)))
+	}
+
+	if length > 0 {
+		Expect(values[0]).To(Equal(a.Expected), reason("HasNumber"))
+	}
 }
 
-// IsNotEmpty checks that the observable produces some items.
-func IsNotEmpty[T any]() RxAssert[T] {
-	return newAssertion(func(a *rxAssert[T]) {
-		a.checkHasSomeItems = true
-	})
+// HasItemsNoOrder
+type HasItemsNoOrder[T any] struct {
+	Expected []T
 }
 
-// IsEmpty checks that the observable has not produced any items.
-func IsEmpty[T any]() RxAssert[T] {
-	return newAssertion(func(a *rxAssert[T]) {
-		a.checkHasNoItems = true
-	})
+// Check ensures that an observable produces the corresponding items regardless of the order.
+func (a HasItemsNoOrder[T]) Check(actual AssertResources[T]) {
+	values := actual.Values()
+	m := make(map[interface{}]interface{})
+
+	for _, v := range a.Expected {
+		m[v] = nil
+	}
+
+	for _, v := range values {
+		delete(m, v)
+	}
+
+	if len(m) != 0 {
+		Fail(reason(fmt.Sprintf("HasItemsNoOrder: missing elements: '%v'", values)))
+	}
 }
 
-func HasError[T any](err error) RxAssert[T] {
-	return newAssertion(func(a *rxAssert[T]) {
-		a.checkHasRaisedError = true
-		a.err = err
-	})
+// HasNumbersNoOrder
+type HasNumbersNoOrder[T any] struct {
+	Expected []T
 }
 
-// HasAnError checks that the observable has produce an error.
-func HasAnError[T any]() RxAssert[T] {
-	return newAssertion(func(a *rxAssert[T]) {
-		a.checkHasRaisedAnError = true
-	})
+// Check ensures that an observable produces the corresponding numbers regardless of the order.
+func (a HasNumbersNoOrder[T]) Check(actual AssertResources[T]) {
+	values := actual.Numbers()
+	m := make(map[interface{}]interface{})
+
+	for _, v := range a.Expected {
+		m[v] = nil
+	}
+
+	for _, v := range values {
+		delete(m, v)
+	}
+
+	if len(m) != 0 {
+		Fail(reason(fmt.Sprintf("HasNumbersNoOrder: missing elements: '%v'", values)))
+	}
 }
 
-func HasNoError[T any]() RxAssert[T] {
-	return newAssertion(func(ra *rxAssert[T]) {
-		ra.checkHasNotRaisedError = true
-	})
+// IsNotEmpty
+type IsNotEmpty[T any] struct {
 }
 
-// CustomPredicate checks a custom predicate.
-func CustomPredicate[T any](predicate AssertPredicate[T]) RxAssert[T] {
-	return newAssertion(func(a *rxAssert[T]) {
-		if !a.checkHasCustomPredicate {
-			a.checkHasCustomPredicate = true
-			a.customPredicates = make([]AssertPredicate[T], 0)
-		}
+func (a IsNotEmpty[T]) Check(actual AssertResources[T]) {
+	// TODO: what about numeric items? What actually does NotEmpty mean?
+	Expect(actual.Values()).NotTo(BeEmpty(), reason("IsNotEmpty"))
+}
 
-		a.customPredicates = append(a.customPredicates, predicate)
-	})
+// IsEmpty
+type IsEmpty[T any] struct {
+}
+
+func (a IsEmpty[T]) Check(actual AssertResources[T]) {
+	// TODO: what about numeric items? What actually does NotEmpty mean?
+	Expect(actual.Values()).To(BeEmpty(), reason("IsEmpty"))
+}
+
+// HasError
+type HasError[T any] struct {
+	Expected []error
+}
+
+func (a HasError[T]) Check(actual AssertResources[T]) {
+	errors := actual.Errors()
+
+	if a.Expected == nil || len(a.Expected) == 0 {
+		Expect(errors).To(BeEmpty(), reason("HasError"))
+
+		return
+	}
+
+	if len(errors) == 0 {
+		Fail(fmt.Sprintf("HasError: no error raised; expected: %v", a.Expected))
+	}
+
+	Expect(errors).To(ContainElements(a.Expected), reason("HasError"))
+}
+
+// HasAnError
+type HasAnError[T any] struct {
+	Expected error
+}
+
+// Check HasAnError ensures that the observable has produced a specific error.
+func (a HasAnError[T]) Check(actual AssertResources[T]) {
+	errors := actual.Errors()
+
+	Expect(errors).NotTo(BeEmpty(), reason("HasAnError: no errors occurred"))
+}
+
+// HasNoError
+type HasNoError[T any] struct {
+}
+
+// Check HasNoError ensures that the observable has not produced an error.
+func (a HasNoError[T]) Check(actual AssertResources[T]) {
+	Expect(actual.Errors()).To(BeEmpty(), reason("HasNoError"))
+}
+
+// CustomPredicate
+type CustomPredicate[T any] struct {
+	Expected AssertPredicate[T]
+}
+
+// Check CustomPredicateAssert checks a custom predicate.
+func (a CustomPredicate[T]) Check(actual AssertResources[T]) {
+	Expect(a.Expected(actual)).To(Succeed(), reason("CustomPredicate"))
 }

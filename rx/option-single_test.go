@@ -96,7 +96,11 @@ var _ = Describe("OptionSingle", func() {
 					defer leaktest.Check(GinkgoT())()
 
 					single := rx.Just(42)().Max(rx.LimitComparator, rx.MaxInitLimitInt).Map(increment)
-					rx.Assert(context.Background(), single, rx.HasItem(43), rx.HasNoError[int]())
+					rx.Assert(context.Background(), single,
+						rx.HasItem[int]{
+							Expected: 43,
+						},
+						rx.HasNoError[int]{})
 				})
 			})
 
@@ -105,7 +109,12 @@ var _ = Describe("OptionSingle", func() {
 					defer leaktest.Check(GinkgoT())()
 
 					single := rx.Just(42, 48)().Max(rx.LimitComparator, rx.MaxInitLimitInt)
-					rx.Assert(context.Background(), single, rx.HasItem(48), rx.HasNoError[int]())
+					rx.Assert(context.Background(), single,
+						rx.HasItem[int]{
+							Expected: 48,
+						},
+						rx.HasNoError[int]{},
+					)
 				})
 			})
 
@@ -114,7 +123,12 @@ var _ = Describe("OptionSingle", func() {
 					defer leaktest.Check(GinkgoT())()
 
 					single := rx.Just(42, 48)().Min(rx.LimitComparator, rx.MinInitLimitInt)
-					rx.Assert(context.Background(), single, rx.HasItem(42), rx.HasNoError[int]())
+					rx.Assert(context.Background(), single,
+						rx.HasItem[int]{
+							Expected: 42,
+						},
+						rx.HasNoError[int]{},
+					)
 				})
 			})
 		})
@@ -129,7 +143,11 @@ var _ = Describe("OptionSingle", func() {
 				single := rx.JustItem(42).Filter(func(i int) bool {
 					return i == 42
 				})
-				rx.Assert(context.Background(), single, rx.HasItem(42), rx.HasNoError[int]())
+				rx.Assert(context.Background(), single,
+					rx.HasItem[int]{
+						Expected: 42,
+					},
+					rx.HasNoError[int]{})
 			})
 
 			Context("Filter", decorators.Label("comprehension"), func() {
@@ -140,7 +158,10 @@ var _ = Describe("OptionSingle", func() {
 						single := rx.JustItem(42).Filter(func(i int) bool {
 							return i == 48
 						})
-						rx.Assert(context.Background(), single, rx.IsEmpty[int](), rx.HasNoError[int]())
+						rx.Assert(context.Background(), single,
+							rx.IsEmpty[int]{},
+							rx.HasNoError[int]{},
+						)
 					})
 				})
 			})

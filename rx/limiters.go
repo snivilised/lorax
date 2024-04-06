@@ -25,3 +25,5 @@ func MaxInitLimitInt() int {
 func MinInitLimitInt() int {
 	return math.MaxInt
 }
+
+// TODO: add limiters for other Ordered constraint types
