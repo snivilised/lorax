@@ -15,6 +15,7 @@ var _ = Describe("OptionSingle", func() {
 	Context("Get", func() {
 		When("Just", func() {
 			It("🧪 should: get the single value", func() {
+				// Test_OptionalSingle_Get_Item
 				defer leaktest.Check(GinkgoT())()
 
 				single := rx.NewOptionalSingleImpl(rx.Just(1)())
@@ -48,6 +49,7 @@ var _ = Describe("OptionSingle", func() {
 
 		When("Empty", func() {
 			It("🧪 should: get empty item", func() {
+				// Test_OptionalSingle_Get_Empty
 				defer leaktest.Check(GinkgoT())()
 
 				single := rx.NewOptionalSingleImpl(rx.Empty[int]())
@@ -59,6 +61,7 @@ var _ = Describe("OptionSingle", func() {
 
 		When("Error", func() {
 			It("🧪 should: get error value", func() {
+				// Test_OptionalSingle_Get_Error
 				defer leaktest.Check(GinkgoT())()
 
 				single := rx.NewOptionalSingleImpl(rx.JustError[int](errFoo)())
@@ -70,6 +73,7 @@ var _ = Describe("OptionSingle", func() {
 
 		When("Context Cancelled", func() {
 			It("🧪 should: result in cancellation error", func() {
+				// Test_OptionalSingle_Get_ContextCanceled
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -93,6 +97,7 @@ var _ = Describe("OptionSingle", func() {
 		When("Just", func() {
 			Context("foo ???", func() {
 				It("🧪 should: Map the single entity iterator", func() {
+					// Test_OptionalSingle_Map
 					defer leaktest.Check(GinkgoT())()
 
 					single := rx.Just(42)().Max(rx.LimitComparator, rx.MaxInitLimitInt).Map(increment)
@@ -137,6 +142,7 @@ var _ = Describe("OptionSingle", func() {
 	Context("Observe", func() {
 		When("JustItem", func() {
 			It("🧪 should: who knows", func() {
+				// Test_OptionalSingle_Observe
 				defer leaktest.Check(GinkgoT())()
 				// the intentions of the original rxgo test is not particularly clear
 				//

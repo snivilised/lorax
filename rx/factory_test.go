@@ -17,6 +17,7 @@ var _ = Describe("Factory", func() {
 	Context("Amb", func() {
 		When("Amb1??", func() {
 			It("🧪 should: emit from first responding observer only", func() {
+				// Test_Amb1
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -34,6 +35,7 @@ var _ = Describe("Factory", func() {
 
 		When("Amb2??", func() {
 			It("🧪 should: emit from first responding observer only", func() {
+				// Test_Amb1
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -55,6 +57,7 @@ var _ = Describe("Factory", func() {
 	Context("CombineLatest", func() {
 		When("Multiple observables", func() {
 			It("🧪 should: combine", func() {
+				// Test_CombineLatest
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -75,6 +78,7 @@ var _ = Describe("Factory", func() {
 
 		When("Empty", func() {
 			It("🧪 should: be able to detect empty observable", func() {
+				// Test_CombineLatest_Empty
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -95,6 +99,7 @@ var _ = Describe("Factory", func() {
 
 		When("Contains error", func() {
 			It("🧪 should: be able to detect error", func() {
+				// Test_CombineLatest_Error
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -122,6 +127,7 @@ var _ = Describe("Factory", func() {
 	Context("Concat", func() {
 		When("Single observable", func() {
 			It("🧪 should: create derived single observable", func() {
+				// Test_Concat_SingleObservable
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -140,6 +146,7 @@ var _ = Describe("Factory", func() {
 
 		When("Two observables", func() {
 			It("🧪 should: create derived compound single observable", func() {
+				// Test_Concat_TwoObservables
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -159,6 +166,7 @@ var _ = Describe("Factory", func() {
 
 		When("More than two observables", func() {
 			It("🧪 should: create derived compound single observable", func() {
+				// Test_Concat_MoreThanTwoObservables
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -179,6 +187,7 @@ var _ = Describe("Factory", func() {
 
 		When("Multiple empty observables", func() {
 			It("🧪 should: create derived compound single observable", func() {
+				// Test_Concat_EmptyObservables
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Concat([]rx.Observable[int]{
@@ -194,6 +203,7 @@ var _ = Describe("Factory", func() {
 
 		When("One empty observable", func() {
 			It("🧪 should: create derived compound single observable", func() {
+				// Test_Concat_OneEmptyObservable
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -224,6 +234,7 @@ var _ = Describe("Factory", func() {
 	Context("Create", func() {
 		When("provided with a Producer", func() {
 			It("🧪 should: create observable", func() {
+				// Test_Create
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Create([]rx.Producer[int]{func(_ context.Context, next chan<- rx.Item[int]) {
@@ -242,6 +253,7 @@ var _ = Describe("Factory", func() {
 
 		When("Provided with a Producer", func() {
 			It("🧪 should: create observable (single dup?)", func() {
+				// Test_Create_SingleDup
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Create([]rx.Producer[int]{func(_ context.Context, next chan<- rx.Item[int]) {
@@ -263,6 +275,7 @@ var _ = Describe("Factory", func() {
 
 		When("context cancelled", func() {
 			It("🧪 should: create observable", func() {
+				// Test_Create_ContextCancelled
 				defer leaktest.Check(GinkgoT())()
 
 				closed1 := make(chan struct{})
@@ -291,6 +304,7 @@ var _ = Describe("Factory", func() {
 	Context("Defer", func() {
 		When("single", func() {
 			It("🧪 should: create deferred observer", func() {
+				// Test_Defer
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Defer([]rx.Producer[int]{
@@ -310,6 +324,7 @@ var _ = Describe("Factory", func() {
 
 		When("multiple", func() {
 			It("should: create deferred observer", func() {
+				// Test_Defer_Multiple
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Defer([]rx.Producer[int]{
@@ -333,6 +348,7 @@ var _ = Describe("Factory", func() {
 
 		When("context cancelled", func() {
 			It("🧪 should: create deferred observable", func() {
+				// Test_Defer_ContextCancelled
 				defer leaktest.Check(GinkgoT())()
 
 				closed1 := make(chan struct{})
@@ -359,6 +375,7 @@ var _ = Describe("Factory", func() {
 
 		When("Provided with a Producer", func() {
 			It("🧪 should: create deferred observable (single dup?)", func() {
+				// Test_Defer_SingleDup
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Defer([]rx.Producer[int]{func(_ context.Context, next chan<- rx.Item[int]) {
@@ -382,6 +399,7 @@ var _ = Describe("Factory", func() {
 
 		When("ComposeDup", func() {
 			It("🧪 should: create deferred observable (composed dup?)", func() {
+				// Test_Defer_ComposedDup
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Defer([]rx.Producer[int]{func(_ context.Context, next chan<- rx.Item[int]) {
@@ -410,6 +428,7 @@ var _ = Describe("Factory", func() {
 
 		When("ComposeDup with eager observation", func() {
 			It("🧪 should: create deferred observable (composed dup?)", func() {
+				// Test_Defer_ComposedDup_EagerObservation
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Defer([]rx.Producer[int]{func(_ context.Context, next chan<- rx.Item[int]) {
@@ -438,6 +457,7 @@ var _ = Describe("Factory", func() {
 
 		When("Error", func() {
 			It("🧪 should: be detectable in observable", func() {
+				// Test_Defer_Error
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Defer([]rx.Producer[int]{func(_ context.Context, next chan<- rx.Item[int]) {
@@ -458,6 +478,7 @@ var _ = Describe("Factory", func() {
 
 	Context("Empty", func() {
 		It("🧪 should: contain no elements", func() {
+			// Test_Empty
 			defer leaktest.Check(GinkgoT())()
 
 			obs := rx.Empty[int]()
@@ -469,6 +490,7 @@ var _ = Describe("Factory", func() {
 
 	Context("FromChannel", func() {
 		It("🧪 should: create observable from channel", func() {
+			// Test_FromChannel
 			defer leaktest.Check(GinkgoT())()
 
 			ch := make(chan rx.Item[int])
@@ -490,6 +512,7 @@ var _ = Describe("Factory", func() {
 
 		When("SimpleCapacity", func() {
 			It("🧪 should: ???", func() {
+				// Test_FromChannel_SimpleCapacity
 				defer leaktest.Check(GinkgoT())()
 
 				ch := rx.FromChannel(make(chan rx.Item[int], 10)).Observe()
@@ -498,7 +521,8 @@ var _ = Describe("Factory", func() {
 		})
 
 		When("ComposedCapacity", func() {
-			XIt("🧪 should: ???", func() {
+			It("🧪 should: ???", func() {
+				// Test_FromChannel_ComposedCapacity
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -515,7 +539,6 @@ var _ = Describe("Factory", func() {
 					return 1, nil
 				}, rx.WithContext[int](ctx), rx.WithBufferedChannel[int](12))
 
-				// FAILED => Observe returns 0
 				Expect(cap(obs2.Observe())).To(Equal(12))
 			})
 		})
@@ -524,6 +547,7 @@ var _ = Describe("Factory", func() {
 	Context("FromEventSource", func() {
 		When("Observation after all sent", func() {
 			It("🧪 should: not see any items", func() {
+				// Test_FromEventSource_ObservationAfterAllSent
 				defer leaktest.Check(GinkgoT())()
 
 				const max = 10
@@ -553,6 +577,7 @@ var _ = Describe("Factory", func() {
 
 		When("Drop", func() {
 			It("🧪 should: ???", func() {
+				// Test_FromEventSource_Drop
 				defer leaktest.Check(GinkgoT())()
 
 				const max = 100000
@@ -584,9 +609,12 @@ var _ = Describe("Factory", func() {
 		})
 	})
 
+	// FIXME: Test_Interval
+
 	Context("JustItem", func() {
 		When("given: a value", func() {
 			It("🧪 should: return a single item observable containing value", func() {
+				// Test_JustItem
 				defer leaktest.Check(GinkgoT())()
 
 				single := rx.JustItem(42)
@@ -608,6 +636,7 @@ var _ = Describe("Factory", func() {
 	Context("Just", func() {
 		When("given: a value", func() {
 			It("🧪 should: return a single item observable containing value", func() {
+				// Test_Just
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Just(1, 2, 3)()
@@ -628,6 +657,7 @@ var _ = Describe("Factory", func() {
 
 		When("given: custom structure", func() {
 			It("🧪 should:  ", func() {
+				// Test_Just_CustomStructure
 				defer leaktest.Check(GinkgoT())()
 
 				type customer struct {
@@ -653,6 +683,7 @@ var _ = Describe("Factory", func() {
 
 		When("given: channel", func() {
 			XIt("🧪 should: ???", func() {
+				// Test_Just_Channel
 				defer leaktest.Check(GinkgoT())()
 
 				ch := make(chan int, 1)
@@ -662,16 +693,19 @@ var _ = Describe("Factory", func() {
 					ch <- 3
 					close(ch)
 				}()
-				obs := rx.Just(ch)()
-				_ = obs
+				// obs := rx.Just[int](ch)()
 
 				// TODO(fix): o := rx.Ch[int](1)
-				// rx.Assert(context.Background(), obs, rx.HasItems[int]([]int{1, 2, 3}))
+				// rx.Assert(context.Background(), obs)
+				// 	rx.HasItems[int]{
+				// 		Expected: []int{1, 2, 3},
+				// 	},
 			})
 		})
 
 		When("given: simple capacity", func() {
 			It("🧪 should: ???", func() {
+				// Test_Just_SimpleCapacity
 				defer leaktest.Check(GinkgoT())()
 
 				ch := rx.Just(1)(rx.WithBufferedChannel[int](5)).Observe()
@@ -680,7 +714,8 @@ var _ = Describe("Factory", func() {
 		})
 
 		When("given: composed capacity", func() {
-			XIt("🧪 should: ???", func() {
+			It("🧪 should: ???", func() {
+				// Test_Just_ComposedCapacity
 				defer leaktest.Check(GinkgoT())()
 
 				obs1 := rx.Just(1)().Map(func(_ context.Context, _ int) (int, error) {
@@ -700,6 +735,7 @@ var _ = Describe("Factory", func() {
 	Context("Merge", func() {
 		When("given, multiple observers", func() {
 			It("🧪 should: combine into a single observer", func() {
+				// Test_Merge
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -718,6 +754,7 @@ var _ = Describe("Factory", func() {
 
 		When("given, multiple observers and contains error", func() {
 			It("🧪 should: able to detect error in combined observable", func() {
+				// Test_Merge_Error
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -736,20 +773,17 @@ var _ = Describe("Factory", func() {
 					})
 			})
 		})
+
+		// FIXME: Test_Merge_Interval
 	})
 
 	Context("Range", func() {
 		When("positive count", func() {
-			XIt("🧪 should: create observable", func() {
+			It("🧪 should: create observable", func() {
+				// Test_Range
 				defer leaktest.Check(GinkgoT())()
 
 				/*
-					this code inside rx.Assert:
-					if item.IsError() {
-						errs = append(errs, item.E)
-					} else {
-						got = append(got, item.V)
-					}
 					needs to accommodate item.N, ie the numeric aux value
 					and also should be modified to support all the other
 					new ways of interpreting an item (Ch, Tick, Tv)
@@ -762,13 +796,13 @@ var _ = Describe("Factory", func() {
 
 				obs := rx.Range[int](start, count)
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.HasNumbers[int]{
 						Expected: []int{5, 6, 7},
 					},
 				)
 				// Test whether the observable is reproducible
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.HasNumbers[int]{
 						Expected: []int{5, 6, 7},
 					})
 			})
@@ -776,6 +810,7 @@ var _ = Describe("Factory", func() {
 
 		When("negative count", func() {
 			It("🧪 should: contain detectable error", func() {
+				// Test_Range_NegativeCount
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Range[int](1, -5)
@@ -787,6 +822,7 @@ var _ = Describe("Factory", func() {
 
 		When("maximum exceeded", func() {
 			It("🧪 should: contain detectable error", func() {
+				// Test_Range_MaximumExceeded
 				defer leaktest.Check(GinkgoT())()
 
 				const (
@@ -805,6 +841,7 @@ var _ = Describe("Factory", func() {
 	Context("Start", func() {
 		When("using Supplier", func() {
 			It("🧪 should: ???", func() {
+				// Test_Start
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Start([]rx.Supplier[int]{func(_ context.Context) rx.Item[int] {
@@ -823,6 +860,7 @@ var _ = Describe("Factory", func() {
 	Context("Thrown", func() {
 		When("foo", func() {
 			It("🧪 should: ", func() {
+				// Test_Thrown
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Thrown[int](errFoo)
@@ -838,6 +876,7 @@ var _ = Describe("Factory", func() {
 	Context("Timer", func() {
 		When("foo", func() {
 			It("🧪 should: ???", func() {
+				// Test_Timer
 				defer leaktest.Check(GinkgoT())()
 
 				obs := rx.Timer[int](rx.WithDuration(time.Nanosecond))
@@ -851,6 +890,7 @@ var _ = Describe("Factory", func() {
 
 		When("Empty", func() {
 			It("🧪 should: ???", func() {
+				// Test_Timer_Empty
 				defer leaktest.Check(GinkgoT())()
 
 				ctx, cancel := context.WithCancel(context.Background())

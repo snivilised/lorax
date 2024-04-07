@@ -62,11 +62,8 @@ func observable[T any](parent context.Context,
 	if forceSeq || !parallel {
 		return &ObservableImpl[T]{
 			iterable: newFactoryIterable(func(propagatedOptions ...Option[T]) <-chan Item[T] {
-				mergedOptions := make([]Option[T], 0, len(opts)+len(propagatedOptions))
-				copy(mergedOptions, opts)
-				mergedOptions = append(mergedOptions, propagatedOptions...)
-
-				option := parseOptions(mergedOptions...) //nolint:govet // shadow is deliberate
+				mergedOptions := append(opts, propagatedOptions...) //nolint:gocritic // ignore
+				option := parseOptions(mergedOptions...)            //nolint:govet // shadow is deliberate
 				next := option.buildChannel()
 				ctx := option.buildContext(parent)
 
@@ -82,10 +79,7 @@ func observable[T any](parent context.Context,
 		fromCh := make(chan Item[T], 1)
 		obs := &ObservableImpl[T]{
 			iterable: newFactoryIterable(func(propagatedOptions ...Option[T]) <-chan Item[T] {
-				mergedOptions := make([]Option[T], 0, len(opts)+len(propagatedOptions))
-				copy(mergedOptions, opts)
-				mergedOptions = append(mergedOptions, propagatedOptions...)
-
+				mergedOptions := append(opts, propagatedOptions...) //nolint:gocritic // ignore
 				option := parseOptions(mergedOptions...)
 				next := option.buildChannel()
 				ctx := option.buildContext(parent)
@@ -116,10 +110,7 @@ func observable[T any](parent context.Context,
 
 	return &ObservableImpl[T]{
 		iterable: newFactoryIterable(func(propagatedOptions ...Option[T]) <-chan Item[T] {
-			mergedOptions := make([]Option[T], 0, len(opts)+len(propagatedOptions))
-			copy(mergedOptions, opts)
-			mergedOptions = append(mergedOptions, propagatedOptions...)
-
+			mergedOptions := append(opts, propagatedOptions...) //nolint:gocritic // ignore
 			option := parseOptions(mergedOptions...)
 			next := option.buildChannel()
 			ctx := option.buildContext(parent)
@@ -153,10 +144,7 @@ func single[T any](parent context.Context,
 
 	return &SingleImpl[T]{
 		iterable: newFactoryIterable(func(propagatedOptions ...Option[T]) <-chan Item[T] {
-			mergedOptions := make([]Option[T], 0, len(opts)+len(propagatedOptions))
-			copy(mergedOptions, opts)
-			mergedOptions = append(mergedOptions, propagatedOptions...)
-
+			mergedOptions := append(opts, propagatedOptions...) //nolint:gocritic // ignore
 			option = parseOptions(mergedOptions...)
 
 			if forceSeq || !parallel {
@@ -197,12 +185,8 @@ func optionalSingle[T any](parent context.Context,
 	return &OptionalSingleImpl[T]{
 		parent: ctx,
 		iterable: newFactoryIterable(func(propagatedOptions ...Option[T]) <-chan Item[T] {
-			mergedOptions := make([]Option[T], 0, len(opts)+len(propagatedOptions))
-			copy(mergedOptions, opts)
-			mergedOptions = append(mergedOptions, propagatedOptions...)
-
+			mergedOptions := append(opts, propagatedOptions...) //nolint:gocritic // ignore
 			option = parseOptions(mergedOptions...)
-
 			next := option.buildChannel()
 			ctx := option.buildContext(parent)
 

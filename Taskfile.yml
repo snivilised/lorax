@@ -87,6 +87,10 @@ tasks:
     cmds:
       - ginkgo watch -v -r -p ./...
 
+  watchx:
+    cmds:
+      - ginkgo watch -v -r -p rx/...
+
   watchvc:
     cmds:
       - ginkgo watch -v -r -p ./collections
