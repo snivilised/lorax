@@ -14,6 +14,7 @@ var _ = Describe("Item", Ordered, func() {
 		Context("variadic", func() {
 			When("no errors in observable", func() {
 				It("🧪 should: send items without error", func() {
+					// Test_SendItems_Variadic
 					defer leaktest.Check(GinkgoT())()
 
 					ch := make(chan rx.Item[int], 3)
@@ -34,10 +35,10 @@ var _ = Describe("Item", Ordered, func() {
 
 			When("error in observable", func() {
 				It("🧪 should: send items including error", func() {
+					// Test_SendItems_VariadicWithError
 					defer leaktest.Check(GinkgoT())()
 
 					ch := make(chan rx.Item[int], 3)
-
 					rx.SendItems(context.Background(), ch, rx.CloseChannel,
 						1,
 						rx.Error[int](errFoo),
@@ -54,23 +55,35 @@ var _ = Describe("Item", Ordered, func() {
 				})
 			})
 
-			When("specific error in observable", func() {
-				It("🧪 should: send items including error", func() {
+			When("slice", func() {
+				It("🧪 should: send slice", func() {
+					// Test_SendItems_Slice
 					defer leaktest.Check(GinkgoT())()
 
 					ch := make(chan rx.Item[int], 3)
+					go rx.SendItems(context.Background(), ch, rx.CloseChannel, []int{1, 2, 3})
+					rx.Assert(context.Background(), rx.FromChannel(ch),
+						rx.HasItems[int]{
+							Expected: []int{1, 2, 3},
+						},
 
-					rx.SendItems(context.Background(), ch, rx.CloseChannel,
-						1,
-						rx.Error[int](errFoo),
-						3,
+						rx.HasNoError[int]{},
 					)
+				})
+			})
 
-					rx.Assert(context.Background(),
-						rx.FromChannel(ch),
+			When("specific error observed", func() {
+				It("🧪 should: send items including error", func() {
+					// Test_SendItems_SliceWithError
+					defer leaktest.Check(GinkgoT())()
+
+					ch := make(chan rx.Item[int], 3)
+					go rx.SendItems(context.Background(), ch, rx.CloseChannel, []any{1, errFoo, 3})
+					rx.Assert(context.Background(), rx.FromChannel(ch),
 						rx.HasItems[int]{
 							Expected: []int{1, 3},
 						},
+
 						rx.HasError[int]{
 							Expected: []error{errFoo},
 						},
@@ -82,6 +95,7 @@ var _ = Describe("Item", Ordered, func() {
 		Context("blocking", func() {
 			When("no errors in observable", func() {
 				It("foo", func() {
+					// Test_Item_SendBlocking
 					defer leaktest.Check(GinkgoT())()
 
 					ch := make(chan rx.Item[int], 1)
@@ -96,6 +110,7 @@ var _ = Describe("Item", Ordered, func() {
 		Context("context", func() {
 			When("not cancelled", func() {
 				It("🧪 should: return true", func() {
+					// Test_Item_SendContext_True
 					defer leaktest.Check(GinkgoT())()
 
 					ch := make(chan rx.Item[int], 1)
@@ -110,6 +125,7 @@ var _ = Describe("Item", Ordered, func() {
 
 			When("cancelled", func() {
 				It("🧪 should: return false", func() {
+					// Test_Item_SendContext_False
 					defer leaktest.Check(GinkgoT())()
 
 					ch := make(chan rx.Item[int], 1)
@@ -125,6 +141,7 @@ var _ = Describe("Item", Ordered, func() {
 
 		Context("non-blocking", func() {
 			When("channel free", func() {
+				// Test_Item_SendNonBlocking
 				It("🧪 should: send item and return true", func() {
 					defer leaktest.Check(GinkgoT())()
 

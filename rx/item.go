@@ -12,12 +12,12 @@ type (
 	// Item is a wrapper having either a value, error or channel.
 	//
 	Item[T any] struct {
-		Disc enums.ItemDiscriminator
-		V    T
-		E    error
+		V T
+		E error
 		//
-		C chan<- Item[T]
-		N int
+		C    chan<- Item[T]
+		N    int
+		disc enums.ItemDiscriminator
 	}
 
 	// TimestampItem attach a timestamp to an item.
@@ -42,7 +42,7 @@ const (
 func Of[T any](v T) Item[T] {
 	return Item[T]{
 		V:    v,
-		Disc: enums.ItemDiscNative,
+		disc: enums.ItemDiscNative,
 	}
 }
 
@@ -51,7 +51,7 @@ func Ch[T any](ch any) Item[T] {
 	if c, ok := ch.(chan<- Item[T]); ok {
 		return Item[T]{
 			C:    c,
-			Disc: enums.ItemDiscChan,
+			disc: enums.ItemDiscChan,
 		}
 	}
 
@@ -62,7 +62,7 @@ func Ch[T any](ch any) Item[T] {
 func Error[T any](err error) Item[T] {
 	return Item[T]{
 		E:    err,
-		Disc: enums.ItemDiscError,
+		disc: enums.ItemDiscError,
 	}
 }
 
@@ -70,7 +70,7 @@ func Error[T any](err error) Item[T] {
 // thats acts like a heartbeat.
 func Pulse[T any]() Item[T] {
 	return Item[T]{
-		Disc: enums.ItemDiscPulse,
+		disc: enums.ItemDiscPulse,
 	}
 }
 
@@ -78,7 +78,7 @@ func Pulse[T any]() Item[T] {
 func TV[T any](tv int) Item[T] {
 	return Item[T]{
 		N:    tv,
-		Disc: enums.ItemDiscTickValue,
+		disc: enums.ItemDiscTickValue,
 	}
 }
 
@@ -86,7 +86,7 @@ func TV[T any](tv int) Item[T] {
 func Num[T any](n int) Item[T] {
 	return Item[T]{
 		N:    n,
-		Disc: enums.ItemDiscNumeric,
+		disc: enums.ItemDiscNumeric,
 	}
 }
 
@@ -165,27 +165,27 @@ func sendViaRefCh[T any](ctx context.Context, inCh reflect.Value, ch chan<- Item
 
 // IsCh checks if an item is an error.
 func (i Item[T]) IsCh() bool {
-	return (i.Disc & enums.ItemDiscChan) > 0
+	return (i.disc & enums.ItemDiscChan) > 0
 }
 
 // IsError checks if an item is an error.
 func (i Item[T]) IsError() bool {
-	return (i.Disc & enums.ItemDiscError) > 0
+	return (i.disc & enums.ItemDiscError) > 0
 }
 
 // IsTick checks if an item is a tick instance.
 func (i Item[T]) IsTick() bool {
-	return (i.Disc & enums.ItemDiscPulse) > 0
+	return (i.disc & enums.ItemDiscPulse) > 0
 }
 
 // IsTickValue checks if an item is a tick instance.
 func (i Item[T]) IsTickValue() bool {
-	return (i.Disc & enums.ItemDiscTickValue) > 0
+	return (i.disc & enums.ItemDiscTickValue) > 0
 }
 
 // IsTickValue checks if an item is a tick instance.
 func (i Item[T]) IsNumeric() bool {
-	return (i.Disc & enums.ItemDiscNumeric) > 0
+	return (i.disc & enums.ItemDiscNumeric) > 0
 }
 
 // SendBlocking sends an item and blocks until it is sent.

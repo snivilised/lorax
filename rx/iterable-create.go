@@ -33,9 +33,7 @@ func newCreateIterable[T any](fs []Producer[T], opts ...Option[T]) Iterable[T] {
 }
 
 func (i *createIterable[T]) Observe(opts ...Option[T]) <-chan Item[T] {
-	mergedOptions := make([]Option[T], 0, len(opts))
-	copy(mergedOptions, opts)
-	mergedOptions = append(mergedOptions, opts...)
+	mergedOptions := append(i.opts, opts...) //nolint:gocritic // ignore
 	option := parseOptions(mergedOptions...)
 
 	if !option.isConnectable() {
