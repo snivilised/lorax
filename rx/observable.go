@@ -10,7 +10,7 @@ import (
 
 type Observable[T any] interface {
 	Iterable[T]
-
+	All(predicate Predicate[T], opts ...Option[T]) Single[T]
 	Connect(ctx context.Context) (context.Context, Disposable)
 
 	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]

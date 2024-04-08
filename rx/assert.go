@@ -19,12 +19,14 @@ type AssertResources[T any] interface {
 	Values() []T
 	Numbers() []int
 	Errors() []error
+	Booleans() []bool
 }
 
 type actualResources[T any] struct {
-	values  []T
-	numbers []int
-	errors  []error
+	values   []T
+	numbers  []int
+	errors   []error
+	booleans []bool
 }
 
 func (r *actualResources[T]) Values() []T {
@@ -39,6 +41,10 @@ func (r *actualResources[T]) Errors() []error {
 	return r.errors
 }
 
+func (r *actualResources[T]) Booleans() []bool {
+	return r.booleans
+}
+
 func Assert[T any](ctx context.Context, iterable Iterable[T], asserters ...Asserter[T]) {
 	resources := assertObserver(ctx, iterable)
 
@@ -49,9 +55,10 @@ func Assert[T any](ctx context.Context, iterable Iterable[T], asserters ...Asser
 
 func assertObserver[T any](ctx context.Context, iterable Iterable[T]) *actualResources[T] {
 	resources := &actualResources[T]{
-		values:  make([]T, 0),
-		numbers: make([]int, 0),
-		errors:  make([]error, 0),
+		values:   make([]T, 0),
+		numbers:  make([]int, 0),
+		errors:   make([]error, 0),
+		booleans: make([]bool, 0),
 	}
 
 	observe := iterable.Observe()
@@ -72,6 +79,9 @@ loop:
 
 			case item.IsNumeric():
 				resources.numbers = append(resources.numbers, item.N)
+
+			case item.IsBoolean():
+				resources.booleans = append(resources.booleans, item.B)
 
 			default:
 				resources.values = append(resources.values, item.V)
@@ -265,4 +275,64 @@ type CustomPredicate[T any] struct {
 // Check CustomPredicateAssert checks a custom predicate.
 func (a CustomPredicate[T]) Check(actual AssertResources[T]) {
 	Expect(a.Expected(actual)).To(Succeed(), reason("CustomPredicate"))
+}
+
+// HasTrue
+type HasTrue[T any] struct {
+}
+
+// Check HasTrue checks boolean values contains at least 1 true value
+func (a HasTrue[T]) Check(actual AssertResources[T]) {
+	values := actual.Booleans()
+
+	if len(values) == 0 {
+		Fail("HasTrue: no values found")
+	}
+
+	Expect(values).To(ContainElements(true), reason("HasTrue"))
+}
+
+// HasFalse
+type HasFalse[T any] struct {
+}
+
+// Check HasFalse checks boolean values contains at least 1 true false
+func (a HasFalse[T]) Check(actual AssertResources[T]) {
+	values := actual.Booleans()
+
+	if len(values) == 0 {
+		Fail("HasFalse: no values found")
+	}
+
+	Expect(values).To(ContainElements(false), reason("HasFalse"))
+}
+
+// IsTrue
+type IsTrue[T any] struct {
+}
+
+// Check IsTrue checks boolean value is true
+func (a IsTrue[T]) Check(actual AssertResources[T]) {
+	values := actual.Booleans()
+
+	if len(values) == 0 {
+		Fail("IsTrue: no value found")
+	}
+
+	Expect(values[0]).To(BeTrue(), reason("IsTrue"))
+}
+
+// IsFalse
+type IsFalse[T any] struct {
+}
+
+// Check IsFalse checks boolean value is false
+func (a IsFalse[T]) Check(actual AssertResources[T]) {
+	values := actual.Booleans()
+
+	if len(values) == 0 {
+		Fail("IsFalse: no value found")
+	}
+
+	Expect(values[0]).To(BeFalse(), reason("IsFalse"))
 }

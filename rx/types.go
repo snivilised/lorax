@@ -51,8 +51,8 @@ type (
 	FuncN[T any] func(...T) T
 	// ErrorFunc defines a function that computes a value from an error.
 	ErrorFunc[T any] func(error) T
-	// Predicate defines a func that returns a bool from an input value.
-	Predicate[T any] func(T) bool
+	// Predicate defines a func that returns a bool from an input item.
+	Predicate[T any] func(Item[T]) bool
 	// Marshaller defines a marshaller type (ItemValue[T] to []byte).
 	Marshaller[T any] func(T) ([]byte, error)
 	// Unmarshaller defines an unmarshaller type ([]byte to interface).
