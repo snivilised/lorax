@@ -146,8 +146,8 @@ var _ = Describe("OptionSingle", func() {
 				defer leaktest.Check(GinkgoT())()
 				// the intentions of the original rxgo test is not particularly clear
 				//
-				single := rx.JustItem(42).Filter(func(i int) bool {
-					return i == 42
+				single := rx.JustItem(42).Filter(func(it rx.Item[int]) bool {
+					return it.V == 42
 				})
 				rx.Assert(context.Background(), single,
 					rx.HasItem[int]{
@@ -161,8 +161,8 @@ var _ = Describe("OptionSingle", func() {
 					It("should: result in empty single iterable", func() {
 						defer leaktest.Check(GinkgoT())()
 
-						single := rx.JustItem(42).Filter(func(i int) bool {
-							return i == 48
+						single := rx.JustItem(42).Filter(func(it rx.Item[int]) bool {
+							return it.V == 48
 						})
 						rx.Assert(context.Background(), single,
 							rx.IsEmpty[int]{},

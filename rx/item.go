@@ -17,6 +17,7 @@ type (
 		//
 		C    chan<- Item[T]
 		N    int
+		B    bool
 		disc enums.ItemDiscriminator
 	}
 
@@ -87,6 +88,30 @@ func Num[T any](n int) Item[T] {
 	return Item[T]{
 		N:    n,
 		disc: enums.ItemDiscNumeric,
+	}
+}
+
+// Bool creates a type safe boolean instance
+func Bool[T any](b bool) Item[T] {
+	return Item[T]{
+		B:    b,
+		disc: enums.ItemDiscBoolean,
+	}
+}
+
+// True creates a type safe boolean instance set to true
+func True[T any]() Item[T] {
+	return Item[T]{
+		B:    true,
+		disc: enums.ItemDiscBoolean,
+	}
+}
+
+// False creates a type safe boolean instance set to false
+func False[T any]() Item[T] {
+	return Item[T]{
+		B:    false,
+		disc: enums.ItemDiscBoolean,
 	}
 }
 
@@ -178,14 +203,19 @@ func (i Item[T]) IsTick() bool {
 	return (i.disc & enums.ItemDiscPulse) > 0
 }
 
-// IsTickValue checks if an item is a tick instance.
+// IsTickValue checks if an item is a tick value instance.
 func (i Item[T]) IsTickValue() bool {
 	return (i.disc & enums.ItemDiscTickValue) > 0
 }
 
-// IsTickValue checks if an item is a tick instance.
+// IsTickValue checks if an item is a numeric instance.
 func (i Item[T]) IsNumeric() bool {
 	return (i.disc & enums.ItemDiscNumeric) > 0
+}
+
+// IsBoolean checks if an item is a boolean instance.
+func (i Item[T]) IsBoolean() bool {
+	return (i.disc & enums.ItemDiscBoolean) > 0
 }
 
 // SendBlocking sends an item and blocks until it is sent.

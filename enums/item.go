@@ -24,6 +24,11 @@ const (
 	//
 	ItemDiscNumeric
 
+	// ItemDiscBoolean enum value that represents a general boolean value
+	// typically used by predicate based operations eg All.
+	//
+	ItemDiscBoolean
+
 	// ItemDiscChan enum value that represents a channel of T
 	//
 	ItemDiscChan

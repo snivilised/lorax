@@ -111,7 +111,7 @@ type filterOperatorSingle[T any] struct {
 func (op *filterOperatorSingle[T]) next(ctx context.Context,
 	item Item[T], dst chan<- Item[T], _ operatorOptions[T],
 ) {
-	if op.apply(item.V) {
+	if op.apply(item) {
 		item.SendContext(ctx, dst)
 	}
 }

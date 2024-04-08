@@ -2,6 +2,7 @@ package rx
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 )
 
@@ -12,8 +13,65 @@ func isZero[T any](limit T) bool {
 	return val != zero
 }
 
-func (o *ObservableImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
-	return o.iterable.Observe(opts...)
+// All determines whether all items emitted by an Observable meet some criteria.
+func (o *ObservableImpl[T]) All(predicate Predicate[T], opts ...Option[T]) Single[T] {
+	const (
+		forceSeq     = false
+		bypassGather = false
+	)
+
+	return single(o.parent, o, func() operator[T] {
+		return &allOperator[T]{
+			predicate: predicate,
+			all:       true,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type allOperator[T any] struct {
+	predicate Predicate[T]
+	all       bool
+}
+
+func (op *allOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if !op.predicate(item) {
+		False[T]().SendContext(ctx, dst)
+
+		op.all = false
+
+		operatorOptions.stop()
+	}
+}
+
+func (op *allOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *allOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if op.all {
+		True[T]().SendContext(ctx, dst)
+	}
+}
+
+func (op *allOperator[T]) gatherNext(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if !item.IsBoolean() {
+		// This panic is temporary
+		panic(fmt.Sprintf("item: '%+v' is not a Boolean", item))
+	}
+
+	if !item.B {
+		False[T]().SendContext(ctx, dst)
+
+		op.all = false
+
+		operatorOptions.stop()
+	}
 }
 
 // Connect instructs a connectable Observable to begin emitting items to its subscribers.
@@ -237,4 +295,8 @@ func (op *minOperator[T]) gatherNext(ctx context.Context,
 ) {
 	// TODO(check): op.next(ctx, Of(item.V.(*minOperator).min), dst, operatorOptions)
 	op.next(ctx, Of(item.V), dst, operatorOptions)
+}
+
+func (o *ObservableImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
+	return o.iterable.Observe(opts...)
 }
