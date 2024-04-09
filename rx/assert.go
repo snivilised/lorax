@@ -74,6 +74,9 @@ loop:
 			}
 
 			switch {
+			case item.IsValue():
+				resources.values = append(resources.values, item.V)
+
 			case item.IsError():
 				resources.errors = append(resources.errors, item.E)
 
@@ -84,7 +87,7 @@ loop:
 				resources.booleans = append(resources.booleans, item.B)
 
 			default:
-				resources.values = append(resources.values, item.V)
+				Fail(fmt.Sprintf("value type not handled for: '%v'", item.Desc()))
 			}
 		}
 	}
