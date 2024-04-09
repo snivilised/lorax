@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+
+	"github.com/cenkalti/backoff/v4"
 )
 
 func isZero[T any](limit T) bool {
@@ -132,6 +134,52 @@ func (op *averageOperator[T]) gatherNext(_ context.Context, item Item[T],
 	// op.count += v.count
 	//
 	panic("averageOperator.gatherNext NOT-IMPL")
+}
+
+// BackOffRetry implements a backoff retry if a source Observable sends an error,
+// resubscribe to it in the hopes that it will complete without error.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) BackOffRetry(backOffCfg backoff.BackOff, opts ...Option[T]) Observable[T] {
+	option := parseOptions(opts...)
+	next := option.buildChannel()
+	ctx := option.buildContext(o.parent)
+	f := func() error {
+		observe := o.Observe(opts...)
+
+		for {
+			select {
+			case <-ctx.Done():
+				close(next)
+
+				return nil
+			case i, ok := <-observe:
+				if !ok {
+					return nil
+				}
+
+				if i.IsError() {
+					return i.E
+				}
+
+				i.SendContext(ctx, next)
+			}
+		}
+	}
+
+	go func() {
+		if err := backoff.Retry(f, backOffCfg); err != nil {
+			Error[T](err).SendContext(ctx, next)
+			close(next)
+
+			return
+		}
+
+		close(next)
+	}()
+
+	return &ObservableImpl[T]{
+		iterable: newChannelIterable(next),
+	}
 }
 
 // Connect instructs a connectable Observable to begin emitting items to its subscribers.

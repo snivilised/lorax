@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/emirpasic/gods/trees/binaryheap"
 )
 
@@ -12,6 +13,7 @@ type Observable[T any] interface {
 	Iterable[T]
 	All(predicate Predicate[T], opts ...Option[T]) Single[T]
 	Average(calc Calculator[T], opts ...Option[T]) Single[T]
+	BackOffRetry(backOffCfg backoff.BackOff, opts ...Option[T]) Observable[T]
 	Connect(ctx context.Context) (context.Context, Disposable)
 
 	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
