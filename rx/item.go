@@ -188,6 +188,11 @@ func sendViaRefCh[T any](ctx context.Context, inCh reflect.Value, ch chan<- Item
 	}
 }
 
+// IsValue checks if an item is a value.
+func (i Item[T]) IsValue() bool {
+	return i.disc == 0
+}
+
 // IsCh checks if an item is an error.
 func (i Item[T]) IsCh() bool {
 	return (i.disc & enums.ItemDiscChan) > 0
@@ -216,6 +221,10 @@ func (i Item[T]) IsNumeric() bool {
 // IsBoolean checks if an item is a boolean instance.
 func (i Item[T]) IsBoolean() bool {
 	return (i.disc & enums.ItemDiscBoolean) > 0
+}
+
+func (i Item[T]) Desc() string {
+	return enums.ItemDescriptions[i.disc]
 }
 
 // SendBlocking sends an item and blocks until it is sent.

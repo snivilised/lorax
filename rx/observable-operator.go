@@ -74,6 +74,66 @@ func (op *allOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	}
 }
 
+func (o *ObservableImpl[T]) Average(calc Calculator[T],
+	opts ...Option[T],
+) Single[T] {
+	const (
+		forceSeq     = false
+		bypassGather = false
+	)
+
+	return single(o.parent, o, func() operator[T] {
+		return &averageOperator[T]{
+			calc: calc,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type averageOperator[T any] struct {
+	sum   T
+	count T
+	calc  Calculator[T]
+}
+
+func (op *averageOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	if !item.IsValue() || item.IsError() {
+		Error[T](IllegalInputError{
+			error: fmt.Sprintf("expected item value, got: %v (%v)", item.Desc(), item)},
+		).SendContext(ctx, dst)
+	}
+
+	op.sum = op.calc.Add(op.sum, item.V)
+	op.count = op.calc.Inc(op.count)
+}
+
+func (op *averageOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *averageOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if op.calc.IsZero(op.count) {
+		Of(op.calc.Zero()).SendContext(ctx, dst)
+	} else {
+		Of(op.calc.Div(op.sum, op.count)).SendContext(ctx, dst)
+	}
+}
+
+func (op *averageOperator[T]) gatherNext(_ context.Context, item Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+	_ = item
+
+	// TODO(fix): v := item.V.(*averageOperator[T])
+	// op.sum += v.sum
+	// op.count += v.count
+	//
+	panic("averageOperator.gatherNext NOT-IMPL")
+}
+
 // Connect instructs a connectable Observable to begin emitting items to its subscribers.
 func (o *ObservableImpl[T]) Connect(ctx context.Context) (context.Context, Disposable) {
 	ctx, cancel := context.WithCancel(ctx)
@@ -225,10 +285,6 @@ type mapOperator[T any] struct {
 func (op *mapOperator[T]) next(ctx context.Context,
 	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	// no longer needed: if !item.IsNumeric() {
-	// 	panic(fmt.Errorf("not a number (%v)", item))
-	// }
-	//
 	res, err := op.apply(ctx, item.V)
 
 	if err != nil {
@@ -265,7 +321,7 @@ type minOperator[T any] struct {
 	comparator Comparator[T]
 	empty      bool
 	min        T
-	limit      func(value T) bool // represents min or max
+	limit      func(value T) bool
 }
 
 func (op *minOperator[T]) next(_ context.Context,

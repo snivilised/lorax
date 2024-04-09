@@ -3,6 +3,7 @@ package rx_test
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/samber/lo"
 	"github.com/snivilised/lorax/rx"
@@ -26,6 +27,15 @@ func channelValue[T any](ctx context.Context, items ...any) chan rx.Item[T] {
 
 			case T:
 				rx.Of(item).SendContext(ctx, next)
+
+			default:
+				// This error can occur, if the client instantiates with type T,
+				// but sends a value not of type T, eg, instantiate with float32,
+				// but send 42 through the channel, instead of float32(42).
+				//
+				err := fmt.Errorf("channel value: '%v' not sent (wrong type?)", item)
+
+				rx.Error[T](err).SendContext(ctx, next)
 			}
 		}
 
