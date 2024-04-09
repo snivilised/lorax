@@ -270,6 +270,42 @@ func (op *containsOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	}
 }
 
+func (o *ObservableImpl[T]) Count(opts ...Option[T]) Single[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return single(o.parent, o, func() operator[T] {
+		return &countOperator[T]{}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type countOperator[T any] struct {
+	count int
+}
+
+func (op *countOperator[T]) next(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+	op.count++
+}
+
+func (op *countOperator[T]) err(_ context.Context, _ Item[T],
+	_ chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	operatorOptions.stop()
+}
+
+func (op *countOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	Num[T](op.count).SendContext(ctx, dst)
+}
+
+func (op *countOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
 func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
 	opts ...Option[T],
