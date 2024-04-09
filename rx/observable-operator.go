@@ -352,6 +352,122 @@ func (op *defaultIfEmptyOperator[T]) gatherNext(_ context.Context, _ Item[T],
 ) {
 }
 
+// Distinct suppresses duplicate items in the original Observable and returns
+// a new Observable.
+func (o *ObservableImpl[T]) Distinct(apply Func[T], opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = false
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &distinctOperator[T]{
+			apply:  apply,
+			keyset: make(map[interface{}]interface{}),
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type distinctOperator[T any] struct {
+	apply  Func[T]
+	keyset map[interface{}]interface{}
+}
+
+func (op *distinctOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	key, err := op.apply(ctx, item.V)
+	if err != nil {
+		Error[T](err).SendContext(ctx, dst)
+		operatorOptions.stop()
+
+		return
+	}
+
+	_, ok := op.keyset[key]
+
+	if !ok {
+		item.SendContext(ctx, dst)
+	}
+
+	op.keyset[key] = nil
+}
+
+func (op *distinctOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *distinctOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *distinctOperator[T]) gatherNext(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	if _, contains := op.keyset[item.V]; !contains {
+		Of(item.V).SendContext(ctx, dst)
+
+		op.keyset[item.V] = nil
+	}
+}
+
+// DistinctUntilChanged suppresses consecutive duplicate items in the original Observable.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) DistinctUntilChanged(apply Func[T], comparator Comparator[T],
+	opts ...Option[T],
+) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &distinctUntilChangedOperator[T]{
+			apply:      apply,
+			comparator: comparator,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type distinctUntilChangedOperator[T any] struct {
+	apply      Func[T]
+	current    T
+	comparator Comparator[T]
+}
+
+func (op *distinctUntilChangedOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T]) {
+	key, err := op.apply(ctx, item.V)
+
+	if err != nil {
+		Error[T](err).SendContext(ctx, dst)
+		operatorOptions.stop()
+
+		return
+	}
+
+	if op.comparator(op.current, key) != 0 {
+		item.SendContext(ctx, dst)
+
+		op.current = key
+	}
+}
+
+func (op *distinctUntilChangedOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *distinctUntilChangedOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *distinctUntilChangedOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
 func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
 	opts ...Option[T],
