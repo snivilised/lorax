@@ -306,6 +306,52 @@ func (op *countOperator[T]) gatherNext(_ context.Context, _ Item[T],
 ) {
 }
 
+// DefaultIfEmpty returns an Observable that emits the items emitted by the source
+// Observable or a specified default item if the source Observable is empty.
+func (o *ObservableImpl[T]) DefaultIfEmpty(defaultValue T, opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &defaultIfEmptyOperator[T]{
+			defaultValue: defaultValue,
+			empty:        true,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type defaultIfEmptyOperator[T any] struct {
+	defaultValue T
+	empty        bool
+}
+
+func (op *defaultIfEmptyOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	op.empty = false
+
+	item.SendContext(ctx, dst)
+}
+
+func (op *defaultIfEmptyOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *defaultIfEmptyOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if op.empty {
+		Of(op.defaultValue).SendContext(ctx, dst)
+	}
+}
+
+func (op *defaultIfEmptyOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
 func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
 	opts ...Option[T],

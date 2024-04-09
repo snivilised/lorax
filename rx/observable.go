@@ -17,6 +17,7 @@ type Observable[T any] interface {
 	Connect(ctx context.Context) (context.Context, Disposable)
 	Contains(equal Predicate[T], opts ...Option[T]) Single[T]
 	Count(opts ...Option[T]) Single[T]
+	DefaultIfEmpty(defaultValue T, opts ...Option[T]) Observable[T]
 
 	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
 	Map(apply Func[T], opts ...Option[T]) Observable[T]
