@@ -1,11 +1,22 @@
 package rx
 
-import "context"
+import (
+	"context"
+)
 
 type (
 	operatorOptions[T any] struct {
 		stop          func()
 		resetIterable func(Iterable[T])
+	}
+
+	// Calculator defines numeric operations for T
+	Calculator[T any] interface {
+		Add(T, T) T
+		Div(T, T) T
+		Inc(T) T
+		IsZero(T) bool
+		Zero() T
 	}
 
 	// Comparator defines a func that returns an int:
@@ -19,6 +30,8 @@ type (
 	// maximum reference point to be minimum value for type T and the reverse for the
 	// Min operator.
 	InitLimit[T any] func() T
+	// IsZero determines whether the value T is zero
+	IsZero[T any] func(T) bool
 	// ItemToObservable defines a function that computes an observable from an item.
 	ItemToObservable[T any] func(Item[T]) Observable[T]
 	// ErrorToObservable defines a function that transforms an observable from an error.
