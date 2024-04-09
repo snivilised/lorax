@@ -216,6 +216,60 @@ func (o *ObservableImpl[T]) Run(opts ...Option[T]) Disposed {
 	return dispose
 }
 
+func (o *ObservableImpl[T]) Contains(equal Predicate[T], opts ...Option[T]) Single[T] {
+	const (
+		forceSeq     = false
+		bypassGather = false
+	)
+
+	return single(o.parent, o, func() operator[T] {
+		return &containsOperator[T]{
+			equal:    equal,
+			contains: false,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type containsOperator[T any] struct {
+	equal    Predicate[T]
+	contains bool
+}
+
+func (op *containsOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if op.equal(item) {
+		True[T]().SendContext(ctx, dst)
+
+		op.contains = true
+
+		operatorOptions.stop()
+	}
+}
+
+func (op *containsOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *containsOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if !op.contains {
+		False[T]().SendContext(ctx, dst)
+	}
+}
+
+func (op *containsOperator[T]) gatherNext(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if item.IsBoolean() && item.B {
+		True[T]().SendContext(ctx, dst)
+		operatorOptions.stop()
+
+		op.contains = true
+	}
+}
+
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
 func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
 	opts ...Option[T],
