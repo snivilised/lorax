@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("Observable operator", func() {
 	XContext("${{OPERATOR-NAME}}", func() {
-		Context("principle", func() {
+		When("principle", func() {
 			// success path
 			It("🧪 should: ", func() {
 				// rxgo: Test_
@@ -22,7 +22,7 @@ var _ = Describe("Observable operator", func() {
 		})
 
 		Context("Errors", func() {
-			Context("given: foo", func() {
+			When("foo", func() {
 				It("🧪 should: ", func() {
 					// rxgo: Test_
 					defer leaktest.Check(GinkgoT())()
@@ -31,7 +31,7 @@ var _ = Describe("Observable operator", func() {
 		})
 
 		Context("Parallel", func() {
-			Context("given: foo", func() {
+			When("foo", func() {
 				It("🧪 should: ", func() {
 					// rxgo: Test_
 					defer leaktest.Check(GinkgoT())()
@@ -40,7 +40,7 @@ var _ = Describe("Observable operator", func() {
 		})
 
 		Context("Parallel/Error", func() {
-			Context("given: foo", func() {
+			When("foo", func() {
 				It("🧪 should: ", func() {
 					// rxgo: Test_
 					defer leaktest.Check(GinkgoT())()
