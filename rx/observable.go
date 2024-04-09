@@ -15,6 +15,7 @@ type Observable[T any] interface {
 	Average(calc Calculator[T], opts ...Option[T]) Single[T]
 	BackOffRetry(backOffCfg backoff.BackOff, opts ...Option[T]) Observable[T]
 	Connect(ctx context.Context) (context.Context, Disposable)
+	Contains(equal Predicate[T], opts ...Option[T]) Single[T]
 
 	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
 	Map(apply Func[T], opts ...Option[T]) Observable[T]
