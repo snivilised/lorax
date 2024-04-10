@@ -31,7 +31,7 @@ func (c *NumericCalc[T]) Div(a, b T) T {
 }
 
 func (c *NumericCalc[T]) Inc(v T) T {
-	return v + 1
+	return v + T(1)
 }
 
 func (c *NumericCalc[T]) IsZero(v T) bool {
