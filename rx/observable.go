@@ -20,6 +20,9 @@ type Observable[T any] interface {
 	DefaultIfEmpty(defaultValue T, opts ...Option[T]) Observable[T]
 	Distinct(apply Func[T], opts ...Option[T]) Observable[T]
 	DistinctUntilChanged(apply Func[T], comparator Comparator[T], opts ...Option[T]) Observable[T]
+	DoOnCompleted(completedFunc CompletedFunc, opts ...Option[T]) Disposed
+	DoOnError(errFunc ErrFunc, opts ...Option[T]) Disposed
+	DoOnNext(nextFunc NextFunc[T], opts ...Option[T]) Disposed
 	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
 	Map(apply Func[T], opts ...Option[T]) Observable[T]
 	Min(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]

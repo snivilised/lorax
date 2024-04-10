@@ -468,6 +468,106 @@ func (op *distinctUntilChangedOperator[T]) gatherNext(_ context.Context, _ Item[
 ) {
 }
 
+// DoOnCompleted registers a callback action that will be called once the
+// Observable terminates.
+func (o *ObservableImpl[T]) DoOnCompleted(completedFunc CompletedFunc,
+	opts ...Option[T],
+) Disposed {
+	dispose := make(chan struct{})
+	handler := func(ctx context.Context, src <-chan Item[T]) {
+		defer close(dispose)
+		defer completedFunc()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case i, ok := <-src:
+				if !ok {
+					return
+				}
+
+				if i.IsError() {
+					return
+				}
+			}
+		}
+	}
+
+	option := parseOptions(opts...)
+	ctx := option.buildContext(o.parent)
+
+	go handler(ctx, o.Observe(opts...))
+
+	return dispose
+}
+
+// DoOnError registers a callback action that will be called if the
+// Observable terminates abnormally.
+func (o *ObservableImpl[T]) DoOnError(errFunc ErrFunc, opts ...Option[T]) Disposed {
+	dispose := make(chan struct{})
+	handler := func(ctx context.Context, src <-chan Item[T]) {
+		defer close(dispose)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case i, ok := <-src:
+				if !ok {
+					return
+				}
+
+				if i.IsError() {
+					errFunc(i.E)
+
+					return
+				}
+			}
+		}
+	}
+
+	option := parseOptions(opts...)
+	ctx := option.buildContext(o.parent)
+
+	go handler(ctx, o.Observe(opts...))
+
+	return dispose
+}
+
+// DoOnNext registers a callback action that will be called on each item
+// emitted by the Observable.
+func (o *ObservableImpl[T]) DoOnNext(nextFunc NextFunc[T], opts ...Option[T]) Disposed {
+	dispose := make(chan struct{})
+	handler := func(ctx context.Context, src <-chan Item[T]) {
+		defer close(dispose)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case i, ok := <-src:
+				if !ok {
+					return
+				}
+
+				if i.IsError() {
+					return
+				}
+
+				nextFunc(i.V)
+			}
+		}
+	}
+
+	option := parseOptions(opts...)
+	ctx := option.buildContext(o.parent)
+
+	go handler(ctx, o.Observe(opts...))
+
+	return dispose
+}
+
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
 func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
 	opts ...Option[T],
