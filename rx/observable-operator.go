@@ -746,6 +746,90 @@ func (op *findOperator[T]) gatherNext(_ context.Context, _ Item[T],
 	_ chan<- Item[T], _ operatorOptions[T]) {
 }
 
+// First returns new Observable which emit only first item.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) First(opts ...Option[T]) OptionalSingle[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return optionalSingle(o.parent, o, func() operator[T] {
+		return &firstOperator[T]{}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type firstOperator[T any] struct{}
+
+func (op *firstOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	item.SendContext(ctx, dst)
+	operatorOptions.stop()
+}
+
+func (op *firstOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *firstOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *firstOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
+// FirstOrDefault returns new Observable which emit only first item.
+// If the observable fails to emit any items, it emits a default value.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) FirstOrDefault(defaultValue T, opts ...Option[T]) Single[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return single(o.parent, o, func() operator[T] {
+		return &firstOrDefaultOperator[T]{
+			defaultValue: defaultValue,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type firstOrDefaultOperator[T any] struct {
+	defaultValue T
+	sent         bool
+}
+
+func (op *firstOrDefaultOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	item.SendContext(ctx, dst)
+
+	op.sent = true
+
+	operatorOptions.stop()
+}
+
+func (op *firstOrDefaultOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *firstOrDefaultOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if !op.sent {
+		Of(op.defaultValue).SendContext(ctx, dst)
+	}
+}
+
+func (op *firstOrDefaultOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
 // !!!
 
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
