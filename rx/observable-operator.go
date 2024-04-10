@@ -668,6 +668,44 @@ func (o *ObservableImpl[T]) Errors(opts ...Option[T]) []error {
 	}
 }
 
+// Filter emits only those items from an Observable that pass a predicate test.
+func (o *ObservableImpl[T]) Filter(apply Predicate[T], opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = false
+		bypassGather = true
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &filterOperator[T]{apply: apply}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type filterOperator[T any] struct {
+	apply Predicate[T]
+}
+
+func (op *filterOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	if op.apply(item) {
+		item.SendContext(ctx, dst)
+	}
+}
+
+func (op *filterOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *filterOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *filterOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
 // !!!
 
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
