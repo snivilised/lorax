@@ -32,6 +32,11 @@ const (
 	// ItemDiscTick enum value that represents a TickValue value.
 	//
 	ItemDiscTickValue
+
+	// ItemDiscOpaque enum value that can be used to represent anything,
+	// typically a value that is not of type T or any of the other scalar
+	// types already catered for.
+	ItemDiscOpaque
 )
 
 type (
@@ -49,5 +54,6 @@ func init() {
 		ItemDiscNumeric:   "numeric",
 		ItemDiscPulse:     "pulse",
 		ItemDiscTickValue: "tick",
+		ItemDiscOpaque:    "opaque",
 	}
 }

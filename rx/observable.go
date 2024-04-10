@@ -30,11 +30,20 @@ type Observable[T any] interface {
 	Find(find Predicate[T], opts ...Option[T]) OptionalSingle[T]
 	First(opts ...Option[T]) OptionalSingle[T]
 	FirstOrDefault(defaultValue T, opts ...Option[T]) Single[T]
+	FlatMap(apply ItemToObservable[T], opts ...Option[T]) Observable[T]
+	ForEach(nextFunc NextFunc[T], errFunc ErrFunc, completedFunc CompletedFunc, opts ...Option[T]) Disposed
+	GroupBy(length int, distribution DistributionFunc[T], opts ...Option[T]) Observable[T]
+	GroupByDynamic(distribution DynamicDistributionFunc[T], opts ...Option[T]) Observable[T]
+	IgnoreElements(opts ...Option[T]) Observable[T]
+	Last(opts ...Option[T]) OptionalSingle[T]
+	LastOrDefault(defaultValue T, opts ...Option[T]) Single[T]
 	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
 	Map(apply Func[T], opts ...Option[T]) Observable[T]
 	Min(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
 
 	Run(opts ...Option[T]) Disposed
+
+	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)
 }
 
 // ObservableImpl implements Observable.
@@ -48,6 +57,39 @@ func defaultErrorFuncOperator[T any](ctx context.Context,
 ) {
 	item.SendContext(ctx, dst)
 	options.stop()
+}
+
+type (
+	customObservableFunc[T any] func(ctx context.Context,
+		next chan Item[T],
+		option Option[T],
+		opts ...Option[T],
+	)
+)
+
+func customObservableOperator[T any](parent context.Context,
+	f customObservableFunc[T], opts ...Option[T],
+) Observable[T] {
+	option := parseOptions(opts...)
+	next := option.buildChannel()
+	ctx := option.buildContext(parent)
+
+	if option.isEagerObservation() {
+		go f(ctx, next, option, opts...)
+
+		return &ObservableImpl[T]{
+			iterable: newChannelIterable(next),
+		}
+	}
+
+	return &ObservableImpl[T]{
+		iterable: newFactoryIterable(func(propagatedOptions ...Option[T]) <-chan Item[T] {
+			mergedOptions := append(opts, propagatedOptions...) //nolint:gocritic // foo
+			go f(ctx, next, option, mergedOptions...)
+
+			return next
+		}),
+	}
 }
 
 type operator[T any] interface {

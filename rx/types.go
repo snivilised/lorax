@@ -24,6 +24,11 @@ type (
 	// - A negative value if the first argument is less than the second
 	// - A positive value if the first argument is greater than the second
 	Comparator[T any] func(T, T) int
+	// DistributionFunc used by GroupBy
+	DistributionFunc[T any] func(Item[T]) int
+
+	// DistributionFunc used by GroupByDynamic
+	DynamicDistributionFunc[T any] func(Item[T]) string
 
 	// InitLimit defines a function to be used with Min and Max operators that defines
 	// a limit initialiser, that is to say, for Max we need to initialise the internal
@@ -80,7 +85,7 @@ type (
 	Disposable context.CancelFunc
 
 	// NextFunc handles a next item in a stream.
-	NextFunc[T any] func(T)
+	NextFunc[T any] func(Item[T])
 	// ErrFunc handles an error in a stream.
 	ErrFunc func(error)
 	// CompletedFunc handles the end of a stream.

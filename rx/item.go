@@ -18,6 +18,7 @@ type (
 		C    chan<- Item[T]
 		N    int
 		B    bool
+		O    any
 		disc enums.ItemDiscriminator
 	}
 
@@ -112,6 +113,13 @@ func False[T any]() Item[T] {
 	return Item[T]{
 		B:    false,
 		disc: enums.ItemDiscBoolean,
+	}
+}
+
+func Opaque[T any](o any) Item[T] {
+	return Item[T]{
+		O:    o,
+		disc: enums.ItemDiscOpaque,
 	}
 }
 
@@ -221,6 +229,11 @@ func (i Item[T]) IsNumeric() bool {
 // IsBoolean checks if an item is a boolean instance.
 func (i Item[T]) IsBoolean() bool {
 	return (i.disc & enums.ItemDiscBoolean) > 0
+}
+
+// IsOpaque checks if an item is an opaque value.
+func (i Item[T]) IsOpaque() bool {
+	return (i.disc & enums.ItemDiscOpaque) > 0
 }
 
 func (i Item[T]) Desc() string {

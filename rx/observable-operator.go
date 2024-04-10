@@ -546,16 +546,16 @@ func (o *ObservableImpl[T]) DoOnNext(nextFunc NextFunc[T], opts ...Option[T]) Di
 			select {
 			case <-ctx.Done():
 				return
-			case i, ok := <-src:
+			case item, ok := <-src:
 				if !ok {
 					return
 				}
 
-				if i.IsError() {
+				if item.IsError() {
 					return
 				}
 
-				nextFunc(i.V)
+				nextFunc(item)
 			}
 		}
 	}
@@ -830,9 +830,347 @@ func (op *firstOrDefaultOperator[T]) gatherNext(_ context.Context, _ Item[T],
 ) {
 }
 
+// FlatMap transforms the items emitted by an Observable into Observables,
+// then flatten the emissions from those into a single Observable.
+func (o *ObservableImpl[T]) FlatMap(apply ItemToObservable[T],
+	opts ...Option[T],
+) Observable[T] {
+	f := func(ctx context.Context, next chan Item[T], option Option[T], opts ...Option[T]) {
+		defer close(next)
+
+		observe := o.Observe(opts...)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case item, ok := <-observe:
+				if !ok {
+					return
+				}
+
+				observe2 := apply(item).Observe(opts...)
+
+			loop2:
+				for {
+					select {
+					case <-ctx.Done():
+						return
+
+					case item, ok := <-observe2:
+						if !ok {
+							break loop2
+						}
+
+						if item.IsError() {
+							item.SendContext(ctx, next)
+							if option.getErrorStrategy() == StopOnError {
+								return
+							}
+						} else if !item.SendContext(ctx, next) {
+							return
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return customObservableOperator(o.parent, f, opts...)
+}
+
+// ForEach subscribes to the Observable and receives notifications for each element.
+func (o *ObservableImpl[T]) ForEach(nextFunc NextFunc[T],
+	errFunc ErrFunc, completedFunc CompletedFunc, opts ...Option[T],
+) Disposed {
+	dispose := make(chan struct{})
+	handler := func(ctx context.Context, src <-chan Item[T]) {
+		defer close(dispose)
+
+		for {
+			select {
+			case <-ctx.Done():
+				completedFunc()
+
+				return
+
+			case item, ok := <-src:
+				if !ok {
+					completedFunc()
+
+					return
+				}
+
+				if item.IsError() {
+					errFunc(item.E)
+
+					break
+				}
+
+				nextFunc(item)
+			}
+		}
+	}
+
+	ctx := o.parent
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	go handler(ctx, o.Observe(opts...))
+
+	return dispose
+}
+
+// GroupBy divides an Observable into a set of Observables that
+// each emit a different group of items from the original Observable,
+// organized by key.
+func (o *ObservableImpl[T]) GroupBy(length int,
+	distribution DistributionFunc[T], opts ...Option[T],
+) Observable[T] {
+	option := parseOptions(opts...)
+	ctx := option.buildContext(o.parent)
+
+	s := make([]Item[T], length)
+	chs := make([]chan Item[T], length)
+
+	for i := 0; i < length; i++ {
+		ch := option.buildChannel()
+		chs[i] = ch
+
+		s[i] = Opaque[T](&ObservableImpl[T]{
+			iterable: newChannelIterable(ch),
+		})
+	}
+
+	go func() {
+		observe := o.Observe(opts...)
+
+		defer func() {
+			for i := 0; i < length; i++ {
+				close(chs[i])
+			}
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case item, ok := <-observe:
+				if !ok {
+					return
+				}
+
+				// Is this where we receive the Opaque *ObservableImpl item?
+				//
+				idx := distribution(item)
+				if idx >= length {
+					err := Error[T](IndexOutOfBoundError{
+						error: fmt.Sprintf("index %d, length %d", idx, length),
+					})
+					for i := 0; i < length; i++ {
+						err.SendContext(ctx, chs[i])
+					}
+
+					return
+				}
+
+				item.SendContext(ctx, chs[idx])
+			}
+		}
+	}()
+
+	return &ObservableImpl[T]{
+		iterable: newSliceIterable(s, opts...),
+	}
+}
+
+// GroupedObservable is the observable type emitted by the GroupByDynamic operator.
+type GroupedObservable[T any] struct {
+	Observable[T]
+	// Key is the distribution key
+	Key string
+}
+
+// GroupByDynamic divides an Observable into a dynamic set of
+// Observables that each emit GroupedObservable from the original
+// Observable, organized by key.
+func (o *ObservableImpl[T]) GroupByDynamic(distribution DynamicDistributionFunc[T],
+	opts ...Option[T],
+) Observable[T] {
+	option := parseOptions(opts...)
+	next := option.buildChannel()
+	ctx := option.buildContext(o.parent)
+	chs := make(map[string]chan Item[T])
+
+	go func() {
+		observe := o.Observe(opts...)
+	loop:
+		for {
+			select {
+			case <-ctx.Done():
+				break loop
+			case item, ok := <-observe:
+				if !ok {
+					break loop
+				}
+
+				idx := distribution(item)
+				ch, contains := chs[idx]
+
+				if !contains {
+					ch = option.buildChannel()
+					chs[idx] = ch
+					Opaque[T](GroupedObservable[T]{ // TODO: where is this received?
+						Observable: &ObservableImpl[T]{
+							iterable: newChannelIterable(ch),
+						},
+						Key: idx,
+					}).SendContext(ctx, next)
+				}
+				item.SendContext(ctx, ch)
+			}
+		}
+
+		for _, ch := range chs {
+			close(ch)
+		}
+
+		close(next)
+	}()
+
+	return &ObservableImpl[T]{
+		iterable: newChannelIterable(next),
+	}
+}
+
+// IgnoreElements ignores all items emitted by the source ObservableSource except
+// for the errors. Cannot be run in parallel.
+func (o *ObservableImpl[T]) IgnoreElements(opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &ignoreElementsOperator[T]{}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type ignoreElementsOperator[T any] struct{}
+
+func (op *ignoreElementsOperator[T]) next(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
+func (op *ignoreElementsOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T]) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *ignoreElementsOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *ignoreElementsOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
+// Last returns a new Observable which emit only last item.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) Last(opts ...Option[T]) OptionalSingle[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return optionalSingle(o.parent, o, func() operator[T] {
+		return &lastOperator[T]{
+			empty: true,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type lastOperator[T any] struct {
+	last  Item[T]
+	empty bool
+}
+
+func (op *lastOperator[T]) next(_ context.Context, item Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+	op.last = item
+	op.empty = false
+}
+
+func (op *lastOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T]) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *lastOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if !op.empty {
+		op.last.SendContext(ctx, dst)
+	}
+}
+
+func (op *lastOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
+func (o *ObservableImpl[T]) LastOrDefault(defaultValue T, opts ...Option[T]) Single[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return single(o.parent, o, func() operator[T] {
+		return &lastOrDefaultOperator[T]{
+			defaultValue: defaultValue,
+			empty:        true,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type lastOrDefaultOperator[T any] struct {
+	defaultValue T
+	last         Item[T]
+	empty        bool
+}
+
+func (op *lastOrDefaultOperator[T]) next(_ context.Context, item Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+	op.last = item
+	op.empty = false
+}
+
+func (op *lastOrDefaultOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *lastOrDefaultOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if !op.empty {
+		op.last.SendContext(ctx, dst)
+	} else {
+		Of(op.defaultValue).SendContext(ctx, dst)
+	}
+}
+
+func (op *lastOrDefaultOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
 // !!!
 
-// Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
+// Max determines and emits the maximum-valued item emitted by an Observable
+// according to a comparator.
 func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
 	opts ...Option[T],
 ) OptionalSingle[T] {
@@ -1019,4 +1357,49 @@ func (op *minOperator[T]) gatherNext(ctx context.Context,
 
 func (o *ObservableImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	return o.iterable.Observe(opts...)
+}
+
+// ToSlice collects all items from an Observable and emit them in a slice and
+// an optional error. Cannot be run in parallel.
+func (o *ObservableImpl[T]) ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error) {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	op := &toSliceOperator[T]{
+		s: make([]Item[T], 0, initialCapacity),
+	}
+
+	<-observable(o.parent, o, func() operator[T] {
+		return op
+	}, forceSeq, bypassGather, opts...).Run()
+
+	return op.s, op.observableErr
+}
+
+type toSliceOperator[T any] struct {
+	s             []Item[T]
+	observableErr error
+}
+
+func (op *toSliceOperator[T]) next(_ context.Context, item Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+	op.s = append(op.s, item)
+}
+
+func (op *toSliceOperator[T]) err(_ context.Context, item Item[T],
+	_ chan<- Item[T], operatorOptions operatorOptions[T]) {
+	op.observableErr = item.E
+
+	operatorOptions.stop()
+}
+
+func (op *toSliceOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *toSliceOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
 }
