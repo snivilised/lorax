@@ -6,6 +6,7 @@ import (
 	"github.com/fortytw2/leaktest"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
 	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
+	"github.com/snivilised/lorax/rx"
 )
 
 var _ = Describe("Observable operator", func() {
@@ -95,8 +96,8 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				s := make([]int, 0)
-				<-testObservable[int](ctx, 1, 2, 3).DoOnNext(func(i int) {
-					s = append(s, i)
+				<-testObservable[int](ctx, 1, 2, 3).DoOnNext(func(item rx.Item[int]) {
+					s = append(s, item.V)
 				})
 
 				Expect(s).To(ContainElements([]int{1, 2, 3}))
@@ -113,8 +114,8 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 
 					s := make([]int, 0)
-					<-testObservable[int](ctx, 1, errFoo, 3).DoOnNext(func(i int) {
-						s = append(s, i)
+					<-testObservable[int](ctx, 1, errFoo, 3).DoOnNext(func(item rx.Item[int]) {
+						s = append(s, item.V)
 					})
 
 					Expect(s).To(ContainElements([]int{1}))
