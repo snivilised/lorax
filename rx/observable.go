@@ -24,6 +24,8 @@ type Observable[T any] interface {
 	DoOnError(errFunc ErrFunc, opts ...Option[T]) Disposed
 	DoOnNext(nextFunc NextFunc[T], opts ...Option[T]) Disposed
 	ElementAt(index uint, opts ...Option[T]) Single[T]
+	Error(opts ...Option[T]) error
+	Errors(opts ...Option[T]) []error
 	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
 	Map(apply Func[T], opts ...Option[T]) Observable[T]
 	Min(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]

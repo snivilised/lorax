@@ -621,6 +621,55 @@ func (op *elementAtOperator[T]) gatherNext(_ context.Context, _ Item[T],
 	_ chan<- Item[T], _ operatorOptions[T]) {
 }
 
+// Error returns the eventual Observable error.
+// This method is blocking.
+func (o *ObservableImpl[T]) Error(opts ...Option[T]) error {
+	option := parseOptions(opts...)
+	ctx := option.buildContext(o.parent)
+	observe := o.iterable.Observe(opts...)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case item, ok := <-observe:
+			if !ok {
+				return nil
+			}
+
+			if item.IsError() {
+				return item.E
+			}
+		}
+	}
+}
+
+// Errors returns an eventual list of Observable errors.
+// This method is blocking
+func (o *ObservableImpl[T]) Errors(opts ...Option[T]) []error {
+	option := parseOptions(opts...)
+	ctx := option.buildContext(o.parent)
+	observe := o.iterable.Observe(opts...)
+	errs := make([]error, 0)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return []error{ctx.Err()}
+		case item, ok := <-observe:
+			if !ok {
+				return errs
+			}
+
+			if item.IsError() {
+				errs = append(errs, item.E)
+			}
+		}
+	}
+}
+
+// !!!
+
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
 func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
 	opts ...Option[T],
