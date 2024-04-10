@@ -706,6 +706,46 @@ func (op *filterOperator[T]) gatherNext(_ context.Context, _ Item[T],
 ) {
 }
 
+// Find emits the first item passing a predicate then complete.
+func (o *ObservableImpl[T]) Find(find Predicate[T], opts ...Option[T]) OptionalSingle[T] {
+	const (
+		forceSeq     = true
+		bypassGather = true
+	)
+
+	return optionalSingle(o.parent, o, func() operator[T] {
+		return &findOperator[T]{
+			find: find,
+		}
+	}, true, true, opts...)
+}
+
+type findOperator[T any] struct {
+	find Predicate[T]
+}
+
+func (op *findOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if op.find(item) {
+		item.SendContext(ctx, dst)
+		operatorOptions.stop()
+	}
+}
+
+func (op *findOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *findOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *findOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
 // !!!
 
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
