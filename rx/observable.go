@@ -27,6 +27,7 @@ type Observable[T any] interface {
 	Error(opts ...Option[T]) error
 	Errors(opts ...Option[T]) []error
 	Filter(apply Predicate[T], opts ...Option[T]) Observable[T]
+	Find(find Predicate[T], opts ...Option[T]) OptionalSingle[T]
 	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
 	Map(apply Func[T], opts ...Option[T]) Observable[T]
 	Min(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
