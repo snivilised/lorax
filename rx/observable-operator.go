@@ -568,6 +568,59 @@ func (o *ObservableImpl[T]) DoOnNext(nextFunc NextFunc[T], opts ...Option[T]) Di
 	return dispose
 }
 
+// ElementAt emits only item n emitted by an Observable.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) ElementAt(index uint, opts ...Option[T]) Single[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return single(o.parent, o, func() operator[T] {
+		return &elementAtOperator[T]{
+			index: index,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type elementAtOperator[T any] struct {
+	index     uint
+	takeCount int
+	sent      bool
+}
+
+func (op *elementAtOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if op.takeCount == int(op.index) {
+		item.SendContext(ctx, dst)
+
+		op.sent = true
+
+		operatorOptions.stop()
+
+		return
+	}
+
+	op.takeCount++
+}
+
+func (op *elementAtOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *elementAtOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if !op.sent {
+		Error[T](&IllegalInputError{}).SendContext(ctx, dst)
+	}
+}
+
+func (op *elementAtOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
 // Max determines and emits the maximum-valued item emitted by an Observable according to a comparator.
 func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
 	opts ...Option[T],
