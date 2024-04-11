@@ -72,7 +72,9 @@ func Amb[T any](observables []Observable[T], opts ...Option[T]) Observable[T] {
 
 // CombineLatest combines the latest item emitted by each Observable via a specified function
 // and emit items based on the results of this function.
-func CombineLatest[T any](f FuncN[T], observables []Observable[T], opts ...Option[T]) Observable[T] {
+func CombineLatest[T any](f FuncN[T], observables []Observable[T],
+	calc Calculator[T], opts ...Option[T],
+) Observable[T] {
 	option := parseOptions(opts...)
 	ctx := option.buildContext(emptyContext)
 	next := option.buildChannel()
@@ -108,7 +110,7 @@ func CombineLatest[T any](f FuncN[T], observables []Observable[T], opts ...Optio
 						return
 					}
 
-					if isZero(s[i]) { // TODO(check): s[i] == nil
+					if calc.IsZero(s[i]) {
 						atomic.AddUint32(&counter, 1)
 					}
 

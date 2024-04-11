@@ -23,7 +23,7 @@ type (
 	// - 0 if two elements are equals
 	// - A negative value if the first argument is less than the second
 	// - A positive value if the first argument is greater than the second
-	Comparator[T any] func(T, T) int
+	Comparator[T any] func(Item[T], Item[T]) int
 	// DistributionFunc used by GroupBy
 	DistributionFunc[T any] func(Item[T]) int
 
@@ -34,7 +34,7 @@ type (
 	// a limit initialiser, that is to say, for Max we need to initialise the internal
 	// maximum reference point to be minimum value for type T and the reverse for the
 	// Min operator.
-	InitLimit[T any] func() T
+	InitLimit[T any] func() Item[T]
 	// IsZero determines whether the value T is zero
 	IsZero[T any] func(T) bool
 	// ItemToObservable defines a function that computes an observable from an item.

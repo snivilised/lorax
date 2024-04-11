@@ -100,7 +100,10 @@ var _ = Describe("OptionSingle", func() {
 					// Test_OptionalSingle_Map
 					defer leaktest.Check(GinkgoT())()
 
-					single := rx.Just(42)().Max(rx.LimitComparator, rx.MaxInitLimitInt).Map(increment)
+					single := rx.Just(42)().Max(
+						rx.NativeItemLimitComparator,
+						rx.MaxItemInitLimitInt,
+					).Map(increment)
 					rx.Assert(context.Background(), single,
 						rx.HasItem[int]{
 							Expected: 43,
@@ -113,7 +116,10 @@ var _ = Describe("OptionSingle", func() {
 				It("🧪 should: turn the sequence into a Single iterable", func() {
 					defer leaktest.Check(GinkgoT())()
 
-					single := rx.Just(42, 48)().Max(rx.LimitComparator, rx.MaxInitLimitInt)
+					single := rx.Just(42, 48)().Max(
+						rx.NativeItemLimitComparator,
+						rx.MaxItemInitLimitInt,
+					)
 					rx.Assert(context.Background(), single,
 						rx.HasItem[int]{
 							Expected: 48,
@@ -127,7 +133,10 @@ var _ = Describe("OptionSingle", func() {
 				It("🧪 should: turn the sequence into a Single iterable", func() {
 					defer leaktest.Check(GinkgoT())()
 
-					single := rx.Just(42, 48)().Min(rx.LimitComparator, rx.MinInitLimitInt)
+					single := rx.Just(42, 48)().Min(
+						rx.NativeItemLimitComparator,
+						rx.MinItemInitLimitInt,
+					)
 					rx.Assert(context.Background(), single,
 						rx.HasItem[int]{
 							Expected: 42,

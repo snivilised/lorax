@@ -9,7 +9,7 @@ import (
 )
 
 var _ = Describe("Observable operator", func() {
-	XContext("${{OPERATOR-NAME}}", func() {
+	Context("${{OPERATOR-NAME}}", func() {
 		When("principle", func() {
 			// success path
 			It("🧪 should: ", func() {

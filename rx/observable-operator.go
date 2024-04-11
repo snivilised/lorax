@@ -3,17 +3,16 @@ package rx
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/cenkalti/backoff/v4"
 )
 
-func isZero[T any](limit T) bool {
-	val := reflect.ValueOf(limit).Interface()
-	zero := reflect.Zero(reflect.TypeOf(limit)).Interface()
+// func isZero[T any](limit T) bool {
+// 	val := reflect.ValueOf(limit).Interface()
+// 	zero := reflect.Zero(reflect.TypeOf(limit)).Interface()
 
-	return val != zero
-}
+// 	return val != zero
+// }
 
 // All determines whether all items emitted by an Observable meet some criteria.
 func (o *ObservableImpl[T]) All(predicate Predicate[T], opts ...Option[T]) Single[T] {
@@ -432,7 +431,7 @@ func (o *ObservableImpl[T]) DistinctUntilChanged(apply Func[T], comparator Compa
 
 type distinctUntilChangedOperator[T any] struct {
 	apply      Func[T]
-	current    T
+	current    Item[T]
 	comparator Comparator[T]
 }
 
@@ -447,10 +446,11 @@ func (op *distinctUntilChangedOperator[T]) next(ctx context.Context, item Item[T
 		return
 	}
 
-	if op.comparator(op.current, key) != 0 {
+	keyItem := Of(key)
+	if op.comparator(op.current, keyItem) != 0 {
 		item.SendContext(ctx, dst)
 
-		op.current = key
+		op.current = keyItem
 	}
 }
 
@@ -1191,7 +1191,7 @@ func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T]
 type maxOperator[T any] struct {
 	comparator Comparator[T]
 	empty      bool
-	max        T
+	max        Item[T]
 }
 
 func (op *maxOperator[T]) next(_ context.Context,
@@ -1199,8 +1199,8 @@ func (op *maxOperator[T]) next(_ context.Context,
 ) {
 	op.empty = false
 
-	if op.comparator(op.max, item.V) < 0 {
-		op.max = item.V
+	if op.comparator(op.max, item) < 0 {
+		op.max = item
 	}
 }
 
@@ -1236,7 +1236,7 @@ func (op *maxOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 		// there should be a way for the client to implement these types of checks
 		// themselves, probably by passing in a new function like comparator.
 		//
-		Of(op.max).SendContext(ctx, dst)
+		op.max.SendContext(ctx, dst)
 	}
 }
 
@@ -1322,7 +1322,7 @@ func (op *mapOperator[T]) gatherNext(ctx context.Context,
 type minOperator[T any] struct {
 	comparator Comparator[T]
 	empty      bool
-	min        T
+	min        Item[T]
 	limit      func(value T) bool
 }
 
@@ -1331,8 +1331,8 @@ func (op *minOperator[T]) next(_ context.Context,
 ) {
 	op.empty = false
 
-	if op.comparator(op.min, item.V) > 0 {
-		op.min = item.V
+	if op.comparator(op.min, item) > 0 {
+		op.min = item
 	}
 }
 
@@ -1344,7 +1344,7 @@ func (op *minOperator[T]) err(ctx context.Context,
 
 func (op *minOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 	if !op.empty {
-		Of(op.min).SendContext(ctx, dst)
+		op.min.SendContext(ctx, dst)
 	}
 }
 
