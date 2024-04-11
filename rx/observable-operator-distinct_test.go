@@ -176,7 +176,7 @@ var _ = Describe("Observable operator", func() {
 				obs := testObservable[int](ctx, 1, 2, 2, 1, 3).DistinctUntilChanged(
 					func(_ context.Context, v int) (int, error) {
 						return v, nil
-					}, rx.LimitComparator, rx.WithCPUPool[int]())
+					}, rx.NativeItemLimitComparator, rx.WithCPUPool[int]())
 
 				rx.Assert(ctx, obs,
 					rx.HasItems[int]{
@@ -197,7 +197,7 @@ var _ = Describe("Observable operator", func() {
 					obs := testObservable[int](ctx, 1, 2, 2, 1, 3).DistinctUntilChanged(
 						func(_ context.Context, item int) (int, error) {
 							return item, nil
-						}, rx.LimitComparator, rx.WithCPUPool[int]())
+						}, rx.NativeItemLimitComparator, rx.WithCPUPool[int]())
 
 					rx.Assert(ctx, obs, rx.HasItems[int]{
 						Expected: []int{1, 2, 1, 3},
