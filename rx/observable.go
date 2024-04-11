@@ -40,7 +40,9 @@ type Observable[T any] interface {
 	Max(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
 	Map(apply Func[T], opts ...Option[T]) Observable[T]
 	Min(comparator Comparator[T], initLimit InitLimit[T], opts ...Option[T]) OptionalSingle[T]
-
+	OnErrorResumeNext(resumeSequence ErrorToObservable[T], opts ...Option[T]) Observable[T]
+	OnErrorReturn(resumeFunc ErrorFunc[T], opts ...Option[T]) Observable[T]
+	OnErrorReturnItem(resume T, opts ...Option[T]) Observable[T]
 	Run(opts ...Option[T]) Disposed
 
 	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)

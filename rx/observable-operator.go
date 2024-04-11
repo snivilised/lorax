@@ -7,13 +7,6 @@ import (
 	"github.com/cenkalti/backoff/v4"
 )
 
-// func isZero[T any](limit T) bool {
-// 	val := reflect.ValueOf(limit).Interface()
-// 	zero := reflect.Zero(reflect.TypeOf(limit)).Interface()
-
-// 	return val != zero
-// }
-
 // All determines whether all items emitted by an Observable meet some criteria.
 func (o *ObservableImpl[T]) All(predicate Predicate[T], opts ...Option[T]) Single[T] {
 	const (
@@ -1357,6 +1350,115 @@ func (op *minOperator[T]) gatherNext(ctx context.Context,
 
 func (o *ObservableImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	return o.iterable.Observe(opts...)
+}
+
+// OnErrorResumeNext instructs an Observable to pass control to another Observable rather than invoking
+// onError if it encounters an error.
+func (o *ObservableImpl[T]) OnErrorResumeNext(resumeSequence ErrorToObservable[T], opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &onErrorResumeNextOperator[T]{
+			resumeSequence: resumeSequence,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type onErrorResumeNextOperator[T any] struct {
+	resumeSequence ErrorToObservable[T]
+}
+
+func (op *onErrorResumeNextOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T]) {
+	item.SendContext(ctx, dst)
+}
+
+func (op *onErrorResumeNextOperator[T]) err(_ context.Context, item Item[T],
+	_ chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	operatorOptions.resetIterable(op.resumeSequence(item.E))
+}
+
+func (op *onErrorResumeNextOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *onErrorResumeNextOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
+func (o *ObservableImpl[T]) OnErrorReturn(resumeFunc ErrorFunc[T], opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &onErrorReturnOperator[T]{
+			resumeFunc: resumeFunc,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type onErrorReturnOperator[T any] struct {
+	resumeFunc ErrorFunc[T]
+}
+
+func (op *onErrorReturnOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T]) {
+	item.SendContext(ctx, dst)
+}
+
+func (op *onErrorReturnOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	Of[T](op.resumeFunc(item.E)).SendContext(ctx, dst)
+}
+
+func (op *onErrorReturnOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *onErrorReturnOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
+func (o *ObservableImpl[T]) OnErrorReturnItem(resume T, opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &onErrorReturnItemOperator[T]{
+			resume: resume,
+		}
+	}, true, false, opts...)
+}
+
+type onErrorReturnItemOperator[T any] struct {
+	resume T
+}
+
+func (op *onErrorReturnItemOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	item.SendContext(ctx, dst)
+}
+
+func (op *onErrorReturnItemOperator[T]) err(ctx context.Context, _ Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	Of(op.resume).SendContext(ctx, dst)
+}
+
+func (op *onErrorReturnItemOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *onErrorReturnItemOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
 }
 
 // ToSlice collects all items from an Observable and emit them in a slice and
