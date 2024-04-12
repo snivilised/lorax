@@ -43,10 +43,10 @@ type Observable[T any] interface {
 	OnErrorResumeNext(resumeSequence ErrorToObservable[T], opts ...Option[T]) Observable[T]
 	OnErrorReturn(resumeFunc ErrorFunc[T], opts ...Option[T]) Observable[T]
 	OnErrorReturnItem(resume T, opts ...Option[T]) Observable[T]
-	Run(opts ...Option[T]) Disposed
 	Reduce(apply Func2[T], opts ...Option[T]) OptionalSingle[T]
 	Repeat(count int64, frequency Duration, opts ...Option[T]) Observable[T]
 	Retry(count int, shouldRetry ShouldRetryFunc, opts ...Option[T]) Observable[T]
+	Run(opts ...Option[T]) Disposed
 	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)
 }
 

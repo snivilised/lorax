@@ -183,32 +183,6 @@ func (o *ObservableImpl[T]) Connect(ctx context.Context) (context.Context, Dispo
 	return ctx, Disposable(cancel)
 }
 
-// Run creates an Observer without consuming the emitted items.
-func (o *ObservableImpl[T]) Run(opts ...Option[T]) Disposed {
-	dispose := make(chan struct{})
-	option := parseOptions(opts...)
-	ctx := option.buildContext(o.parent)
-
-	go func() {
-		defer close(dispose)
-
-		observe := o.Observe(opts...)
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case _, ok := <-observe:
-				if !ok {
-					return
-				}
-			}
-		}
-	}()
-
-	return dispose
-}
-
 func (o *ObservableImpl[T]) Contains(equal Predicate[T], opts ...Option[T]) Single[T] {
 	const (
 		forceSeq     = false
@@ -1639,6 +1613,32 @@ func (o *ObservableImpl[T]) Retry(count int, shouldRetry ShouldRetryFunc, opts .
 	return &ObservableImpl[T]{
 		iterable: newChannelIterable(next),
 	}
+}
+
+// Run creates an Observer without consuming the emitted items.
+func (o *ObservableImpl[T]) Run(opts ...Option[T]) Disposed {
+	dispose := make(chan struct{})
+	option := parseOptions(opts...)
+	ctx := option.buildContext(o.parent)
+
+	go func() {
+		defer close(dispose)
+
+		observe := o.Observe(opts...)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case _, ok := <-observe:
+				if !ok {
+					return
+				}
+			}
+		}
+	}()
+
+	return dispose
 }
 
 // !!!
