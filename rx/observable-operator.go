@@ -1723,6 +1723,57 @@ func (o *ObservableImpl[T]) Sample(iterable Iterable[T], opts ...Option[T]) Obse
 	}
 }
 
+// Scan apply a Func2 to each item emitted by an Observable, sequentially, and
+// emit each successive value. Cannot be run in parallel.
+func (o *ObservableImpl[T]) Scan(apply Func2[T], opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &scanOperator[T]{
+			apply: apply,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type scanOperator[T any] struct {
+	apply   Func2[T]
+	current Item[T]
+}
+
+func (op *scanOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	v, err := op.apply(ctx, op.current, item)
+
+	if err != nil {
+		Error[T](err).SendContext(ctx, dst)
+		operatorOptions.stop()
+
+		return
+	}
+
+	it := Of(v)
+	it.SendContext(ctx, dst)
+	op.current = it
+}
+
+func (op *scanOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *scanOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *scanOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
 // !!!
 
 // ToSlice collects all items from an Observable and emit them in a slice and

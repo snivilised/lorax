@@ -48,6 +48,7 @@ type Observable[T any] interface {
 	Retry(count int, shouldRetry ShouldRetryFunc, opts ...Option[T]) Observable[T]
 	Run(opts ...Option[T]) Disposed
 	Sample(iterable Iterable[T], opts ...Option[T]) Observable[T]
+	Scan(apply Func2[T], opts ...Option[T]) Observable[T]
 	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)
 }
 
