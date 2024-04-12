@@ -1755,9 +1755,8 @@ func (op *scanOperator[T]) next(ctx context.Context, item Item[T],
 		return
 	}
 
-	it := Of(v)
-	it.SendContext(ctx, dst)
-	op.current = it
+	op.current = Of(v)
+	op.current.SendContext(ctx, dst)
 }
 
 func (op *scanOperator[T]) err(ctx context.Context, item Item[T],
@@ -1772,6 +1771,153 @@ func (op *scanOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
 func (op *scanOperator[T]) gatherNext(_ context.Context, _ Item[T],
 	_ chan<- Item[T], _ operatorOptions[T],
 ) {
+}
+
+// Compares first items of two sequences and returns true if they are equal and false if
+// they are not. Besides, it returns two new sequences - input sequences without compared items.
+func popAndCompareFirstItems[T any]( //nolint:gocritic // foo
+	inputSequence1 []Item[T],
+	inputSequence2 []Item[T],
+	comparator Comparator[T],
+) (bool, []Item[T], []Item[T]) {
+	if len(inputSequence1) > 0 && len(inputSequence2) > 0 {
+		s1, sequence1 := inputSequence1[0], inputSequence1[1:]
+		s2, sequence2 := inputSequence2[0], inputSequence2[1:]
+
+		return comparator(s1, s2) == 0, sequence1, sequence2
+	}
+
+	return true, inputSequence1, inputSequence2
+}
+
+// Send sends the items to a given channel.
+func (o *ObservableImpl[T]) Send(output chan<- Item[T], opts ...Option[T]) {
+	go func() {
+		option := parseOptions(opts...)
+		ctx := option.buildContext(o.parent)
+		observe := o.Observe(opts...)
+	loop:
+		for {
+			select {
+			case <-ctx.Done():
+				break loop
+			case i, ok := <-observe:
+				if !ok {
+					break loop
+				}
+
+				if i.IsError() {
+					output <- i
+					break loop
+				}
+
+				i.SendContext(ctx, output)
+			}
+		}
+		close(output)
+	}()
+}
+
+// SequenceEqual emits true if an Observable and the input Observable emit the same items,
+// in the same order, with the same termination state. Otherwise, it emits false.
+func (o *ObservableImpl[T]) SequenceEqual(iterable Iterable[T],
+	comparator Comparator[T],
+	opts ...Option[T],
+) Single[T] {
+	option := parseOptions(opts...)
+	next := option.buildChannel()
+	ctx := option.buildContext(o.parent)
+	itCh := make(chan Item[T])
+	obsCh := make(chan Item[T])
+
+	go func() {
+		defer close(obsCh)
+
+		observe := o.Observe(opts...)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case i, ok := <-observe:
+				if !ok {
+					return
+				}
+
+				i.SendContext(ctx, obsCh)
+			}
+		}
+	}()
+
+	go func() {
+		defer close(itCh)
+
+		observe := iterable.Observe(opts...)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case i, ok := <-observe:
+				if !ok {
+					return
+				}
+
+				i.SendContext(ctx, itCh)
+			}
+		}
+	}()
+
+	go func() {
+		var (
+			mainSequence, obsSequence []Item[T]
+		)
+
+		areCorrect := true
+		isMainChannelClosed := false
+		isObsChannelClosed := false
+
+		for {
+			select {
+			case item, ok := <-itCh:
+				if ok {
+					mainSequence = append(mainSequence, item)
+
+					areCorrect, mainSequence, obsSequence = popAndCompareFirstItems(
+						mainSequence, obsSequence,
+						comparator,
+					)
+				} else {
+					isMainChannelClosed = true
+				}
+
+			case item, ok := <-obsCh:
+				if ok {
+					obsSequence = append(obsSequence, item)
+					areCorrect, mainSequence, obsSequence = popAndCompareFirstItems(
+						mainSequence, obsSequence,
+						comparator,
+					)
+				} else {
+					isObsChannelClosed = true
+				}
+			}
+
+			if !areCorrect || (isMainChannelClosed && isObsChannelClosed) {
+				break
+			}
+		}
+
+		Bool[T](
+			areCorrect && len(mainSequence) == 0 && len(obsSequence) == 0,
+		).SendContext(ctx, next)
+
+		close(next)
+	}()
+
+	return &SingleImpl[T]{
+		iterable: newChannelIterable(next),
+	}
 }
 
 // !!!
