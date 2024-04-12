@@ -3,6 +3,7 @@ package rx
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
 )
@@ -1523,6 +1524,80 @@ func (op *reduceOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	}
 
 	op.next(ctx, item.O.(*reduceOperator[T]).acc, dst, operatorOptions)
+}
+
+// Repeat returns an Observable that repeats the sequence of items emitted
+// by the source Observable at most count times, at a particular frequency.
+// Cannot run in parallel.
+func (o *ObservableImpl[T]) Repeat(count int64, frequency Duration, opts ...Option[T]) Observable[T] {
+	if count != Infinite {
+		if count < 0 {
+			return Thrown[T](IllegalInputError{error: "count must be positive"})
+		}
+	}
+
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &repeatOperator[T]{
+			count:     count,
+			frequency: frequency,
+			seq:       make([]Item[T], 0),
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type repeatOperator[T any] struct {
+	count     int64
+	frequency Duration
+	seq       []Item[T]
+}
+
+func (op *repeatOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	item.SendContext(ctx, dst)
+	op.seq = append(op.seq, item)
+}
+
+func (op *repeatOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *repeatOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	for {
+		select {
+		default:
+		case <-ctx.Done():
+			return
+		}
+
+		if op.count != Infinite {
+			if op.count == 0 {
+				break
+			}
+		}
+
+		if op.frequency != nil {
+			time.Sleep(op.frequency.duration())
+		}
+
+		for _, v := range op.seq {
+			v.SendContext(ctx, dst)
+		}
+
+		op.count--
+	}
+}
+
+func (op *repeatOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
 }
 
 // !!!
