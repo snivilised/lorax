@@ -1641,6 +1641,88 @@ func (o *ObservableImpl[T]) Run(opts ...Option[T]) Disposed {
 	return dispose
 }
 
+// Sample returns an Observable that emits the most recent items emitted by the source
+// Iterable whenever the input Iterable emits an item.
+func (o *ObservableImpl[T]) Sample(iterable Iterable[T], opts ...Option[T]) Observable[T] {
+	option := parseOptions(opts...)
+	next := option.buildChannel()
+	ctx := option.buildContext(o.parent)
+	itCh := make(chan Item[T])
+	obsCh := make(chan Item[T])
+
+	go func() {
+		defer close(obsCh)
+
+		observe := o.Observe(opts...)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case i, ok := <-observe:
+				if !ok {
+					return
+				}
+
+				i.SendContext(ctx, obsCh)
+			}
+		}
+	}()
+
+	go func() {
+		defer close(itCh)
+
+		observe := iterable.Observe(opts...)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case i, ok := <-observe:
+				if !ok {
+					return
+				}
+
+				i.SendContext(ctx, itCh)
+			}
+		}
+	}()
+
+	go func() {
+		defer close(next)
+
+		var lastEmittedItem Item[T]
+
+		isItemWaitingToBeEmitted := false
+
+		for {
+			select {
+			case _, ok := <-itCh:
+				if ok {
+					if isItemWaitingToBeEmitted {
+						next <- lastEmittedItem
+
+						isItemWaitingToBeEmitted = false
+					}
+				} else {
+					return
+				}
+			case item, ok := <-obsCh:
+				if ok {
+					lastEmittedItem = item
+					isItemWaitingToBeEmitted = true
+				} else {
+					return
+				}
+			}
+		}
+	}()
+
+	return &ObservableImpl[T]{
+		iterable: newChannelIterable(next),
+	}
+}
+
 // !!!
 
 // ToSlice collects all items from an Observable and emit them in a slice and
