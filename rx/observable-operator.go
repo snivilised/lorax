@@ -1600,6 +1600,47 @@ func (op *repeatOperator[T]) gatherNext(_ context.Context, _ Item[T],
 ) {
 }
 
+// Retry retries if a source Observable sends an error, resubscribe to
+// it in the hopes that it will complete without error. Cannot be run in parallel.
+func (o *ObservableImpl[T]) Retry(count int, shouldRetry ShouldRetryFunc, opts ...Option[T]) Observable[T] {
+	option := parseOptions(opts...)
+	next := option.buildChannel()
+	ctx := option.buildContext(o.parent)
+
+	go func() {
+		observe := o.Observe(opts...)
+	loop:
+		for {
+			select {
+			case <-ctx.Done():
+				break loop
+			case i, ok := <-observe:
+				if !ok {
+					break loop
+				}
+
+				if i.IsError() {
+					count--
+
+					if count < 0 || !shouldRetry(i.E) {
+						i.SendContext(ctx, next)
+						break loop
+					}
+
+					observe = o.Observe(opts...)
+				} else {
+					i.SendContext(ctx, next)
+				}
+			}
+		}
+		close(next)
+	}()
+
+	return &ObservableImpl[T]{
+		iterable: newChannelIterable(next),
+	}
+}
+
 // !!!
 
 // ToSlice collects all items from an Observable and emit them in a slice and

@@ -86,6 +86,8 @@ type (
 	Unmarshaller[T any] func([]byte, T) error
 	// Producer defines a producer implementation.
 	Producer[T any] func(ctx context.Context, next chan<- Item[T])
+	// ShouldRetryFunc as used by Retry operator
+	ShouldRetryFunc func(error) bool
 	// Supplier defines a function that supplies a result from nothing.
 	Supplier[T any] func(ctx context.Context) Item[T]
 	// Disposed is a notification channel indicating when an Observable is closed.
