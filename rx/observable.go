@@ -44,7 +44,8 @@ type Observable[T any] interface {
 	OnErrorReturn(resumeFunc ErrorFunc[T], opts ...Option[T]) Observable[T]
 	OnErrorReturnItem(resume T, opts ...Option[T]) Observable[T]
 	Run(opts ...Option[T]) Disposed
-
+	Reduce(apply Func2[T], opts ...Option[T]) OptionalSingle[T]
+	Repeat(count int64, frequency Duration, opts ...Option[T]) Observable[T]
 	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)
 }
 

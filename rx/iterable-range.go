@@ -1,11 +1,11 @@
 package rx
 
 type rangeIterable[T any] struct {
-	start, count int
+	start, count NumVal
 	opts         []Option[T]
 }
 
-func newRangeIterable[T any](start, count int, opts ...Option[T]) Iterable[T] {
+func newRangeIterable[T any](start, count NumVal, opts ...Option[T]) Iterable[T] {
 	return &rangeIterable[T]{
 		start: start,
 		count: count,

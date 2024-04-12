@@ -71,7 +71,7 @@ var _ = Describe("Factory", func() {
 						testObservable[int](ctx, 10, 11),
 					}, func(it rx.Observable[int], _ int) rx.Observable[int] {
 						return it
-					}), rx.NewCalc[int]())
+					}), rx.Calc[int]())
 
 				rx.Assert(context.Background(), obs, rx.IsNotEmpty[int]{})
 			})
@@ -92,7 +92,7 @@ var _ = Describe("Factory", func() {
 					rx.Empty[int](),
 				}, func(it rx.Observable[int], _ int) rx.Observable[int] {
 					return it
-				}), rx.NewCalc[int]())
+				}), rx.Calc[int]())
 
 				rx.Assert(context.Background(), obs, rx.IsEmpty[int]{})
 			})
@@ -113,7 +113,7 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, errFoo),
 				}, func(it rx.Observable[int], _ int) rx.Observable[int] {
 					return it
-				}), rx.NewCalc[int]())
+				}), rx.Calc[int]())
 
 				rx.Assert(context.Background(), obs,
 					rx.IsEmpty[int]{},
