@@ -19,6 +19,15 @@ type (
 		Zero() T
 	}
 
+	// CalculatorItem defines numeric operations for T
+	CalculatorItem[T any] interface {
+		Add(Item[T], Item[T]) Item[T]
+		Div(Item[T], Item[T]) Item[T]
+		Inc(Item[T]) Item[T]
+		IsZero(Item[T]) bool
+		Zero() Item[T]
+	}
+
 	// Comparator defines a func that returns an int:
 	// - 0 if two elements are equals
 	// - A negative value if the first argument is less than the second
@@ -44,7 +53,7 @@ type (
 	// Func defines a function that computes a value from an input value.
 	Func[T any] func(context.Context, T) (T, error)
 	// Func2 defines a function that computes a value from two input values.
-	Func2[T any] func(context.Context, T, T) (T, error)
+	Func2[T any] func(context.Context, Item[T], Item[T]) (T, error)
 	// FuncIntM defines a function that's specialised for Map
 	// To solve the problem of being able to map values across different
 	// types, the FuncIntM type will be modified to take an extra type
@@ -86,6 +95,8 @@ type (
 
 	// NextFunc handles a next item in a stream.
 	NextFunc[T any] func(Item[T])
+	// NumVal is an integer value used by Item.N and Range
+	NumVal = int
 	// ErrFunc handles an error in a stream.
 	ErrFunc func(error)
 	// CompletedFunc handles the end of a stream.

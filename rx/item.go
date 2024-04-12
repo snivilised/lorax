@@ -16,7 +16,7 @@ type (
 		E error
 		//
 		C    chan<- Item[T]
-		N    int
+		N    NumVal
 		B    bool
 		O    any
 		disc enums.ItemDiscriminator
@@ -85,7 +85,7 @@ func TV[T any](tv int) Item[T] {
 }
 
 // Num creates a type safe tick value instance
-func Num[T any](n int) Item[T] {
+func Num[T any](n NumVal) Item[T] {
 	return Item[T]{
 		N:    n,
 		disc: enums.ItemDiscNumeric,

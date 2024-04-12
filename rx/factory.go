@@ -359,7 +359,7 @@ func Never[T any]() Observable[T] {
 
 // Range creates an Observable that emits count sequential integers beginning
 // at start.
-func Range[T any](start, count int, opts ...Option[T]) Observable[T] {
+func Range[T any](start, count NumVal, opts ...Option[T]) Observable[T] {
 	if count < 0 {
 		return Thrown[T](IllegalInputError{
 			error: "count must be positive", // TODO(i18n)

@@ -22,14 +22,14 @@ var _ = Describe("Observable operator", func() {
 				rx.Assert(ctx,
 					testObservable[float32](ctx,
 						float32(1), float32(20),
-					).Average(rx.NewCalc[float32]()),
+					).Average(rx.Calc[float32]()),
 					rx.HasItem[float32]{
 						Expected: 10.5,
 					},
 				)
 				rx.Assert(ctx, testObservable[float32](ctx,
 					float32(1), float32(20),
-				).Average(rx.NewCalc[float32]()),
+				).Average(rx.Calc[float32]()),
 					rx.HasItem[float32]{
 						Expected: 10.5,
 					},
@@ -47,7 +47,7 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 
 					rx.Assert(ctx,
-						rx.Empty[float32]().Average(rx.NewCalc[float32]()),
+						rx.Empty[float32]().Average(rx.Calc[float32]()),
 						rx.HasItem[float32]{
 							Expected: 0.0,
 						},
@@ -67,7 +67,7 @@ var _ = Describe("Observable operator", func() {
 
 					rx.Assert(ctx, testObservable[float32](ctx,
 						"foo",
-					).Average(rx.NewCalc[float32]()),
+					).Average(rx.Calc[float32]()),
 						rx.HasAnError[float32]{},
 					)
 				})
