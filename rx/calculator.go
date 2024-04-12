@@ -9,7 +9,7 @@ type Numeric interface {
 	constraints.Integer | constraints.Signed | constraints.Unsigned | constraints.Float
 }
 
-func NewCalc[T Numeric]() Calculator[T] {
+func Calc[T Numeric]() Calculator[T] {
 	return new(NumericCalc[T])
 }
 
@@ -40,4 +40,41 @@ func (c *NumericCalc[T]) IsZero(v T) bool {
 
 func (c *NumericCalc[T]) Zero() T {
 	return c.zero
+}
+
+func ItemCalc[T Numeric]() Calculator[T] {
+	return new(NumericCalc[T])
+}
+
+type NumericItemCalc[T Numeric] struct {
+	zero T
+}
+
+func (c *NumericItemCalc[T]) Add(a, b Item[T]) int {
+	return a.N + b.N
+}
+
+func (c *NumericItemCalc[T]) Div(a, b Item[T]) Item[T] {
+	if b.N == 0 {
+		return c.Zero()
+	}
+
+	// !!!TODO(fix): we might need to use Opaque or another type
+	// so we don't lose the precision with this division.
+	//
+	return Num[T](a.N / b.N)
+}
+
+func (c *NumericItemCalc[T]) Inc(i Item[T]) Item[T] {
+	i.N++
+
+	return i
+}
+
+func (c *NumericItemCalc[T]) IsZero(v Item[T]) bool {
+	return v.N == 0
+}
+
+func (c *NumericItemCalc[T]) Zero() Item[T] {
+	return Num[T](0)
 }

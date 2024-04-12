@@ -1160,8 +1160,6 @@ func (op *lastOrDefaultOperator[T]) gatherNext(_ context.Context, _ Item[T],
 ) {
 }
 
-// !!!
-
 // Max determines and emits the maximum-valued item emitted by an Observable
 // according to a comparator.
 func (o *ObservableImpl[T]) Max(comparator Comparator[T], initLimit InitLimit[T],
@@ -1460,6 +1458,74 @@ func (op *onErrorReturnItemOperator[T]) gatherNext(_ context.Context, _ Item[T],
 	_ chan<- Item[T], _ operatorOptions[T],
 ) {
 }
+
+// Reduce applies a function to each item emitted by an Observable, sequentially,
+// and emit the final value.
+func (o *ObservableImpl[T]) Reduce(apply Func2[T], opts ...Option[T]) OptionalSingle[T] {
+	const (
+		forceSeq     = false
+		bypassGather = false
+	)
+
+	return optionalSingle(o.parent, o, func() operator[T] {
+		return &reduceOperator[T]{
+			apply: apply,
+			empty: true,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type reduceOperator[T any] struct {
+	apply Func2[T]
+	acc   Item[T]
+	empty bool
+}
+
+func (op *reduceOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	op.empty = false
+	v, err := op.apply(ctx, op.acc, item)
+
+	if err != nil {
+		Error[T](err).SendContext(ctx, dst)
+		operatorOptions.stop()
+
+		op.empty = true
+
+		return
+	}
+
+	op.acc.V = v
+}
+
+func (op *reduceOperator[T]) err(_ context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	dst <- item
+
+	op.empty = true
+
+	operatorOptions.stop()
+}
+
+func (op *reduceOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if !op.empty {
+		op.acc.SendContext(ctx, dst)
+	}
+}
+
+func (op *reduceOperator[T]) gatherNext(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if !item.IsOpaque() {
+		panic("reduceOperator.gatherNext: item is not Opaque")
+	}
+
+	op.next(ctx, item.O.(*reduceOperator[T]).acc, dst, operatorOptions)
+}
+
+// !!!
 
 // ToSlice collects all items from an Observable and emit them in a slice and
 // an optional error. Cannot be run in parallel.
