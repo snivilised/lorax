@@ -52,6 +52,9 @@ type Observable[T any] interface {
 	Send(output chan<- Item[T], opts ...Option[T])
 	SequenceEqual(iterable Iterable[T], comparator Comparator[T], opts ...Option[T]) Single[T]
 	Serialize(from int, identifier func(any) int, opts ...Option[T]) Observable[T]
+	Skip(nth uint, opts ...Option[T]) Observable[T]
+	SkipLast(nth uint, opts ...Option[T]) Observable[T]
+	SkipWhile(apply Predicate[T], opts ...Option[T]) Observable[T]
 	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)
 }
 
