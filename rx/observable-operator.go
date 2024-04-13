@@ -3,9 +3,11 @@ package rx
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/emirpasic/gods/trees/binaryheap"
 )
 
 // All determines whether all items emitted by an Observable meet some criteria.
@@ -1916,6 +1918,71 @@ func (o *ObservableImpl[T]) SequenceEqual(iterable Iterable[T],
 	}()
 
 	return &SingleImpl[T]{
+		iterable: newChannelIterable(next),
+	}
+}
+
+// Serialize forces an Observable to make serialized calls and to be well-behaved.
+func (o *ObservableImpl[T]) Serialize(from int, identifier func(any) int,
+	opts ...Option[T],
+) Observable[T] {
+	option := parseOptions(opts...)
+	next := option.buildChannel()
+	ctx := option.buildContext(o.parent)
+	minHeap := binaryheap.NewWith(func(a, b any) int {
+		return a.(int) - b.(int)
+	})
+	counter := int64(from)
+	items := make(map[int]T)
+
+	go func() {
+		src := o.Observe(opts...)
+
+		defer close(next)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case item, ok := <-src:
+				if !ok {
+					return
+				}
+
+				if item.IsError() {
+					next <- item
+					return
+				}
+
+				id := identifier(item.V)
+				minHeap.Push(id)
+
+				items[id] = item.V
+
+				for !minHeap.Empty() {
+					v, _ := minHeap.Peek()
+					id := v.(int) //nolint:errcheck // TODO
+
+					if atomic.LoadInt64(&counter) == int64(id) {
+						if itemValue, contains := items[id]; contains {
+							minHeap.Pop()
+							delete(items, id)
+							Of(itemValue).SendContext(ctx, next)
+
+							counter++
+
+							continue
+						}
+					}
+
+					break
+				}
+			}
+		}
+	}()
+
+	return &ObservableImpl[T]{
 		iterable: newChannelIterable(next),
 	}
 }
