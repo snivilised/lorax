@@ -2181,6 +2181,13 @@ func (o *ObservableImpl[T]) StartWith(iterable Iterable[T], opts ...Option[T]) O
 	}
 }
 
+// Sum calculates the average emitted by an Observable and emits the result
+func (o *ObservableImpl[T]) Sum(calc Calculator[T], opts ...Option[T]) OptionalSingle[T] {
+	return o.Reduce(func(_ context.Context, acc, elem Item[T]) (T, error) {
+		return calc.Add(acc.V, elem.V), nil
+	}, opts...)
+}
+
 // !!!
 
 // ToSlice collects all items from an Observable and emit them in a slice and
