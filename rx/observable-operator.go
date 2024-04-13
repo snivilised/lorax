@@ -1987,6 +1987,147 @@ func (o *ObservableImpl[T]) Serialize(from int, identifier func(any) int,
 	}
 }
 
+// Skip suppresses the first n items in the original Observable and
+// returns a new Observable with the rest items.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) Skip(nth uint, opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &skipOperator[T]{
+			nth: nth,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type skipOperator[T any] struct {
+	nth       uint
+	skipCount int
+}
+
+func (op *skipOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	if op.skipCount < int(op.nth) {
+		op.skipCount++
+		return
+	}
+
+	item.SendContext(ctx, dst)
+}
+
+func (op *skipOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *skipOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *skipOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
+// SkipLast suppresses the last n items in the original Observable and
+// returns a new Observable with the rest items.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) SkipLast(nth uint, opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &skipLastOperator[T]{
+			nth: nth,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type skipLastOperator[T any] struct {
+	nth       uint
+	skipCount int
+}
+
+func (op *skipLastOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if op.skipCount >= int(op.nth) {
+		operatorOptions.stop()
+		return
+	}
+
+	op.skipCount++
+
+	item.SendContext(ctx, dst)
+}
+
+func (op *skipLastOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *skipLastOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *skipLastOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
+// SkipWhile discard items emitted by an Observable until a specified condition becomes false.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) SkipWhile(apply Predicate[T], opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &skipWhileOperator[T]{
+			apply: apply,
+			skip:  true,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type skipWhileOperator[T any] struct {
+	apply Predicate[T]
+	skip  bool
+}
+
+func (op *skipWhileOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	if !op.skip {
+		item.SendContext(ctx, dst)
+	} else if !op.apply(item) {
+		op.skip = false
+
+		item.SendContext(ctx, dst)
+	}
+}
+
+func (op *skipWhileOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *skipWhileOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *skipWhileOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
 // !!!
 
 // ToSlice collects all items from an Observable and emit them in a slice and
