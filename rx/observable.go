@@ -49,6 +49,7 @@ type Observable[T any] interface {
 	Run(opts ...Option[T]) Disposed
 	Sample(iterable Iterable[T], opts ...Option[T]) Observable[T]
 	Scan(apply Func2[T], opts ...Option[T]) Observable[T]
+	Send(output chan<- Item[T], opts ...Option[T])
 	SequenceEqual(iterable Iterable[T], comparator Comparator[T], opts ...Option[T]) Single[T]
 	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)
 }
