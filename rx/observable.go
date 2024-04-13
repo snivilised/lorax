@@ -55,6 +55,7 @@ type Observable[T any] interface {
 	Skip(nth uint, opts ...Option[T]) Observable[T]
 	SkipLast(nth uint, opts ...Option[T]) Observable[T]
 	SkipWhile(apply Predicate[T], opts ...Option[T]) Observable[T]
+	StartWith(iterable Iterable[T], opts ...Option[T]) Observable[T]
 	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)
 }
 

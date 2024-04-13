@@ -2128,6 +2128,59 @@ func (op *skipWhileOperator[T]) gatherNext(_ context.Context, _ Item[T],
 ) {
 }
 
+// StartWith emits a specified Iterable before beginning to emit the items from the source Observable.
+func (o *ObservableImpl[T]) StartWith(iterable Iterable[T], opts ...Option[T]) Observable[T] {
+	option := parseOptions(opts...)
+	next := option.buildChannel()
+	ctx := option.buildContext(o.parent)
+
+	go func() {
+		defer close(next)
+
+		observe := iterable.Observe(opts...)
+	loop1:
+		for {
+			select {
+			case <-ctx.Done():
+				break loop1
+			case i, ok := <-observe:
+				if !ok {
+					break loop1
+				}
+				if i.IsError() {
+					next <- i
+					return
+				}
+				i.SendContext(ctx, next)
+			}
+		}
+
+		observe = o.Observe(opts...)
+
+	loop2:
+		for {
+			select {
+			case <-ctx.Done():
+				break loop2
+			case i, ok := <-observe:
+				if !ok {
+					break loop2
+				}
+
+				if i.IsError() {
+					i.SendContext(ctx, next)
+					return
+				}
+				i.SendContext(ctx, next)
+			}
+		}
+	}()
+
+	return &ObservableImpl[T]{
+		iterable: newChannelIterable(next),
+	}
+}
+
 // !!!
 
 // ToSlice collects all items from an Observable and emit them in a slice and
