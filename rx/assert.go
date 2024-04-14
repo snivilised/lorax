@@ -20,13 +20,17 @@ type AssertResources[T any] interface {
 	Numbers() []int
 	Errors() []error
 	Booleans() []bool
+	Ticks() []NumVal
+	TickValues() []NumVal
 }
 
 type actualResources[T any] struct {
-	values   []T
-	numbers  []int
-	errors   []error
-	booleans []bool
+	values     []T
+	numbers    []int
+	errors     []error
+	booleans   []bool
+	ticks      []NumVal
+	tickValues []NumVal
 }
 
 func (r *actualResources[T]) Values() []T {
@@ -45,6 +49,14 @@ func (r *actualResources[T]) Booleans() []bool {
 	return r.booleans
 }
 
+func (r *actualResources[T]) Ticks() []NumVal {
+	return r.ticks
+}
+
+func (r *actualResources[T]) TickValues() []NumVal {
+	return r.tickValues
+}
+
 func Assert[T any](ctx context.Context, iterable Iterable[T], asserters ...Asserter[T]) {
 	resources := assertObserver(ctx, iterable)
 
@@ -55,10 +67,12 @@ func Assert[T any](ctx context.Context, iterable Iterable[T], asserters ...Asser
 
 func assertObserver[T any](ctx context.Context, iterable Iterable[T]) *actualResources[T] {
 	resources := &actualResources[T]{
-		values:   make([]T, 0),
-		numbers:  make([]int, 0),
-		errors:   make([]error, 0),
-		booleans: make([]bool, 0),
+		values:     make([]T, 0),
+		numbers:    make([]int, 0),
+		errors:     make([]error, 0),
+		booleans:   make([]bool, 0),
+		ticks:      make([]NumVal, 0),
+		tickValues: make([]NumVal, 0),
 	}
 
 	observe := iterable.Observe()
@@ -85,6 +99,12 @@ loop:
 
 			case item.IsBoolean():
 				resources.booleans = append(resources.booleans, item.B)
+
+			case item.IsTick():
+				resources.ticks = append(resources.ticks, item.N)
+
+			case item.IsTickValue():
+				resources.tickValues = append(resources.tickValues, item.N)
 
 			default:
 				Fail(fmt.Sprintf("value type not handled for: '%v'", item.Desc()))
@@ -338,4 +358,53 @@ func (a IsFalse[T]) Check(actual AssertResources[T]) {
 	}
 
 	Expect(values[0]).To(BeFalse(), reason("IsFalse"))
+}
+
+// HasTicks
+type HasTicks[T any] struct {
+	Expected []T
+}
+
+// HasTickValues checks if an observable has an exact set of numeric items.
+func (a HasTicks[T]) Check(actual AssertResources[T]) {
+	Expect(actual.Ticks()).To(ContainElements(a.Expected), reason("HasTickValues"))
+}
+
+// HasTickCount
+type HasTickCount[T any] struct {
+	Expected int
+}
+
+// HasTickValues checks if an observable has a expect count of tick value items.
+func (a HasTickCount[T]) Check(actual AssertResources[T]) {
+	Expect(actual.Ticks()).To(HaveLen(a.Expected), reason("HasTickCount"))
+}
+
+// HasTickValue
+type HasTickValue[T any] struct {
+	Expected int
+}
+
+// HasTickValue checks if a single or optional single has a specific numeric item.
+func (a HasTickValue[T]) Check(actual AssertResources[T]) {
+	values := actual.TickValues()
+	length := len(values)
+
+	if length != 1 {
+		Fail(reason(fmt.Sprintf("HasTickValue: wrong number of items, expected 1, got %d", length)))
+	}
+
+	if length > 0 {
+		Expect(values[0]).To(Equal(a.Expected), reason("HasTickValue"))
+	}
+}
+
+// HasTickValueCount
+type HasTickValueCount[T any] struct {
+	Expected int
+}
+
+// HasTickValues checks if an observable has a expect count of tick value items.
+func (a HasTickValueCount[T]) Check(actual AssertResources[T]) {
+	Expect(actual.TickValues()).To(HaveLen(a.Expected), reason("HasTickValueCount"))
 }

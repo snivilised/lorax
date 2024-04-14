@@ -1,6 +1,7 @@
 package rx
 
 import (
+	"container/ring"
 	"context"
 	"fmt"
 	"sync/atomic"
@@ -2186,6 +2187,206 @@ func (o *ObservableImpl[T]) Sum(calc Calculator[T], opts ...Option[T]) OptionalS
 	return o.Reduce(func(_ context.Context, acc, elem Item[T]) (T, error) {
 		return calc.Add(acc.V, elem.V), nil
 	}, opts...)
+}
+
+// Take emits only the first n items emitted by an Observable.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) Take(nth uint, opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &takeOperator[T]{
+			nth: nth,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type takeOperator[T any] struct {
+	nth       uint
+	takeCount int
+}
+
+func (op *takeOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if op.takeCount >= int(op.nth) {
+		operatorOptions.stop()
+
+		return
+	}
+
+	op.takeCount++
+
+	item.SendContext(ctx, dst)
+}
+
+func (op *takeOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *takeOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *takeOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
+// TakeLast emits only the last n items emitted by an Observable.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) TakeLast(nth uint, opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		n := int(nth)
+
+		return &takeLast[T]{
+			n: n,
+			r: ring.New(n),
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type takeLast[T any] struct {
+	n     int
+	r     *ring.Ring
+	count int
+}
+
+func (op *takeLast[T]) next(_ context.Context, item Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+	op.count++
+	op.r.Value = item.V
+	op.r = op.r.Next()
+}
+
+func (op *takeLast[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *takeLast[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if op.count < op.n {
+		remaining := op.n - op.count
+
+		if remaining <= op.count {
+			op.r = op.r.Move(op.n - op.count)
+		} else {
+			op.r = op.r.Move(-op.count)
+		}
+
+		op.n = op.count
+	}
+
+	for i := 0; i < op.n; i++ {
+		Of(op.r.Value.(T)).SendContext(ctx, dst)
+		op.r = op.r.Next()
+	}
+}
+
+func (op *takeLast[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
+// TakeUntil returns an Observable that emits items emitted by the source Observable,
+// checks the specified predicate for each item, and then completes when the condition is satisfied.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) TakeUntil(apply Predicate[T], opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &takeUntilOperator[T]{
+			apply: apply,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type takeUntilOperator[T any] struct {
+	apply Predicate[T]
+}
+
+func (op *takeUntilOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	item.SendContext(ctx, dst)
+
+	if op.apply(item) {
+		operatorOptions.stop()
+
+		return
+	}
+}
+
+func (op *takeUntilOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *takeUntilOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *takeUntilOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
+// TakeWhile returns an Observable that emits items emitted by the source ObservableSource so long as each
+// item satisfied a specified condition, and then completes as soon as this condition is not satisfied.
+// Cannot be run in parallel.
+func (o *ObservableImpl[T]) TakeWhile(apply Predicate[T], opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &takeWhileOperator[T]{
+			apply: apply,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type takeWhileOperator[T any] struct {
+	apply Predicate[T]
+}
+
+func (op *takeWhileOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if !op.apply(item) {
+		operatorOptions.stop()
+
+		return
+	}
+
+	item.SendContext(ctx, dst)
+}
+
+func (op *takeWhileOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *takeWhileOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *takeWhileOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
 }
 
 // !!!

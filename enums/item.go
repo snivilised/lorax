@@ -25,9 +25,9 @@ const (
 	//
 	ItemDiscNumeric
 
-	// ItemDiscPulse enum value that represents a Tick value.
+	// ItemDiscTick enum value that represents a Tick value.
 	//
-	ItemDiscPulse
+	ItemDiscTick
 
 	// ItemDiscTick enum value that represents a TickValue value.
 	//
@@ -52,8 +52,8 @@ func init() {
 		ItemDiscChan:      "channel",
 		ItemDiscError:     "error",
 		ItemDiscNumeric:   "numeric",
-		ItemDiscPulse:     "pulse",
-		ItemDiscTickValue: "tick",
+		ItemDiscTick:      "tick",
+		ItemDiscTickValue: "tick value",
 		ItemDiscOpaque:    "opaque",
 	}
 }
