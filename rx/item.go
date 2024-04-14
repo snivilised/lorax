@@ -72,7 +72,7 @@ func Error[T any](err error) Item[T] {
 // thats acts like a heartbeat.
 func Pulse[T any]() Item[T] {
 	return Item[T]{
-		disc: enums.ItemDiscPulse,
+		disc: enums.ItemDiscTick,
 	}
 }
 
@@ -213,7 +213,7 @@ func (i Item[T]) IsError() bool {
 
 // IsTick checks if an item is a tick instance.
 func (i Item[T]) IsTick() bool {
-	return (i.disc & enums.ItemDiscPulse) > 0
+	return (i.disc & enums.ItemDiscTick) > 0
 }
 
 // IsTickValue checks if an item is a tick value instance.
