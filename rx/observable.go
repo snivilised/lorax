@@ -64,6 +64,9 @@ type Observable[T any] interface {
 	TimeInterval(opts ...Option[T]) Observable[T]
 	Timestamp(opts ...Option[T]) Observable[T]
 	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)
+	WindowWithCount(count int, opts ...Option[T]) Observable[T]
+	WindowWithTime(timespan Duration, opts ...Option[T]) Observable[T]
+	WindowWithTimeOrCount(timespan Duration, count int, opts ...Option[T]) Observable[T]
 }
 
 // ObservableImpl implements Observable.

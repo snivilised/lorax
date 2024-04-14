@@ -4,6 +4,7 @@ import (
 	"container/ring"
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -2465,7 +2466,323 @@ func (op *timestampOperator[T]) gatherNext(_ context.Context, _ Item[T],
 	_ chan<- Item[T], _ operatorOptions[T]) {
 }
 
-// !!!
+// WindowWithCount periodically subdivides items from an Observable into Observable windows of a given size and emit these windows
+// rather than emitting the items one at a time.
+func (o *ObservableImpl[T]) WindowWithCount(count int, opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	if count < 0 {
+		return Thrown[T](IllegalInputError{
+			error: "count must be positive or nil",
+		})
+	}
+
+	option := parseOptions(opts...)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &windowWithCountOperator[T]{
+			count:  count,
+			option: option,
+		}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type windowWithCountOperator[T any] struct {
+	count          int
+	iCount         int
+	currentChannel chan Item[T]
+	option         Option[T]
+}
+
+func (op *windowWithCountOperator[T]) pre(ctx context.Context, dst chan<- Item[T]) {
+	if op.currentChannel == nil {
+		ch := op.option.buildChannel()
+		op.currentChannel = ch
+
+		Opaque[T](FromChannel(ch)).SendContext(ctx, dst)
+	}
+}
+
+func (op *windowWithCountOperator[T]) post(ctx context.Context, dst chan<- Item[T]) {
+	if op.iCount == op.count {
+		op.iCount = 0
+		close(op.currentChannel)
+
+		ch := op.option.buildChannel()
+		op.currentChannel = ch
+		Opaque[T](FromChannel(ch)).SendContext(ctx, dst)
+	}
+}
+
+func (op *windowWithCountOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	op.pre(ctx, dst)
+	op.currentChannel <- item
+
+	op.iCount++
+
+	op.post(ctx, dst)
+}
+
+func (op *windowWithCountOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T]) {
+	op.pre(ctx, dst)
+
+	op.currentChannel <- item
+
+	op.iCount++
+
+	op.post(ctx, dst)
+	operatorOptions.stop()
+}
+
+func (op *windowWithCountOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+	if op.currentChannel != nil {
+		close(op.currentChannel)
+	}
+}
+
+func (op *windowWithCountOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+}
+
+// WindowWithTime periodically subdivides items from an Observable into Observables based on timed windows
+// and emit them rather than emitting the items one at a time.
+func (o *ObservableImpl[T]) WindowWithTime(timespan Duration, opts ...Option[T]) Observable[T] {
+	if timespan == nil {
+		return Thrown[T](IllegalInputError{
+			error: "timespan must no be nil",
+		})
+	}
+
+	f := func(ctx context.Context, next chan Item[T], option Option[T], opts ...Option[T]) {
+		observe := o.Observe(opts...)
+		ch := option.buildChannel()
+		done := make(chan struct{})
+		empty := true
+		mutex := sync.Mutex{}
+
+		if !Opaque[T](FromChannel(ch)).SendContext(ctx, next) {
+			return
+		}
+
+		go func() {
+			defer func() {
+				mutex.Lock()
+				close(ch)
+				mutex.Unlock()
+			}()
+			defer close(next)
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-done:
+					return
+				case <-time.After(timespan.duration()):
+					mutex.Lock()
+
+					if empty {
+						mutex.Unlock()
+						continue
+					}
+
+					close(ch)
+
+					empty = true
+
+					ch = option.buildChannel()
+
+					if !Opaque[T](FromChannel(ch)).SendContext(ctx, next) {
+						close(done)
+
+						return
+					}
+					mutex.Unlock()
+				}
+			}
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-done:
+				return
+			case item, ok := <-observe:
+				if !ok {
+					close(done)
+
+					return
+				}
+
+				if item.IsError() {
+					mutex.Lock()
+
+					if !item.SendContext(ctx, ch) {
+						mutex.Unlock()
+						close(done)
+
+						return
+					}
+					mutex.Unlock()
+
+					if option.getErrorStrategy() == StopOnError {
+						close(done)
+
+						return
+					}
+				}
+
+				mutex.Lock()
+				if !item.SendContext(ctx, ch) {
+					mutex.Unlock()
+
+					return
+				}
+
+				empty = false
+
+				mutex.Unlock()
+			}
+		}
+	}
+
+	return customObservableOperator(o.parent, f, opts...)
+}
+
+// WindowWithTimeOrCount periodically subdivides items from an Observable into Observables based on timed windows or a specific size
+// and emit them rather than emitting the items one at a time.
+func (o *ObservableImpl[T]) WindowWithTimeOrCount(timespan Duration, count int, opts ...Option[T]) Observable[T] {
+	if timespan == nil {
+		return Thrown[T](IllegalInputError{
+			error: "timespan must not be nil",
+		})
+	}
+
+	if count < 0 {
+		return Thrown[T](IllegalInputError{
+			error: "count must be positive or nil",
+		})
+	}
+
+	f := func(ctx context.Context, next chan Item[T], option Option[T], opts ...Option[T]) {
+		observe := o.Observe(opts...)
+		ch := option.buildChannel()
+		done := make(chan struct{})
+		mutex := sync.Mutex{}
+		iCount := 0
+
+		if !Opaque[T](FromChannel(ch)).SendContext(ctx, next) {
+			return
+		}
+
+		go func() {
+			defer func() {
+				mutex.Lock()
+				close(ch)
+				mutex.Unlock()
+			}()
+			defer close(next)
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-done:
+					return
+				case <-time.After(timespan.duration()):
+					mutex.Lock()
+					if iCount == 0 {
+						mutex.Unlock()
+
+						continue
+					}
+
+					close(ch)
+
+					iCount = 0
+					ch = option.buildChannel()
+
+					if !Opaque[T](FromChannel(ch)).SendContext(ctx, next) {
+						close(done)
+
+						return
+					}
+					mutex.Unlock()
+				}
+			}
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-done:
+				return
+			case item, ok := <-observe:
+				if !ok {
+					close(done)
+
+					return
+				}
+
+				if item.IsError() {
+					mutex.Lock()
+					if !item.SendContext(ctx, ch) {
+						mutex.Unlock()
+
+						close(done)
+
+						return
+					}
+					mutex.Unlock()
+
+					if option.getErrorStrategy() == StopOnError {
+						close(done)
+
+						return
+					}
+				}
+
+				mutex.Lock()
+
+				if !item.SendContext(ctx, ch) {
+					mutex.Unlock()
+
+					return
+				}
+
+				iCount++
+
+				if iCount == count {
+					close(ch)
+
+					iCount = 0
+					ch = option.buildChannel()
+
+					if !Opaque[T](FromChannel(ch)).SendContext(ctx, next) {
+						mutex.Unlock()
+						close(done)
+
+						return
+					}
+				}
+				mutex.Unlock()
+			}
+		}
+	}
+
+	return customObservableOperator(o.parent, f, opts...)
+}
+
+// <<<
 
 // ToSlice collects all items from an Observable and emit them in a slice and
 // an optional error. Cannot be run in parallel.
