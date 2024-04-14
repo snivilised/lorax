@@ -61,6 +61,8 @@ type Observable[T any] interface {
 	TakeLast(nth uint, opts ...Option[T]) Observable[T]
 	TakeUntil(apply Predicate[T], opts ...Option[T]) Observable[T]
 	TakeWhile(apply Predicate[T], opts ...Option[T]) Observable[T]
+	TimeInterval(opts ...Option[T]) Observable[T]
+	Timestamp(opts ...Option[T]) Observable[T]
 	ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error)
 }
 

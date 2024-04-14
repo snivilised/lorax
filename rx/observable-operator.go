@@ -2389,6 +2389,82 @@ func (op *takeWhileOperator[T]) gatherNext(_ context.Context, _ Item[T],
 ) {
 }
 
+func (o *ObservableImpl[T]) TimeInterval(opts ...Option[T]) Observable[T] {
+	f := func(ctx context.Context, next chan Item[T], option Option[T], opts ...Option[T]) {
+		defer close(next)
+
+		observe := o.Observe(opts...)
+		latest := time.Now().UTC()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case item, ok := <-observe:
+				if !ok {
+					return
+				}
+
+				if item.IsError() {
+					if !item.SendContext(ctx, next) {
+						return
+					}
+
+					if option.getErrorStrategy() == StopOnError {
+						return
+					}
+				} else {
+					now := time.Now().UTC()
+
+					if !Opaque[T](now.Sub(latest)).SendContext(ctx, next) {
+						return
+					}
+
+					latest = now
+				}
+			}
+		}
+	}
+
+	return customObservableOperator(o.parent, f, opts...)
+}
+
+func (o *ObservableImpl[T]) Timestamp(opts ...Option[T]) Observable[T] {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	return observable(o.parent, o, func() operator[T] {
+		return &timestampOperator[T]{}
+	}, forceSeq, bypassGather, opts...)
+}
+
+type timestampOperator[T any] struct {
+}
+
+func (op *timestampOperator[T]) next(ctx context.Context, item Item[T],
+	dst chan<- Item[T], _ operatorOptions[T],
+) {
+	Opaque[T](&TimestampItem[T]{
+		Timestamp: time.Now().UTC(),
+		V:         item.V,
+	}).SendContext(ctx, dst)
+}
+
+func (op *timestampOperator[T]) err(ctx context.Context, item Item[T],
+	dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *timestampOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *timestampOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
 // !!!
 
 // ToSlice collects all items from an Observable and emit them in a slice and
