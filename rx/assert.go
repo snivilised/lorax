@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive,stylecheck // ginkgo ok
 	. "github.com/onsi/gomega"    //nolint:revive,stylecheck // gomega ok
+	"github.com/snivilised/lorax/enums"
 )
 
 // AssertPredicate is a custom predicate based on the items.
@@ -22,6 +23,7 @@ type AssertResources[T any] interface {
 	Booleans() []bool
 	Ticks() []NumVal
 	TickValues() []NumVal
+	Opaques() []any
 }
 
 type actualResources[T any] struct {
@@ -31,6 +33,7 @@ type actualResources[T any] struct {
 	booleans   []bool
 	ticks      []NumVal
 	tickValues []NumVal
+	opaques    []any
 }
 
 func (r *actualResources[T]) Values() []T {
@@ -57,6 +60,10 @@ func (r *actualResources[T]) TickValues() []NumVal {
 	return r.tickValues
 }
 
+func (r *actualResources[T]) Opaques() []any {
+	return r.opaques
+}
+
 func Assert[T any](ctx context.Context, iterable Iterable[T], asserters ...Asserter[T]) {
 	resources := assertObserver(ctx, iterable)
 
@@ -73,6 +80,7 @@ func assertObserver[T any](ctx context.Context, iterable Iterable[T]) *actualRes
 		booleans:   make([]bool, 0),
 		ticks:      make([]NumVal, 0),
 		tickValues: make([]NumVal, 0),
+		opaques:    make([]any, 0),
 	}
 
 	observe := iterable.Observe()
@@ -87,24 +95,30 @@ loop:
 				break loop
 			}
 
-			switch {
-			case item.IsValue():
+			switch item.disc {
+			case enums.ItemDiscNative:
 				resources.values = append(resources.values, item.V)
 
-			case item.IsError():
-				resources.errors = append(resources.errors, item.E)
-
-			case item.IsNumeric():
-				resources.numbers = append(resources.numbers, item.N)
-
-			case item.IsBoolean():
+			case enums.ItemDiscBoolean:
 				resources.booleans = append(resources.booleans, item.B)
 
-			case item.IsTick():
+			case enums.ItemDiscChan:
+				Fail(fmt.Sprintf("NOT-IMPL yet for channel for: '%v'", item.Desc()))
+
+			case enums.ItemDiscError:
+				resources.errors = append(resources.errors, item.E)
+
+			case enums.ItemDiscNumeric:
+				resources.numbers = append(resources.numbers, item.N)
+
+			case enums.ItemDiscTick:
 				resources.ticks = append(resources.ticks, item.N)
 
-			case item.IsTickValue():
+			case enums.ItemDiscTickValue:
 				resources.tickValues = append(resources.tickValues, item.N)
+
+			case enums.ItemDiscOpaque:
+				resources.opaques = append(resources.opaques, item.O)
 
 			default:
 				Fail(fmt.Sprintf("value type not handled for: '%v'", item.Desc()))
