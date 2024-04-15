@@ -124,7 +124,7 @@ loop:
 			case enums.ItemDiscBoolean:
 				resources.booleans = append(resources.booleans, item.Bool())
 
-			case enums.ItemDiscChan:
+			case enums.ItemDiscWChan:
 				Fail(fmt.Sprintf("NOT-IMPL yet for channel for: '%v'", item.Desc()))
 
 			case enums.ItemDiscError:
@@ -141,6 +141,9 @@ loop:
 
 			case enums.ItemDiscOpaque:
 				resources.opaques = append(resources.opaques, item.Opaque())
+
+			case enums.ItemDiscUndefined:
+				Fail(fmt.Sprintf("undefined value not handled for: '%v'", item.Desc()))
 
 			default:
 				Fail(fmt.Sprintf("value type not handled for: '%v'", item.Desc()))

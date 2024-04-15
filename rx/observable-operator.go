@@ -1476,6 +1476,7 @@ func (o *ObservableImpl[T]) Reduce(apply Func2[T], opts ...Option[T]) OptionalSi
 	return optionalSingle(o.parent, o, func() operator[T] {
 		return &reduceOperator[T]{
 			apply: apply,
+			acc:   Zero[T](),
 			empty: true,
 		}
 	}, forceSeq, bypassGather, opts...)

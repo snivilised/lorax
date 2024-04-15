@@ -56,26 +56,16 @@ func Of[T any](v T) Item[T] {
 	}
 }
 
-// Returns the native value of item
-func (it Item[T]) Of() T {
-	return it.aux.(T)
-}
+// Zero creates a zero value item.
+func Zero[T any]() Item[T] {
+	var (
+		zero T
+	)
 
-// Ch creates an item from a channel
-func Ch[T any](ch any) Item[T] {
-	if c, ok := ch.(chan<- Item[T]); ok {
-		return Item[T]{
-			aux:  c,
-			disc: enums.ItemDiscChan,
-		}
+	return Item[T]{
+		V:    zero,
+		disc: enums.ItemDiscNative,
 	}
-
-	panic("temp: invalid ch type")
-}
-
-// Returns the channel value of item
-func (it Item[T]) Ch() chan<- Item[T] {
-	return it.aux.(chan<- Item[T])
 }
 
 // Error creates an item from an error.
@@ -84,42 +74,6 @@ func Error[T any](err error) Item[T] {
 		E:    err,
 		disc: enums.ItemDiscError,
 	}
-}
-
-// Returns the error value of item
-func (it Item[T]) Error() error {
-	return it.aux.(error)
-}
-
-// Returns the error value of item
-func (it Item[T]) Pulse() error {
-	return it.aux.(error)
-}
-
-// TV creates a type safe tick value instance
-func TV[T any](tv int) Item[T] {
-	return Item[T]{
-		aux:  tv,
-		disc: enums.ItemDiscTickValue,
-	}
-}
-
-// Returns the tick value of item
-func (it Item[T]) TV() int {
-	return it.aux.(int)
-}
-
-// Num creates a type safe tick value instance
-func Num[T any](n NumVal) Item[T] {
-	return Item[T]{
-		aux:  n,
-		disc: enums.ItemDiscNumber,
-	}
-}
-
-// Returns the tick value of item
-func (it Item[T]) Num() NumVal {
-	return it.aux.(NumVal)
 }
 
 // Bool creates a type safe boolean instance
@@ -151,6 +105,36 @@ func False[T any]() Item[T] {
 	}
 }
 
+// WCh creates an item from a channel
+func WCh[T any](ch any) Item[T] {
+	if c, ok := ch.(chan<- Item[T]); ok {
+		return Item[T]{
+			aux:  c,
+			disc: enums.ItemDiscWChan,
+		}
+	}
+
+	panic("temp: invalid ch type")
+}
+
+// Returns the channel value of item
+func (it Item[T]) Ch() chan<- Item[T] {
+	return it.aux.(chan<- Item[T])
+}
+
+// Num creates a type safe tick value instance
+func Num[T any](n NumVal) Item[T] {
+	return Item[T]{
+		aux:  n,
+		disc: enums.ItemDiscNumber,
+	}
+}
+
+// Returns the tick value of item
+func (it Item[T]) Num() NumVal {
+	return it.aux.(NumVal)
+}
+
 // Opaque creates an item from any type of value
 func Opaque[T any](o any) Item[T] {
 	return Item[T]{
@@ -162,6 +146,26 @@ func Opaque[T any](o any) Item[T] {
 // Opaque returns the opaque value of item without typecast
 func (it Item[T]) Opaque() any {
 	return it.aux
+}
+
+// TV creates a type safe tick instance (no value)
+func Tick[T any]() Item[T] {
+	return Item[T]{
+		disc: enums.ItemDiscTick,
+	}
+}
+
+// TV creates a type safe tick value instance
+func TV[T any](tv int) Item[T] {
+	return Item[T]{
+		aux:  tv,
+		disc: enums.ItemDiscTickValue,
+	}
+}
+
+// Returns the tick value of item
+func (it Item[T]) TV() int {
+	return it.aux.(int)
 }
 
 // Disc returns the discriminator of the item
@@ -234,7 +238,7 @@ func sendViaRefCh[T any](ctx context.Context, inCh reflect.Value, ch chan<- Item
 
 		switch item := vItem.(type) {
 		default:
-			Ch[T](item).SendContext(ctx, ch)
+			WCh[T](item).SendContext(ctx, ch)
 
 		case error:
 			Error[T](item).SendContext(ctx, ch)
@@ -244,12 +248,12 @@ func sendViaRefCh[T any](ctx context.Context, inCh reflect.Value, ch chan<- Item
 
 // IsValue checks if an item is a value.
 func (it Item[T]) IsValue() bool {
-	return it.disc == 0
+	return (it.disc & enums.ItemDiscNative) > 0
 }
 
 // IsCh checks if an item is an error.
 func (it Item[T]) IsCh() bool {
-	return (it.disc & enums.ItemDiscChan) > 0
+	return (it.disc & enums.ItemDiscWChan) > 0
 }
 
 // IsError checks if an item is an error.

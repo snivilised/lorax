@@ -1,5 +1,11 @@
 package rx
 
+import (
+	"fmt"
+
+	"github.com/snivilised/lorax/enums"
+)
+
 // MIT License
 
 // Copyright (c) 2016 Joe Chasinga
@@ -38,4 +44,16 @@ type IndexOutOfBoundError struct {
 
 func (e IndexOutOfBoundError) Error() string {
 	return "index out of bound: " + e.error
+}
+
+type TryError[T any] struct {
+	error    string
+	item     Item[T]
+	expected enums.ItemDiscriminator
+}
+
+func (e TryError[T]) Error() string {
+	return fmt.Sprintf("expected item to be : '%v', but is: '%v' (%+v)",
+		enums.ItemDescriptions[e.expected], enums.ItemDescriptions[e.item.disc], e.item,
+	)
 }
