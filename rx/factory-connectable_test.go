@@ -354,8 +354,8 @@ func collect[T any](ctx context.Context, ch <-chan Item[T]) ([]any, error) {
 			switch {
 			case item.IsError():
 				s = append(s, item.E)
-			case item.IsNumeric():
-				s = append(s, item.N)
+			case item.IsNumber():
+				s = append(s, item.Num())
 			default:
 				s = append(s, item.V)
 			}

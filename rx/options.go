@@ -4,6 +4,7 @@ import (
 	"context"
 	"runtime"
 
+	"github.com/snivilised/lorax/enums"
 	"github.com/teivah/onecontext"
 )
 
@@ -16,8 +17,8 @@ type Option[T any] interface {
 	getPool() (bool, int)
 	buildChannel() chan Item[T]
 	buildContext(parent context.Context) context.Context
-	getBackPressureStrategy() BackPressureStrategy
-	getErrorStrategy() OnErrorStrategy
+	getBackPressureStrategy() enums.BackPressureStrategy
+	getErrorStrategy() enums.OnErrorStrategy
 	isConnectable() bool
 	isConnectOperation() bool
 	isSerialized() (bool, func(T) int)
@@ -28,10 +29,10 @@ type funcOption[T any] struct {
 	isBuffer             bool
 	buffer               int
 	ctx                  context.Context
-	observation          ObservationStrategy
+	observation          enums.ObservationStrategy
 	pool                 int
-	backPressureStrategy BackPressureStrategy
-	onErrorStrategy      OnErrorStrategy
+	backPressureStrategy enums.BackPressureStrategy
+	onErrorStrategy      enums.OnErrorStrategy
 	propagate            bool
 	connectable          bool
 	connectOperation     bool
@@ -43,7 +44,7 @@ func (fdo *funcOption[T]) toPropagate() bool {
 }
 
 func (fdo *funcOption[T]) isEagerObservation() bool {
-	return fdo.observation == Eager
+	return fdo.observation == enums.Eager
 }
 
 func (fdo *funcOption[T]) getPool() (b bool, p int) {
@@ -76,11 +77,11 @@ func (fdo *funcOption[T]) buildContext(parent context.Context) context.Context {
 	return context.Background()
 }
 
-func (fdo *funcOption[T]) getBackPressureStrategy() BackPressureStrategy {
+func (fdo *funcOption[T]) getBackPressureStrategy() enums.BackPressureStrategy {
 	return fdo.backPressureStrategy
 }
 
-func (fdo *funcOption[T]) getErrorStrategy() OnErrorStrategy {
+func (fdo *funcOption[T]) getErrorStrategy() enums.OnErrorStrategy {
 	return fdo.onErrorStrategy
 }
 
@@ -135,7 +136,7 @@ func WithContext[T any](ctx context.Context) Option[T] {
 }
 
 // WithObservationStrategy uses the eager observation mode meaning consuming the items even without subscription.
-func WithObservationStrategy[T any](strategy ObservationStrategy) Option[T] {
+func WithObservationStrategy[T any](strategy enums.ObservationStrategy) Option[T] {
 	return newFuncOption(func(options *funcOption[T]) {
 		options.observation = strategy
 	})
@@ -156,7 +157,7 @@ func WithCPUPool[T any]() Option[T] {
 }
 
 // WithBackPressureStrategy sets the back pressure strategy: drop or block.
-func WithBackPressureStrategy[T any](strategy BackPressureStrategy) Option[T] {
+func WithBackPressureStrategy[T any](strategy enums.BackPressureStrategy) Option[T] {
 	return newFuncOption(func(options *funcOption[T]) {
 		options.backPressureStrategy = strategy
 	})
@@ -164,7 +165,7 @@ func WithBackPressureStrategy[T any](strategy BackPressureStrategy) Option[T] {
 
 // WithErrorStrategy defines how an observable should deal with error.
 // This strategy is propagated to the parent observable.
-func WithErrorStrategy[T any](strategy OnErrorStrategy) Option[T] {
+func WithErrorStrategy[T any](strategy enums.OnErrorStrategy) Option[T] {
 	return newFuncOption(func(options *funcOption[T]) {
 		options.onErrorStrategy = strategy
 	})

@@ -6,6 +6,7 @@ import (
 	"github.com/fortytw2/leaktest"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
 	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
+	"github.com/snivilised/lorax/enums"
 	"github.com/snivilised/lorax/rx"
 )
 
@@ -84,7 +85,7 @@ var _ = Describe("Observable operator", func() {
 							return 0, errBar
 						}
 						return i, nil
-					}, rx.WithErrorStrategy[int](rx.ContinueOnError),
+					}, rx.WithErrorStrategy[int](enums.ContinueOnError),
 				)
 				Expect(obs.Errors()).To(HaveLen(2))
 			})

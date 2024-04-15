@@ -9,12 +9,12 @@ import (
 	"github.com/snivilised/lorax/rx"
 )
 
-var predicateAllPositive = func(i rx.Item[int]) bool {
-	return i.N > 0
+var positiveN = func(it rx.Item[int]) bool {
+	return it.Num() > 0
 }
 
-var predicateAllNegative = func(i rx.Item[int]) bool {
-	return i.N < 0
+var negative = func(it rx.Item[int]) bool {
+	return it.V < 0
 }
 
 var _ = Describe("Observable operator", func() {
@@ -28,7 +28,7 @@ var _ = Describe("Observable operator", func() {
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
-					rx.Assert(ctx, rx.Range[int](1, 3).All(predicateAllPositive),
+					rx.Assert(ctx, rx.Range[int](1, 3).All(positiveN),
 						rx.IsTrue[int]{},
 						rx.HasNoError[int]{},
 					)
@@ -41,7 +41,7 @@ var _ = Describe("Observable operator", func() {
 						ctx, cancel := context.WithCancel(context.Background())
 						defer cancel()
 
-						rx.Assert(ctx, rx.Range[int](1, 3).All(predicateAllPositive),
+						rx.Assert(ctx, rx.Range[int](1, 3).All(positiveN),
 							rx.HasTrue[int]{},
 						)
 					})
@@ -56,7 +56,7 @@ var _ = Describe("Observable operator", func() {
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
-					rx.Assert(ctx, testObservable[int](ctx, 1, -2, 3).All(predicateAllNegative),
+					rx.Assert(ctx, testObservable[int](ctx, 1, -2, 3).All(negative),
 						rx.IsFalse[int]{},
 						rx.HasNoError[int]{},
 					)
@@ -85,7 +85,7 @@ var _ = Describe("Observable operator", func() {
 						ctx, cancel := context.WithCancel(context.Background())
 						defer cancel()
 
-						rx.Assert(ctx, testObservable[int](ctx, -1, 2, 3).All(predicateAllNegative),
+						rx.Assert(ctx, testObservable[int](ctx, -1, 2, 3).All(negative),
 							rx.HasFalse[int]{},
 						)
 					})
@@ -103,7 +103,7 @@ var _ = Describe("Observable operator", func() {
 						ctx, cancel := context.WithCancel(context.Background())
 						defer cancel()
 
-						rx.Assert(ctx, rx.Range[int](1, 3).All(predicateAllPositive,
+						rx.Assert(ctx, rx.Range[int](1, 3).All(positiveN,
 							rx.WithContext[int](ctx),
 							rx.WithCPUPool[int](), // not supported yet
 						),
@@ -123,7 +123,7 @@ var _ = Describe("Observable operator", func() {
 						ctx, cancel := context.WithCancel(context.Background())
 						defer cancel()
 
-						rx.Assert(ctx, testObservable[int](ctx, 1, -2, 3).All(predicateAllNegative,
+						rx.Assert(ctx, testObservable[int](ctx, 1, -2, 3).All(negative,
 							rx.WithContext[int](ctx),
 							rx.WithCPUPool[int](), // not supported yet
 						),
@@ -144,7 +144,7 @@ var _ = Describe("Observable operator", func() {
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
-					rx.Assert(ctx, testObservable[int](ctx, 1, errFoo, 3).All(predicateAllNegative,
+					rx.Assert(ctx, testObservable[int](ctx, 1, errFoo, 3).All(negative,
 						rx.WithContext[int](ctx),
 						rx.WithCPUPool[int](), // not supported yet
 					),
