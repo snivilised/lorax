@@ -170,8 +170,8 @@ var _ = Describe("OptionSingle", func() {
 					It("should: result in empty single iterable", func() {
 						defer leaktest.Check(GinkgoT())()
 
-						single := rx.JustItem(42).Filter(func(it rx.Item[int]) bool {
-							return it.V == 48
+						single := rx.JustItem(42).Filter(func(item rx.Item[int]) bool {
+							return item.V == 48
 						})
 						rx.Assert(context.Background(), single,
 							rx.IsEmpty[int]{},

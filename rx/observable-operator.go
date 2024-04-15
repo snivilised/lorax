@@ -136,7 +136,9 @@ func (op *averageOperator[T]) gatherNext(_ context.Context, item Item[T],
 // BackOffRetry implements a backoff retry if a source Observable sends an error,
 // resubscribe to it in the hopes that it will complete without error.
 // Cannot be run in parallel.
-func (o *ObservableImpl[T]) BackOffRetry(backOffCfg backoff.BackOff, opts ...Option[T]) Observable[T] {
+func (o *ObservableImpl[T]) BackOffRetry(backOffCfg backoff.BackOff,
+	opts ...Option[T],
+) Observable[T] {
 	option := parseOptions(opts...)
 	next := option.buildChannel()
 	ctx := option.buildContext(o.parent)
@@ -1331,7 +1333,9 @@ func (o *ObservableImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 
 // OnErrorResumeNext instructs an Observable to pass control to another Observable rather than invoking
 // onError if it encounters an error.
-func (o *ObservableImpl[T]) OnErrorResumeNext(resumeSequence ErrorToObservable[T], opts ...Option[T]) Observable[T] {
+func (o *ObservableImpl[T]) OnErrorResumeNext(resumeSequence ErrorToObservable[T],
+	opts ...Option[T],
+) Observable[T] {
 	const (
 		forceSeq     = true
 		bypassGather = false
@@ -1580,7 +1584,9 @@ func (op *repeatOperator[T]) gatherNext(_ context.Context, _ Item[T],
 
 // Retry retries if a source Observable sends an error, resubscribe to
 // it in the hopes that it will complete without error. Cannot be run in parallel.
-func (o *ObservableImpl[T]) Retry(count int, shouldRetry ShouldRetryFunc, opts ...Option[T]) Observable[T] {
+func (o *ObservableImpl[T]) Retry(count int, shouldRetry ShouldRetryFunc,
+	opts ...Option[T],
+) Observable[T] {
 	option := parseOptions(opts...)
 	next := option.buildChannel()
 	ctx := option.buildContext(o.parent)
@@ -2185,8 +2191,8 @@ func (o *ObservableImpl[T]) StartWith(iterable Iterable[T], opts ...Option[T]) O
 
 // Sum calculates the average emitted by an Observable and emits the result
 func (o *ObservableImpl[T]) Sum(calc Calculator[T], opts ...Option[T]) OptionalSingle[T] {
-	return o.Reduce(func(_ context.Context, acc, elem Item[T]) (T, error) {
-		return calc.Add(acc.V, elem.V), nil
+	return o.Reduce(func(_ context.Context, acc, item Item[T]) (T, error) {
+		return calc.Add(acc.V, item.V), nil
 	}, opts...)
 }
 
@@ -2301,7 +2307,9 @@ func (op *takeLast[T]) gatherNext(_ context.Context, _ Item[T],
 // TakeUntil returns an Observable that emits items emitted by the source Observable,
 // checks the specified predicate for each item, and then completes when the condition is satisfied.
 // Cannot be run in parallel.
-func (o *ObservableImpl[T]) TakeUntil(apply Predicate[T], opts ...Option[T]) Observable[T] {
+func (o *ObservableImpl[T]) TakeUntil(apply Predicate[T],
+	opts ...Option[T],
+) Observable[T] {
 	const (
 		forceSeq     = true
 		bypassGather = false
@@ -2347,7 +2355,9 @@ func (op *takeUntilOperator[T]) gatherNext(_ context.Context, _ Item[T],
 // TakeWhile returns an Observable that emits items emitted by the source ObservableSource so long as each
 // item satisfied a specified condition, and then completes as soon as this condition is not satisfied.
 // Cannot be run in parallel.
-func (o *ObservableImpl[T]) TakeWhile(apply Predicate[T], opts ...Option[T]) Observable[T] {
+func (o *ObservableImpl[T]) TakeWhile(apply Predicate[T],
+	opts ...Option[T],
+) Observable[T] {
 	const (
 		forceSeq     = true
 		bypassGather = false
@@ -2464,6 +2474,51 @@ func (op *timestampOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
 
 func (op *timestampOperator[T]) gatherNext(_ context.Context, _ Item[T],
 	_ chan<- Item[T], _ operatorOptions[T]) {
+}
+
+// ToSlice collects all items from an Observable and emit them in a slice and
+// an optional error. Cannot be run in parallel.
+func (o *ObservableImpl[T]) ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error) {
+	const (
+		forceSeq     = true
+		bypassGather = false
+	)
+
+	op := &toSliceOperator[T]{
+		s: make([]Item[T], 0, initialCapacity),
+	}
+
+	<-observable(o.parent, o, func() operator[T] {
+		return op
+	}, forceSeq, bypassGather, opts...).Run()
+
+	return op.s, op.observableErr
+}
+
+type toSliceOperator[T any] struct {
+	s             []Item[T]
+	observableErr error
+}
+
+func (op *toSliceOperator[T]) next(_ context.Context, item Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
+	op.s = append(op.s, item)
+}
+
+func (op *toSliceOperator[T]) err(_ context.Context, item Item[T],
+	_ chan<- Item[T], operatorOptions operatorOptions[T]) {
+	op.observableErr = item.E
+
+	operatorOptions.stop()
+}
+
+func (op *toSliceOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
+}
+
+func (op *toSliceOperator[T]) gatherNext(_ context.Context, _ Item[T],
+	_ chan<- Item[T], _ operatorOptions[T],
+) {
 }
 
 // WindowWithCount periodically subdivides items from an Observable into Observable windows of a given size and emit these windows
@@ -2659,7 +2714,9 @@ func (o *ObservableImpl[T]) WindowWithTime(timespan Duration, opts ...Option[T])
 
 // WindowWithTimeOrCount periodically subdivides items from an Observable into Observables based on timed windows or a specific size
 // and emit them rather than emitting the items one at a time.
-func (o *ObservableImpl[T]) WindowWithTimeOrCount(timespan Duration, count int, opts ...Option[T]) Observable[T] {
+func (o *ObservableImpl[T]) WindowWithTimeOrCount(timespan Duration,
+	count int, opts ...Option[T],
+) Observable[T] {
 	if timespan == nil {
 		return Thrown[T](IllegalInputError{
 			error: "timespan must not be nil",
@@ -2672,7 +2729,9 @@ func (o *ObservableImpl[T]) WindowWithTimeOrCount(timespan Duration, count int, 
 		})
 	}
 
-	f := func(ctx context.Context, next chan Item[T], option Option[T], opts ...Option[T]) {
+	f := func(ctx context.Context, next chan Item[T], option Option[T],
+		opts ...Option[T],
+	) {
 		observe := o.Observe(opts...)
 		ch := option.buildChannel()
 		done := make(chan struct{})
@@ -2782,49 +2841,67 @@ func (o *ObservableImpl[T]) WindowWithTimeOrCount(timespan Duration, count int, 
 	return customObservableOperator(o.parent, f, opts...)
 }
 
-// <<<
+// ZipFromIterable merges the emissions of an Iterable via a specified function
+// and emit single items for each combination based on the results of this function.
+func (o *ObservableImpl[T]) ZipFromIterable(iterable Iterable[T], zipper Func2[T],
+	opts ...Option[T],
+) Observable[T] {
+	option := parseOptions(opts...)
+	next := option.buildChannel()
+	ctx := option.buildContext(o.parent)
 
-// ToSlice collects all items from an Observable and emit them in a slice and
-// an optional error. Cannot be run in parallel.
-func (o *ObservableImpl[T]) ToSlice(initialCapacity int, opts ...Option[T]) ([]Item[T], error) {
-	const (
-		forceSeq     = true
-		bypassGather = false
-	)
+	go func() {
+		defer close(next)
 
-	op := &toSliceOperator[T]{
-		s: make([]Item[T], 0, initialCapacity),
+		it1 := o.Observe(opts...)
+		it2 := iterable.Observe(opts...)
+	loop:
+		for {
+			select {
+			case <-ctx.Done():
+				break loop
+			case i1, ok := <-it1:
+				if !ok {
+					break loop
+				}
+
+				if i1.IsError() {
+					i1.SendContext(ctx, next)
+
+					return
+				}
+
+				for {
+					select {
+					case <-ctx.Done():
+						break loop
+					case i2, ok := <-it2:
+						if !ok {
+							break loop
+						}
+
+						if i2.IsError() {
+							i2.SendContext(ctx, next)
+							return
+						}
+
+						v, err := zipper(ctx, i1, i2)
+
+						if err != nil {
+							Error[T](err).SendContext(ctx, next)
+
+							return
+						}
+
+						Of(v).SendContext(ctx, next)
+						continue loop
+					}
+				}
+			}
+		}
+	}()
+
+	return &ObservableImpl[T]{
+		iterable: newChannelIterable(next),
 	}
-
-	<-observable(o.parent, o, func() operator[T] {
-		return op
-	}, forceSeq, bypassGather, opts...).Run()
-
-	return op.s, op.observableErr
-}
-
-type toSliceOperator[T any] struct {
-	s             []Item[T]
-	observableErr error
-}
-
-func (op *toSliceOperator[T]) next(_ context.Context, item Item[T],
-	_ chan<- Item[T], _ operatorOptions[T],
-) {
-	op.s = append(op.s, item)
-}
-
-func (op *toSliceOperator[T]) err(_ context.Context, item Item[T],
-	_ chan<- Item[T], operatorOptions operatorOptions[T]) {
-	op.observableErr = item.E
-
-	operatorOptions.stop()
-}
-
-func (op *toSliceOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
-}
-
-func (op *toSliceOperator[T]) gatherNext(_ context.Context, _ Item[T],
-	_ chan<- Item[T], _ operatorOptions[T],
-) {
 }

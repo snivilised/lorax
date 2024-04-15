@@ -73,7 +73,7 @@ type mapOperatorOptionalSingle[T any] struct {
 func (op *mapOperatorOptionalSingle[T]) next(ctx context.Context,
 	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	// no longer needed: if !item.IsNumeric() {
+	// TODO: no longer needed: if !item.IsNumeric() {
 	// 	panic(fmt.Errorf("not a number (%v)", item))
 	// }
 	//
@@ -101,7 +101,7 @@ func (op *mapOperatorOptionalSingle[T]) end(_ context.Context, _ chan<- Item[T])
 func (op *mapOperatorOptionalSingle[T]) gatherNext(_ context.Context,
 	item Item[T], dst chan<- Item[T], _ operatorOptions[T],
 ) {
-	// --> switch item.V.(type) {
+	// TODO: --> switch item.V.(type) {
 	// case *mapOperatorOptionalSingle[T]:
 	// 	return
 	// }
