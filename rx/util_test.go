@@ -97,8 +97,3 @@ func testObservableN[T any](ctx context.Context, items ...any) rx.Observable[T] 
 	//
 	return rx.FromChannel(channelValueN[T](ctx, convertAllItemsToAny(items)...))
 }
-
-type widget struct {
-	name   string
-	amount int
-}

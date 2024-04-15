@@ -67,6 +67,7 @@ type Observable[T any] interface {
 	WindowWithCount(count int, opts ...Option[T]) Observable[T]
 	WindowWithTime(timespan Duration, opts ...Option[T]) Observable[T]
 	WindowWithTimeOrCount(timespan Duration, count int, opts ...Option[T]) Observable[T]
+	ZipFromIterable(iterable Iterable[T], zipper Func2[T], opts ...Option[T]) Observable[T]
 }
 
 // ObservableImpl implements Observable.

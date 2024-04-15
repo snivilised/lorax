@@ -37,47 +37,47 @@ type execution struct {
 	isTick bool
 }
 
-func timeCausality[T any](elems ...any) (context.Context, Observable[T], Duration) {
+func timeCausality[T any](values ...any) (context.Context, Observable[T], Duration) {
 	ch := make(chan Item[T], 1)
-	fs := make([]execution, len(elems)+1)
+	fs := make([]execution, len(values)+1)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	for i, elem := range elems {
+	for i, value := range values {
 		i := i
-		elem := elem
+		value := value
 
-		if el, ok := elem.(Item[T]); ok && el.IsTick() {
+		if el, ok := value.(Item[T]); ok && el.IsTick() {
 			fs[i] = execution{
 				f:      func() {},
 				isTick: true,
 			}
 		} else {
-			switch elem := elem.(type) {
+			switch value := value.(type) {
 			case Item[T]:
 				fs[i] = execution{
 					f: func() {
-						ch <- elem
+						ch <- value
 					},
 				}
 
 			case error:
 				fs[i] = execution{
 					f: func() {
-						ch <- Error[T](elem)
+						ch <- Error[T](value)
 					},
 				}
 
 			case T:
 				fs[i] = execution{
 					f: func() {
-						ch <- Of(elem)
+						ch <- Of(value)
 					},
 				}
 			}
 		}
 	}
 
-	fs[len(elems)] = execution{
+	fs[len(values)] = execution{
 		f: func() {
 			cancel()
 		},

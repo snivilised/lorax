@@ -20,8 +20,8 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				obs := testObservable[int](ctx, 1, 2, 2, 1, 3).Distinct(
-					func(_ context.Context, item int) (int, error) {
-						return item, nil
+					func(_ context.Context, value int) (int, error) {
+						return value, nil
 					},
 				)
 
@@ -44,8 +44,8 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 
 					obs := testObservable[int](ctx, 1, 2, 2, errFoo, 3).Distinct(
-						func(_ context.Context, item int) (int, error) {
-							return item, nil
+						func(_ context.Context, value int) (int, error) {
+							return value, nil
 						},
 					)
 
@@ -69,12 +69,12 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 
 					obs := testObservable[int](ctx, 1, 2, 2, 2, 3, 4).Distinct(
-						func(_ context.Context, v int) (int, error) {
-							if v == 3 {
+						func(_ context.Context, value int) (int, error) {
+							if value == 3 {
 								return 0, errFoo
 							}
 
-							return v, nil
+							return value, nil
 						},
 					)
 
@@ -195,8 +195,8 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 
 					obs := testObservable[int](ctx, 1, 2, 2, 1, 3).DistinctUntilChanged(
-						func(_ context.Context, item int) (int, error) {
-							return item, nil
+						func(_ context.Context, value int) (int, error) {
+							return value, nil
 						}, rx.NativeItemLimitComparator, rx.WithCPUPool[int]())
 
 					rx.Assert(ctx, obs, rx.HasItems[int]{

@@ -785,7 +785,7 @@ var _ = Describe("Factory", func() {
 				defer leaktest.Check(GinkgoT())()
 
 				/*
-					needs to accommodate item.N, ie the numeric aux value
+					TODO: needs to accommodate item.N, ie the numeric aux value
 					and also should be modified to support all the other
 					new ways of interpreting an item (Ch, Tick, Tv)
 				*/
