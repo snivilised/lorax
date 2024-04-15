@@ -51,28 +51,30 @@ type NumericItemCalc[T Numeric] struct {
 }
 
 func (c *NumericItemCalc[T]) Add(a, b Item[T]) int {
-	return a.N + b.N
+	return a.Num() + b.Num()
 }
 
 func (c *NumericItemCalc[T]) Div(a, b Item[T]) Item[T] {
-	if b.N == 0 {
+	if b.Num() == 0 {
 		return c.Zero()
 	}
 
 	// !!!TODO(fix): we might need to use Opaque or another type
 	// so we don't lose the precision with this division.
 	//
-	return Num[T](a.N / b.N)
+	return Num[T](a.Num() / b.Num())
 }
 
 func (c *NumericItemCalc[T]) Inc(i Item[T]) Item[T] {
-	i.N++
+	n, _ := i.aux.(int)
+	n++
+	i.aux = n
 
 	return i
 }
 
 func (c *NumericItemCalc[T]) IsZero(v Item[T]) bool {
-	return v.N == 0
+	return v.Num() == 0
 }
 
 func (c *NumericItemCalc[T]) Zero() Item[T] {

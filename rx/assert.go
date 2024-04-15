@@ -75,7 +75,7 @@ func Assert[T any](ctx context.Context, iterable Iterable[T], asserters ...Asser
 func assertObserver[T any](ctx context.Context, iterable Iterable[T]) *actualResources[T] {
 	resources := &actualResources[T]{
 		values:     make([]T, 0),
-		numbers:    make([]int, 0),
+		numbers:    make([]NumVal, 0),
 		errors:     make([]error, 0),
 		booleans:   make([]bool, 0),
 		ticks:      make([]NumVal, 0),
@@ -100,7 +100,7 @@ loop:
 				resources.values = append(resources.values, item.V)
 
 			case enums.ItemDiscBoolean:
-				resources.booleans = append(resources.booleans, item.B)
+				resources.booleans = append(resources.booleans, item.Bool())
 
 			case enums.ItemDiscChan:
 				Fail(fmt.Sprintf("NOT-IMPL yet for channel for: '%v'", item.Desc()))
@@ -108,17 +108,17 @@ loop:
 			case enums.ItemDiscError:
 				resources.errors = append(resources.errors, item.E)
 
-			case enums.ItemDiscNumeric:
-				resources.numbers = append(resources.numbers, item.N)
+			case enums.ItemDiscNumber:
+				resources.numbers = append(resources.numbers, item.Num())
 
 			case enums.ItemDiscTick:
-				resources.ticks = append(resources.ticks, item.N)
+				resources.ticks = append(resources.ticks, item.Num())
 
 			case enums.ItemDiscTickValue:
-				resources.tickValues = append(resources.tickValues, item.N)
+				resources.tickValues = append(resources.tickValues, item.Num())
 
 			case enums.ItemDiscOpaque:
-				resources.opaques = append(resources.opaques, item.O)
+				resources.opaques = append(resources.opaques, item.Opaque())
 
 			default:
 				Fail(fmt.Sprintf("value type not handled for: '%v'", item.Desc()))
@@ -206,7 +206,7 @@ type HasItemsNoOrder[T any] struct {
 // Check ensures that an observable produces the corresponding items regardless of the order.
 func (a HasItemsNoOrder[T]) Check(actual AssertResources[T]) {
 	values := actual.Values()
-	m := make(map[interface{}]interface{})
+	m := make(map[any]any)
 
 	for _, v := range a.Expected {
 		m[v] = nil
@@ -229,7 +229,7 @@ type HasNumbersNoOrder[T any] struct {
 // Check ensures that an observable produces the corresponding numbers regardless of the order.
 func (a HasNumbersNoOrder[T]) Check(actual AssertResources[T]) {
 	values := actual.Numbers()
-	m := make(map[interface{}]interface{})
+	m := make(map[any]any)
 
 	for _, v := range a.Expected {
 		m[v] = nil

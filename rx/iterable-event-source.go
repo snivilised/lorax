@@ -3,6 +3,8 @@ package rx
 import (
 	"context"
 	"sync"
+
+	"github.com/snivilised/lorax/enums"
 )
 
 type eventSourceIterable[T any] struct {
@@ -13,7 +15,7 @@ type eventSourceIterable[T any] struct {
 }
 
 func newEventSourceIterable[T any](ctx context.Context,
-	next <-chan Item[T], strategy BackPressureStrategy, opts ...Option[T],
+	next <-chan Item[T], strategy enums.BackPressureStrategy, opts ...Option[T],
 ) Iterable[T] {
 	it := &eventSourceIterable[T]{
 		observers: make([]chan Item[T], 0),
@@ -32,13 +34,13 @@ func newEventSourceIterable[T any](ctx context.Context,
 			switch strategy {
 			default:
 				fallthrough
-			case Block:
+			case enums.Block:
 				for _, observer := range it.observers {
 					if !item.SendContext(ctx, observer) {
 						return true
 					}
 				}
-			case Drop:
+			case enums.Drop:
 				for _, observer := range it.observers {
 					select {
 					default:

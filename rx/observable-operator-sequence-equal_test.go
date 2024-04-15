@@ -21,7 +21,7 @@ var _ = Describe("Observable operator", func() {
 				sequence := testObservable[int](ctx, 2, 5, 12, 43, 98, 100, 213)
 				result := testObservable[int](ctx, 2, 5, 12, 43, 98, 100, 213).SequenceEqual(
 					sequence,
-					rx.NumericItemLimitComparator,
+					rx.NativeItemLimitComparator,
 				)
 				rx.Assert(ctx, result,
 					rx.IsTrue[int]{},
@@ -40,11 +40,11 @@ var _ = Describe("Observable operator", func() {
 				sequence := testObservable[int](ctx, 2, 5, 12, 43, 98, 100, 213)
 				result := testObservable[int](ctx, 2, 5, 12, 43, 15, 100, 213).SequenceEqual(
 					sequence,
-					rx.NumericItemLimitComparator,
+					rx.NativeItemLimitComparator,
 					rx.WithContext[int](ctx),
 				)
 				rx.Assert(ctx, result,
-					rx.IsTrue[int]{},
+					rx.IsFalse[int]{},
 				)
 			})
 		})
@@ -62,7 +62,7 @@ var _ = Describe("Observable operator", func() {
 
 				resultForShorter := testObservable[int](ctx, 2, 5, 12, 43, 98, 100, 213).SequenceEqual(
 					sequenceShorter,
-					rx.NumericItemLimitComparator,
+					rx.NativeItemLimitComparator,
 				)
 				rx.Assert(ctx, resultForShorter,
 					rx.IsFalse[int]{},
@@ -70,7 +70,7 @@ var _ = Describe("Observable operator", func() {
 
 				resultForLonger := testObservable[int](ctx, 2, 5, 12, 43, 98, 100, 213).SequenceEqual(
 					sequenceLonger,
-					rx.NumericItemLimitComparator,
+					rx.NativeItemLimitComparator,
 				)
 				rx.Assert(ctx, resultForLonger,
 					rx.IsFalse[int]{},
@@ -88,7 +88,7 @@ var _ = Describe("Observable operator", func() {
 
 				result := rx.Empty[int]().SequenceEqual(
 					rx.Empty[int](),
-					rx.NumericItemLimitComparator,
+					rx.NativeItemLimitComparator,
 				)
 				rx.Assert(ctx, result,
 					rx.IsTrue[int]{},

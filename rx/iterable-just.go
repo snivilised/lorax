@@ -1,5 +1,9 @@
 package rx
 
+import (
+	"github.com/snivilised/lorax/enums"
+)
+
 type justIterable[T any] struct {
 	items []any
 	opts  []Option[T]
@@ -20,7 +24,7 @@ func (i *justIterable[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	items := make([]any, 0, len(i.items))
 	items = append(items, i.items...)
 
-	go SendItems(option.buildContext(emptyContext), next, CloseChannel,
+	go SendItems(option.buildContext(emptyContext), next, enums.CloseChannel,
 		items...,
 	)
 

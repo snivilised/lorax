@@ -20,10 +20,10 @@ const (
 	//
 	ItemDiscError
 
-	// ItemDiscNumeric enum value that represents a general numeric value
+	// ItemDiscNumber enum value that represents a general numeric value
 	// typically used by range operations that require a number.
 	//
-	ItemDiscNumeric
+	ItemDiscNumber
 
 	// ItemDiscTick enum value that represents a Tick value.
 	//
@@ -41,6 +41,16 @@ const (
 
 type (
 	itemsDiscDescriptions map[ItemDiscriminator]string
+
+	// CloseChannelStrategy indicates a strategy on whether to close a channel.
+	CloseChannelStrategy uint32
+)
+
+const (
+	// LeaveChannelOpen indicates to leave the channel open after completion.
+	LeaveChannelOpen CloseChannelStrategy = iota
+	// enums.CloseChannel indicates to close the channel open after completion.
+	CloseChannel
 )
 
 var ItemDescriptions map[ItemDiscriminator]string
@@ -51,7 +61,7 @@ func init() {
 		ItemDiscBoolean:   "boolean",
 		ItemDiscChan:      "channel",
 		ItemDiscError:     "error",
-		ItemDiscNumeric:   "numeric",
+		ItemDiscNumber:    "number",
 		ItemDiscTick:      "tick",
 		ItemDiscTickValue: "tick value",
 		ItemDiscOpaque:    "opaque",

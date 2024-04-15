@@ -21,17 +21,20 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				observe := testObservable[int](ctx, 1, 2, 3, 4, 5).WindowWithCount(2).Observe()
-				rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 					rx.HasItems[int]{
 						Expected: []int{1, 2},
 					},
 				)
-				rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 					rx.HasItems[int]{
 						Expected: []int{3, 4},
 					},
 				)
-				rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 					rx.HasItem[int]{
 						Expected: 5,
 					},
@@ -48,7 +51,8 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				observe := testObservable[int](ctx, 1, 2, 3, 4, 5).WindowWithCount(0).Observe()
-				rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 					rx.HasItems[int]{
 						Expected: []int{1, 2, 3, 4, 5},
 					},
@@ -66,12 +70,14 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 
 					observe := testObservable[int](ctx, 1, 2, errFoo, 4, 5).WindowWithCount(2).Observe()
-					rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+					rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 						rx.HasItems[int]{
 							Expected: []int{1, 2},
 						},
 					)
-					rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+					rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 						rx.IsEmpty[int]{},
 						rx.HasError[int]{
 							Expected: []error{errFoo},
@@ -121,12 +127,14 @@ var _ = Describe("Observable operator", func() {
 					rx.WithDuration(10*time.Millisecond),
 					rx.WithBufferedChannel[int](10),
 				).Observe()
-				rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 					rx.HasItems[int]{
 						Expected: []int{1, 2},
 					},
 				)
-				rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 					rx.HasItem[int]{
 						Expected: 3,
 					},
@@ -159,17 +167,20 @@ var _ = Describe("Observable operator", func() {
 					rx.WithDuration(10*time.Millisecond), 1,
 					rx.WithBufferedChannel[int](10),
 				).Observe()
-				rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 					rx.HasItem[int]{
 						Expected: 1,
 					},
 				)
-				rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 					rx.HasItem[int]{
 						Expected: 2,
 					},
 				)
-				rx.Assert(ctx, (<-observe).O.(rx.Observable[int]),
+
+				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
 					rx.HasItem[int]{
 						Expected: 3,
 					},

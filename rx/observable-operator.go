@@ -10,6 +10,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/emirpasic/gods/trees/binaryheap"
+	"github.com/snivilised/lorax/enums"
 )
 
 // All determines whether all items emitted by an Observable meet some criteria.
@@ -64,7 +65,7 @@ func (op *allOperator[T]) gatherNext(ctx context.Context, item Item[T],
 		panic(fmt.Sprintf("item: '%+v' is not a Boolean", item))
 	}
 
-	if !item.B {
+	if !item.Bool() {
 		False[T]().SendContext(ctx, dst)
 
 		op.all = false
@@ -235,7 +236,7 @@ func (op *containsOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 func (op *containsOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	if item.IsBoolean() && item.B {
+	if item.IsBoolean() && item.Bool() {
 		True[T]().SendContext(ctx, dst)
 		operatorOptions.stop()
 
@@ -839,7 +840,7 @@ func (o *ObservableImpl[T]) FlatMap(apply ItemToObservable[T],
 
 						if item.IsError() {
 							item.SendContext(ctx, next)
-							if option.getErrorStrategy() == StopOnError {
+							if option.getErrorStrategy() == enums.StopOnError {
 								return
 							}
 						} else if !item.SendContext(ctx, next) {
@@ -1505,7 +1506,7 @@ func (op *reduceOperator[T]) gatherNext(ctx context.Context, item Item[T],
 		panic("reduceOperator.gatherNext: item is not Opaque")
 	}
 
-	op.next(ctx, item.O.(*reduceOperator[T]).acc, dst, operatorOptions)
+	op.next(ctx, item.Opaque().(*reduceOperator[T]).acc, dst, operatorOptions)
 }
 
 // Repeat returns an Observable that repeats the sequence of items emitted
@@ -2421,7 +2422,7 @@ func (o *ObservableImpl[T]) TimeInterval(opts ...Option[T]) Observable[T] {
 						return
 					}
 
-					if option.getErrorStrategy() == StopOnError {
+					if option.getErrorStrategy() == enums.StopOnError {
 						return
 					}
 				} else {
@@ -2688,7 +2689,7 @@ func (o *ObservableImpl[T]) WindowWithTime(timespan Duration, opts ...Option[T])
 					}
 					mutex.Unlock()
 
-					if option.getErrorStrategy() == StopOnError {
+					if option.getErrorStrategy() == enums.StopOnError {
 						close(done)
 
 						return
@@ -2803,7 +2804,7 @@ func (o *ObservableImpl[T]) WindowWithTimeOrCount(timespan Duration,
 					}
 					mutex.Unlock()
 
-					if option.getErrorStrategy() == StopOnError {
+					if option.getErrorStrategy() == enums.StopOnError {
 						close(done)
 
 						return

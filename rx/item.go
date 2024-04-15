@@ -9,16 +9,12 @@ import (
 )
 
 type (
-	// Item is a wrapper having either a value, error or channel.
+	// Item is a wrapper having either a value, error or an auxiliary value.
 	//
 	Item[T any] struct {
-		V T
-		E error
-		//
-		C    chan<- Item[T]
-		N    NumVal
-		B    bool
-		O    any
+		V    T
+		E    error
+		aux  any
 		disc enums.ItemDiscriminator
 	}
 
@@ -28,16 +24,6 @@ type (
 		Timestamp time.Time
 		V         T
 	}
-
-	// CloseChannelStrategy indicates a strategy on whether to close a channel.
-	CloseChannelStrategy uint32
-)
-
-const (
-	// LeaveChannelOpen indicates to leave the channel open after completion.
-	LeaveChannelOpen CloseChannelStrategy = iota
-	// CloseChannel indicates to close the channel open after completion.
-	CloseChannel
 )
 
 // Of creates an item from a value.
@@ -48,16 +34,26 @@ func Of[T any](v T) Item[T] {
 	}
 }
 
+// Returns the native value of item
+func (it Item[T]) Of() T {
+	return it.aux.(T)
+}
+
 // Ch creates an item from a channel
 func Ch[T any](ch any) Item[T] {
 	if c, ok := ch.(chan<- Item[T]); ok {
 		return Item[T]{
-			C:    c,
+			aux:  c,
 			disc: enums.ItemDiscChan,
 		}
 	}
 
 	panic("temp: invalid ch type")
+}
+
+// Returns the channel value of item
+func (it Item[T]) Ch() chan<- Item[T] {
+	return it.aux.(chan<- Item[T])
 }
 
 // Error creates an item from an error.
@@ -68,42 +64,59 @@ func Error[T any](err error) Item[T] {
 	}
 }
 
-// Pulse creates a type safe tick instance that doesn't contain a value
-// thats acts like a heartbeat.
-func Pulse[T any]() Item[T] {
-	return Item[T]{
-		disc: enums.ItemDiscTick,
-	}
+// Returns the error value of item
+func (it Item[T]) Error() error {
+	return it.aux.(error)
+}
+
+// Returns the error value of item
+func (it Item[T]) Pulse() error {
+	return it.aux.(error)
 }
 
 // TV creates a type safe tick value instance
 func TV[T any](tv int) Item[T] {
 	return Item[T]{
-		N:    tv,
+		aux:  tv,
 		disc: enums.ItemDiscTickValue,
 	}
+}
+
+// Returns the tick value of item
+func (it Item[T]) TV() int {
+	return it.aux.(int)
 }
 
 // Num creates a type safe tick value instance
 func Num[T any](n NumVal) Item[T] {
 	return Item[T]{
-		N:    n,
-		disc: enums.ItemDiscNumeric,
+		aux:  n,
+		disc: enums.ItemDiscNumber,
 	}
+}
+
+// Returns the tick value of item
+func (it Item[T]) Num() NumVal {
+	return it.aux.(NumVal)
 }
 
 // Bool creates a type safe boolean instance
 func Bool[T any](b bool) Item[T] {
 	return Item[T]{
-		B:    b,
+		aux:  b,
 		disc: enums.ItemDiscBoolean,
 	}
+}
+
+// Returns the tick value of item
+func (it Item[T]) Bool() bool {
+	return it.aux.(bool)
 }
 
 // True creates a type safe boolean instance set to true
 func True[T any]() Item[T] {
 	return Item[T]{
-		B:    true,
+		aux:  true,
 		disc: enums.ItemDiscBoolean,
 	}
 }
@@ -111,24 +124,35 @@ func True[T any]() Item[T] {
 // False creates a type safe boolean instance set to false
 func False[T any]() Item[T] {
 	return Item[T]{
-		B:    false,
+		aux:  false,
 		disc: enums.ItemDiscBoolean,
 	}
 }
 
+// Opaque creates an item from any type of value
 func Opaque[T any](o any) Item[T] {
 	return Item[T]{
-		O:    o,
+		aux:  o,
 		disc: enums.ItemDiscOpaque,
 	}
+}
+
+// Opaque returns the opaque value of item without typecast
+func (it Item[T]) Opaque() any {
+	return it.aux
+}
+
+// Disc returns the discriminator of the item
+func (it Item[T]) Disc() enums.ItemDiscriminator {
+	return it.disc
 }
 
 // SendItems is a utility function that sends a list of items and indicates a
 // strategy on whether to close the channel once the function completes.
 func SendItems[T any](ctx context.Context,
-	ch chan<- Item[T], strategy CloseChannelStrategy, items ...any,
+	ch chan<- Item[T], strategy enums.CloseChannelStrategy, items ...any,
 ) {
-	if strategy == CloseChannel {
+	if strategy == enums.CloseChannel {
 		defer close(ch)
 	}
 
@@ -197,57 +221,57 @@ func sendViaRefCh[T any](ctx context.Context, inCh reflect.Value, ch chan<- Item
 }
 
 // IsValue checks if an item is a value.
-func (i Item[T]) IsValue() bool {
-	return i.disc == 0
+func (it Item[T]) IsValue() bool {
+	return it.disc == 0
 }
 
 // IsCh checks if an item is an error.
-func (i Item[T]) IsCh() bool {
-	return (i.disc & enums.ItemDiscChan) > 0
+func (it Item[T]) IsCh() bool {
+	return (it.disc & enums.ItemDiscChan) > 0
 }
 
 // IsError checks if an item is an error.
-func (i Item[T]) IsError() bool {
-	return (i.disc & enums.ItemDiscError) > 0
+func (it Item[T]) IsError() bool {
+	return (it.disc & enums.ItemDiscError) > 0
 }
 
 // IsTick checks if an item is a tick instance.
-func (i Item[T]) IsTick() bool {
-	return (i.disc & enums.ItemDiscTick) > 0
+func (it Item[T]) IsTick() bool {
+	return (it.disc & enums.ItemDiscTick) > 0
 }
 
 // IsTickValue checks if an item is a tick value instance.
-func (i Item[T]) IsTickValue() bool {
-	return (i.disc & enums.ItemDiscTickValue) > 0
+func (it Item[T]) IsTickValue() bool {
+	return (it.disc & enums.ItemDiscTickValue) > 0
 }
 
-// IsTickValue checks if an item is a numeric instance.
-func (i Item[T]) IsNumeric() bool {
-	return (i.disc & enums.ItemDiscNumeric) > 0
+// IsNumber checks if an item is a numeric instance.
+func (it Item[T]) IsNumber() bool {
+	return (it.disc & enums.ItemDiscNumber) > 0
 }
 
 // IsBoolean checks if an item is a boolean instance.
-func (i Item[T]) IsBoolean() bool {
-	return (i.disc & enums.ItemDiscBoolean) > 0
+func (it Item[T]) IsBoolean() bool {
+	return (it.disc & enums.ItemDiscBoolean) > 0
 }
 
 // IsOpaque checks if an item is an opaque value.
-func (i Item[T]) IsOpaque() bool {
-	return (i.disc & enums.ItemDiscOpaque) > 0
+func (it Item[T]) IsOpaque() bool {
+	return (it.disc & enums.ItemDiscOpaque) > 0
 }
 
-func (i Item[T]) Desc() string {
-	return enums.ItemDescriptions[i.disc]
+func (it Item[T]) Desc() string {
+	return enums.ItemDescriptions[it.disc]
 }
 
 // SendBlocking sends an item and blocks until it is sent.
-func (i Item[T]) SendBlocking(ch chan<- Item[T]) {
-	ch <- i
+func (it Item[T]) SendBlocking(ch chan<- Item[T]) {
+	ch <- it
 }
 
 // SendContext sends an item and blocks until it is sent or a context canceled.
 // It returns a boolean to indicate whether the item was sent.
-func (i Item[T]) SendContext(ctx context.Context, ch chan<- Item[T]) bool {
+func (it Item[T]) SendContext(ctx context.Context, ch chan<- Item[T]) bool {
 	select {
 	case <-ctx.Done(): // Context's done channel has the highest priority
 		return false
@@ -255,13 +279,13 @@ func (i Item[T]) SendContext(ctx context.Context, ch chan<- Item[T]) bool {
 		select {
 		case <-ctx.Done():
 			return false
-		case ch <- i:
+		case ch <- it:
 			return true
 		}
 	}
 }
 
-func (i Item[T]) SendOpContext(ctx context.Context, ch any) bool { // Item[operator[T]]
+func (it Item[T]) SendOpContext(ctx context.Context, ch any) bool { // Item[operator[T]]
 	_ = ctx
 	_ = ch
 
@@ -270,11 +294,11 @@ func (i Item[T]) SendOpContext(ctx context.Context, ch any) bool { // Item[opera
 
 // SendNonBlocking sends an item without blocking.
 // It returns a boolean to indicate whether the item was sent.
-func (i Item[T]) SendNonBlocking(ch chan<- Item[T]) bool {
+func (it Item[T]) SendNonBlocking(ch chan<- Item[T]) bool {
 	select {
 	default:
 		return false
-	case ch <- i:
+	case ch <- it:
 		return true
 	}
 }

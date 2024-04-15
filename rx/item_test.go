@@ -6,6 +6,7 @@ import (
 	"github.com/fortytw2/leaktest"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
 	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
+	"github.com/snivilised/lorax/enums"
 	"github.com/snivilised/lorax/rx"
 )
 
@@ -19,7 +20,7 @@ var _ = Describe("Item", Ordered, func() {
 
 					ch := make(chan rx.Item[int], 3)
 
-					rx.SendItems(context.Background(), ch, rx.CloseChannel,
+					rx.SendItems(context.Background(), ch, enums.CloseChannel,
 						1, 2, 3,
 					)
 
@@ -39,7 +40,7 @@ var _ = Describe("Item", Ordered, func() {
 					defer leaktest.Check(GinkgoT())()
 
 					ch := make(chan rx.Item[int], 3)
-					rx.SendItems(context.Background(), ch, rx.CloseChannel,
+					rx.SendItems(context.Background(), ch, enums.CloseChannel,
 						1,
 						rx.Error[int](errFoo),
 						3,
@@ -61,7 +62,7 @@ var _ = Describe("Item", Ordered, func() {
 					defer leaktest.Check(GinkgoT())()
 
 					ch := make(chan rx.Item[int], 3)
-					go rx.SendItems(context.Background(), ch, rx.CloseChannel, []int{1, 2, 3})
+					go rx.SendItems(context.Background(), ch, enums.CloseChannel, []int{1, 2, 3})
 					rx.Assert(context.Background(), rx.FromChannel(ch),
 						rx.HasItems[int]{
 							Expected: []int{1, 2, 3},
@@ -78,7 +79,7 @@ var _ = Describe("Item", Ordered, func() {
 					defer leaktest.Check(GinkgoT())()
 
 					ch := make(chan rx.Item[int], 3)
-					go rx.SendItems(context.Background(), ch, rx.CloseChannel, []any{1, errFoo, 3})
+					go rx.SendItems(context.Background(), ch, enums.CloseChannel, []any{1, errFoo, 3})
 					rx.Assert(context.Background(), rx.FromChannel(ch),
 						rx.HasItems[int]{
 							Expected: []int{1, 3},

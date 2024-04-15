@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
 	"github.com/samber/lo"
 
+	"github.com/snivilised/lorax/enums"
 	"github.com/snivilised/lorax/rx"
 )
 
@@ -438,7 +439,7 @@ var _ = Describe("Factory", func() {
 					next <- rx.Of(3)
 				}}).Map(func(_ context.Context, i int) (_ int, _ error) {
 					return i + 1, nil
-				}, rx.WithObservationStrategy[int](rx.Eager)).Map(func(_ context.Context, i int) (_ int, _ error) {
+				}, rx.WithObservationStrategy[int](enums.Eager)).Map(func(_ context.Context, i int) (_ int, _ error) {
 					return i + 1, nil
 				})
 				rx.Assert(context.Background(), obs,
@@ -553,7 +554,7 @@ var _ = Describe("Factory", func() {
 
 				const max = 10
 				next := make(chan rx.Item[int], max)
-				obs := rx.FromEventSource(next, rx.WithBackPressureStrategy[int](rx.Drop))
+				obs := rx.FromEventSource(next, rx.WithBackPressureStrategy[int](enums.Drop))
 
 				go func() {
 					for i := 0; i < max; i++ {
@@ -583,7 +584,7 @@ var _ = Describe("Factory", func() {
 
 				const max = 100000
 				next := make(chan rx.Item[int], max)
-				obs := rx.FromEventSource(next, rx.WithBackPressureStrategy[int](rx.Drop))
+				obs := rx.FromEventSource(next, rx.WithBackPressureStrategy[int](enums.Drop))
 
 				go func() {
 					for i := 0; i < max; i++ {
@@ -785,7 +786,7 @@ var _ = Describe("Factory", func() {
 				defer leaktest.Check(GinkgoT())()
 
 				/*
-					TODO: needs to accommodate item.N, ie the numeric aux value
+					TODO: needs to accommodate item.Num(), ie the numeric aux value
 					and also should be modified to support all the other
 					new ways of interpreting an item (Ch, Tick, Tv)
 				*/

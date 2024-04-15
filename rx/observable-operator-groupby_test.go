@@ -23,7 +23,7 @@ var _ = Describe("Observable operator", func() {
 				length := 3
 				count := 11
 				obs := rx.Range[int](0, count).GroupBy(length, func(item rx.Item[int]) int {
-					return item.N % length
+					return item.Num() % length
 				}, rx.WithBufferedChannel[int](count))
 				observables, err := obs.ToSlice(0)
 
@@ -35,19 +35,19 @@ var _ = Describe("Observable operator", func() {
 					Fail(fmt.Sprintf("length; got=%d, expected=%d", len(observables), length))
 				}
 
-				rx.Assert(ctx, observables[0].O.(rx.Observable[int]),
+				rx.Assert(ctx, observables[0].Opaque().(rx.Observable[int]),
 					rx.HasNumbers[int]{
 						Expected: []int{0, 3, 6, 9},
 					},
 					rx.HasNoError[int]{},
 				)
-				rx.Assert(ctx, observables[1].O.(rx.Observable[int]),
+				rx.Assert(ctx, observables[1].Opaque().(rx.Observable[int]),
 					rx.HasNumbers[int]{
 						Expected: []int{1, 4, 7, 10},
 					},
 					rx.HasNoError[int]{},
 				)
-				rx.Assert(ctx, observables[2].O.(rx.Observable[int]),
+				rx.Assert(ctx, observables[2].Opaque().(rx.Observable[int]),
 					rx.HasNumbers[int]{
 						Expected: []int{2, 5, 8},
 					},
@@ -68,11 +68,11 @@ var _ = Describe("Observable operator", func() {
 				count := 11
 
 				obs := rx.Range[int](0, count).GroupByDynamic(func(item rx.Item[int]) string {
-					if item.N == 10 {
+					if item.Num() == 10 {
 						return "10"
 					}
 
-					return strconv.Itoa(item.N % length)
+					return strconv.Itoa(item.Num() % length)
 				}, rx.WithBufferedChannel[int](count))
 				observablesGrouped, err := obs.ToSlice(0)
 
@@ -84,37 +84,37 @@ var _ = Describe("Observable operator", func() {
 					Fail(fmt.Sprintf("length; got=%d, expected=%d", len(observablesGrouped), 4))
 				}
 
-				rx.Assert(ctx, observablesGrouped[0].O.(rx.GroupedObservable[int]),
+				rx.Assert(ctx, observablesGrouped[0].Opaque().(rx.GroupedObservable[int]),
 					rx.HasNumbers[int]{
 						Expected: []int{0, 3, 6, 9},
 					},
 					rx.HasNoError[int]{},
 				)
-				Expect(observablesGrouped[0].O.(rx.GroupedObservable[int]).Key).To(Equal("0"))
+				Expect(observablesGrouped[0].Opaque().(rx.GroupedObservable[int]).Key).To(Equal("0"))
 
-				rx.Assert(ctx, observablesGrouped[1].O.(rx.GroupedObservable[int]),
+				rx.Assert(ctx, observablesGrouped[1].Opaque().(rx.GroupedObservable[int]),
 					rx.HasNumbers[int]{
 						Expected: []int{1, 4, 7},
 					},
 					rx.HasNoError[int]{},
 				)
-				Expect(observablesGrouped[1].O.(rx.GroupedObservable[int]).Key).To(Equal("1"))
+				Expect(observablesGrouped[1].Opaque().(rx.GroupedObservable[int]).Key).To(Equal("1"))
 
-				rx.Assert(ctx, observablesGrouped[2].O.(rx.GroupedObservable[int]),
+				rx.Assert(ctx, observablesGrouped[2].Opaque().(rx.GroupedObservable[int]),
 					rx.HasNumbers[int]{
 						Expected: []int{2, 5, 8},
 					},
 					rx.HasNoError[int]{},
 				)
-				Expect(observablesGrouped[2].O.(rx.GroupedObservable[int]).Key).To(Equal("2"))
+				Expect(observablesGrouped[2].Opaque().(rx.GroupedObservable[int]).Key).To(Equal("2"))
 
-				rx.Assert(ctx, observablesGrouped[3].O.(rx.GroupedObservable[int]),
+				rx.Assert(ctx, observablesGrouped[3].Opaque().(rx.GroupedObservable[int]),
 					rx.HasNumbers[int]{
 						Expected: []int{10},
 					},
 					rx.HasNoError[int]{},
 				)
-				Expect(observablesGrouped[3].O.(rx.GroupedObservable[int]).Key).To(Equal("10"))
+				Expect(observablesGrouped[3].Opaque().(rx.GroupedObservable[int]).Key).To(Equal("10"))
 			})
 		})
 
@@ -143,13 +143,13 @@ var _ = Describe("Observable operator", func() {
 						Fail(fmt.Sprintf("length; got=%d, expected=%d", len(observables), length))
 					}
 
-					rx.Assert(ctx, observables[0].O.(rx.Observable[int]),
+					rx.Assert(ctx, observables[0].Opaque().(rx.Observable[int]),
 						rx.HasAnError[int]{},
 					)
-					rx.Assert(ctx, observables[1].O.(rx.Observable[int]),
+					rx.Assert(ctx, observables[1].Opaque().(rx.Observable[int]),
 						rx.HasAnError[int]{},
 					)
-					rx.Assert(ctx, observables[2].O.(rx.Observable[int]),
+					rx.Assert(ctx, observables[2].Opaque().(rx.Observable[int]),
 						rx.HasAnError[int]{},
 					)
 				})

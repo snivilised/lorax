@@ -19,11 +19,11 @@ func NativeItemLimitComparator[T constraints.Ordered](a, b Item[T]) int {
 }
 
 func NumericItemLimitComparator[T constraints.Ordered](a, b Item[T]) int {
-	if a.N == b.N {
+	if a.Num() == b.Num() {
 		return 0
 	}
 
-	if a.N < b.N {
+	if a.Num() < b.Num() {
 		return -1
 	}
 

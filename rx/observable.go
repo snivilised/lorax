@@ -7,6 +7,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/emirpasic/gods/trees/binaryheap"
+	"github.com/snivilised/lorax/enums"
 )
 
 type Observable[T any] interface {
@@ -299,7 +300,7 @@ func runSequential[T any](ctx context.Context,
 		stopped := false
 		operator := operatorOptions[T]{
 			stop: func() {
-				if option.getErrorStrategy() == StopOnError {
+				if option.getErrorStrategy() == enums.StopOnError {
 					stopped = true
 				}
 			},
@@ -350,7 +351,7 @@ func runParallel[T any](ctx context.Context,
 			stopped := false
 			operator := operatorOptions[T]{
 				stop: func() {
-					if option.getErrorStrategy() == StopOnError {
+					if option.getErrorStrategy() == enums.StopOnError {
 						stopped = true
 					}
 				},
@@ -383,7 +384,7 @@ func runParallel[T any](ctx context.Context,
 			stopped := false
 			operator := operatorOptions[T]{
 				stop: func() {
-					if option.getErrorStrategy() == StopOnError {
+					if option.getErrorStrategy() == enums.StopOnError {
 						stopped = true
 					}
 				},
@@ -433,7 +434,7 @@ func runFirstItem[T any](ctx context.Context,
 		stopped := false
 		operator := operatorOptions[T]{
 			stop: func() {
-				if option.getErrorStrategy() == StopOnError {
+				if option.getErrorStrategy() == enums.StopOnError {
 					stopped = true
 				}
 			},
@@ -499,7 +500,7 @@ func (o *ObservableImpl[T]) serialize(parent context.Context,
 				return
 			}
 
-			from = item.N
+			from = item.Num()
 			counter = int64(from)
 
 			go func() {

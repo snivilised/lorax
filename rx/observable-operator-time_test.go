@@ -47,13 +47,14 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				observe := testObservable[int](ctx, 1, 2, 3).Timestamp().Observe()
-				v, _ := (<-observe).O.(*rx.TimestampItem[int])
+
+				v, _ := (<-observe).Opaque().(*rx.TimestampItem[int])
 				Expect(v.V).To(Equal(1))
 
-				v, _ = (<-observe).O.(*rx.TimestampItem[int])
+				v, _ = (<-observe).Opaque().(*rx.TimestampItem[int])
 				Expect(v.V).To(Equal(2))
 
-				v, _ = (<-observe).O.(*rx.TimestampItem[int])
+				v, _ = (<-observe).Opaque().(*rx.TimestampItem[int])
 				Expect(v.V).To(Equal(3))
 			})
 		})

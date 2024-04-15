@@ -5,6 +5,7 @@ import (
 
 	"github.com/fortytw2/leaktest"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
+	"github.com/snivilised/lorax/enums"
 	"github.com/snivilised/lorax/rx"
 )
 
@@ -20,7 +21,7 @@ var _ = Describe("Observable operator", func() {
 
 				obs := rx.Range[int](1, 10000).Reduce(
 					func(_ context.Context, acc, num rx.Item[int]) (int, error) {
-						return acc.V + num.N, nil
+						return acc.V + num.Num(), nil
 					},
 				)
 				rx.Assert(ctx, obs,
@@ -84,11 +85,11 @@ var _ = Describe("Observable operator", func() {
 
 					obs := testObservableN[int](ctx, 1, 2, 3).Reduce(
 						func(_ context.Context, _, num rx.Item[int]) (int, error) {
-							if num.N == 2 {
+							if num.Num() == 2 {
 								return 0, errFoo
 							}
 
-							return num.N, nil
+							return num.Num(), nil
 						},
 					)
 					rx.Assert(ctx, obs,
@@ -110,7 +111,7 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 					obs := rx.Range[int](1, 10000).Reduce(
 						func(_ context.Context, acc, num rx.Item[int]) (int, error) {
-							return acc.N + num.N, nil
+							return acc.Num() + num.Num(), nil
 						}, rx.WithCPUPool[int]())
 					rx.Assert(ctx, obs,
 						rx.HasItem[int]{
@@ -132,10 +133,10 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 					obs := rx.Range[int](1, 10000).Reduce(
 						func(_ context.Context, acc, num rx.Item[int]) (int, error) {
-							if num.N == 1000 {
+							if num.Num() == 1000 {
 								return 0, errFoo
 							}
-							return acc.N + num.N, nil
+							return acc.Num() + num.Num(), nil
 						}, rx.WithContext[int](ctx), rx.WithCPUPool[int](),
 					)
 					rx.Assert(ctx, obs,
@@ -155,11 +156,11 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 					obs := rx.Range[int](1, 10000).Reduce(
 						func(_ context.Context, acc, num rx.Item[int]) (int, error) {
-							if num.N == 1 {
+							if num.Num() == 1 {
 								return 0, errFoo
 							}
-							return acc.N + num.N, nil
-						}, rx.WithCPUPool[int](), rx.WithErrorStrategy[int](rx.ContinueOnError),
+							return acc.Num() + num.Num(), nil
+						}, rx.WithCPUPool[int](), rx.WithErrorStrategy[int](enums.ContinueOnError),
 					)
 					rx.Assert(ctx, obs,
 						rx.HasItem[int]{
