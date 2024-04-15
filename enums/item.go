@@ -3,18 +3,19 @@ package enums
 type ItemDiscriminator uint32
 
 const (
+	ItemDiscUndefined ItemDiscriminator = 0
 	// ItemDiscNative enum value that represents the native type T.
 	//
-	ItemDiscNative ItemDiscriminator = 0
+	ItemDiscNative ItemDiscriminator = 1 << (iota - 1)
 
 	// ItemDiscBoolean enum value that represents a general boolean value
 	// typically used by predicate based operations eg All.
 	//
-	ItemDiscBoolean ItemDiscriminator = 1 << (iota - 1)
+	ItemDiscBoolean
 
-	// ItemDiscChan enum value that represents a channel of T
+	// ItemDiscWChan enum value that represents a channel of T
 	//
-	ItemDiscChan
+	ItemDiscWChan
 
 	// ItemDiscError enum value that represents an error
 	//
@@ -59,7 +60,7 @@ func init() {
 	ItemDescriptions = itemsDiscDescriptions{
 		ItemDiscNative:    "native",
 		ItemDiscBoolean:   "boolean",
-		ItemDiscChan:      "channel",
+		ItemDiscWChan:     "write channel",
 		ItemDiscError:     "error",
 		ItemDiscNumber:    "number",
 		ItemDiscTick:      "tick",
