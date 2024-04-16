@@ -424,7 +424,20 @@ func runParallel[T any](ctx context.Context,
 				case item, ok := <-observe:
 					if !ok {
 						if !bypassGather {
-							Of(op).SendOpContext(ctx, gather)
+							// TODO: this is still not well understood. Where/who
+							// is receiving this Opaque value? Currently, there is
+							// no functionality that is unpacking this item as an
+							// Opaque, which is the reason why it is not understood
+							// yet, but the tests are passing! (Perhaps, we'll see
+							// failures once buffering has been implemented.)
+							//
+							// We need to send the operator op as an Opaque,
+							// but that also means the consumer of the channel
+							// must be aware of the Opaque
+							//
+							// This is received by the operator in gatherNext, eg MaxOp
+							//
+							Opaque[T](op).SendContext(ctx, gather)
 						}
 
 						return

@@ -35,7 +35,7 @@ func two(i rx.Item[int]) bool {
 	return i.V == 2
 }
 
-var _ = Describe("Observable operator", func() {
+var _ = Context("Observable operator", func() {
 	Context("Contains", func() {
 		When("sequence contains item", func() {
 			It("🧪 should: result in true", func() {
@@ -73,19 +73,16 @@ var _ = Describe("Observable operator", func() {
 					// rxgo: Test_Observable_Contain_Parallel
 					defer leaktest.Check(GinkgoT())()
 
-					/*
-						TODO(impl): CPUPool
-						ctx, cancel := context.WithCancel(context.Background())
-						defer cancel()
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
 
-						rx.Assert(ctx,
-							testObservable[int](ctx, 1, 2, 3).Contains(two,
-								rx.WithContext[int](ctx),
-								rx.WithCPUPool[int](),
-							),
-							rx.IsTrue[int]{},
-						)
-					*/
+					rx.Assert(ctx,
+						testObservable[int](ctx, 1, 2, 3).Contains(two,
+							rx.WithContext[int](ctx),
+							rx.WithCPUPool[int](),
+						),
+						rx.IsTrue[int]{},
+					)
 				})
 			})
 
@@ -94,19 +91,17 @@ var _ = Describe("Observable operator", func() {
 					// rxgo: Test_Observable_Contain_Parallel
 					defer leaktest.Check(GinkgoT())()
 
-					/*
-						TODO(impl): CPUPool
-						ctx, cancel := context.WithCancel(context.Background())
-						defer cancel()
+					// TODO(impl): CPUPool
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
 
-						rx.Assert(ctx,
-							testObservable[int](ctx, 1, 4, 3).Contains(two,
-								rx.WithContext[int](ctx),
-								rx.WithCPUPool[int](),
-							),
-							rx.IsFalse[int]{},
-						)
-					*/
+					rx.Assert(ctx,
+						testObservable[int](ctx, 1, 4, 3).Contains(two,
+							rx.WithContext[int](ctx),
+							rx.WithCPUPool[int](),
+						),
+						rx.IsFalse[int]{},
+					)
 				})
 			})
 		})

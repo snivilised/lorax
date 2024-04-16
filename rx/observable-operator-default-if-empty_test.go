@@ -68,17 +68,15 @@ var _ = Describe("Observable operator", func() {
 					// rxgo: Test_Observable_DefaultIfEmpty_Parallel_Empty
 					defer leaktest.Check(GinkgoT())()
 
-					/*
-						ctx, cancel := context.WithCancel(context.Background())
-						defer cancel()
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
 
-						obs := rx.Empty[int]().DefaultIfEmpty(3,
-							rx.WithCPUPool[int](),
-						)
-						rx.Assert(ctx, obs, rx.HasItems[int]{
-							Expected: []int{3},
-						})
-					*/
+					obs := rx.Empty[int]().DefaultIfEmpty(3,
+						rx.WithCPUPool[int](),
+					)
+					rx.Assert(ctx, obs, rx.HasItems[int]{
+						Expected: []int{3},
+					})
 				})
 			})
 
@@ -87,26 +85,15 @@ var _ = Describe("Observable operator", func() {
 					// rxgo: Test_Observable_DefaultIfEmpty_Parallel_NotEmpty
 					defer leaktest.Check(GinkgoT())()
 
-					/*
-						ctx, cancel := context.WithCancel(context.Background())
-						defer cancel()
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
 
-						obs := testObservable[int](ctx, 1, 2).DefaultIfEmpty(3,
-							rx.WithCPUPool[int](),
-						)
-						rx.Assert(ctx, obs, rx.HasItems[int]{
-							Expected: []int{1, 2},
-						})
-					*/
-				})
-			})
-		})
-
-		Context("Parallel/Error", func() {
-			Context("given: foo", func() {
-				It("🧪 should: ", func() {
-					// rxgo: Test_
-					defer leaktest.Check(GinkgoT())()
+					obs := testObservable[int](ctx, 1, 2).DefaultIfEmpty(3,
+						rx.WithCPUPool[int](),
+					)
+					rx.Assert(ctx, obs, rx.HasItems[int]{
+						Expected: []int{1, 2},
+					})
 				})
 			})
 		})

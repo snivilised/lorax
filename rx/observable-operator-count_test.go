@@ -53,18 +53,16 @@ var _ = Describe("Observable operator", func() {
 					// rxgo: Test_Observable_Count_Parallel
 					defer leaktest.Check(GinkgoT())()
 
-					/*
-						ctx, cancel := context.WithCancel(context.Background())
-						defer cancel()
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
 
-						rx.Assert(ctx, rx.Range[int](1, 100).Count(
-							rx.WithCPUPool[int](),
-						),
-							rx.HasNumber[int]{
-								Expected: 100,
-							},
-						)
-					*/
+					rx.Assert(ctx, rx.Range[int](1, 100).Count(
+						rx.WithCPUPool[int](),
+					),
+						rx.HasNumber[int]{
+							Expected: 100,
+						},
+					)
 				})
 			})
 		})

@@ -27,6 +27,7 @@ import (
 
 	"github.com/fortytw2/leaktest"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
+	"github.com/onsi/ginkgo/v2/dsl/decorators"
 
 	"github.com/snivilised/lorax/rx"
 )
@@ -115,7 +116,7 @@ var _ = Describe("Observable operator", func() {
 			})
 		})
 
-		XContext("Parallel", func() {
+		Context("Parallel", func() {
 			Context("all true", func() {
 				Context("given: foo", func() {
 					It("🧪 should: ", func() {
@@ -127,7 +128,7 @@ var _ = Describe("Observable operator", func() {
 
 						rx.Assert(ctx, rx.Range[int](1, 3).All(positiveN,
 							rx.WithContext[int](ctx),
-							rx.WithCPUPool[int](), // not supported yet
+							rx.WithCPUPool[int](),
 						),
 							rx.HasTrue[int]{},
 							rx.HasNoError[int]{},
@@ -147,7 +148,7 @@ var _ = Describe("Observable operator", func() {
 
 						rx.Assert(ctx, testObservable[int](ctx, 1, -2, 3).All(negative,
 							rx.WithContext[int](ctx),
-							rx.WithCPUPool[int](), // not supported yet
+							rx.WithCPUPool[int](),
 						),
 							rx.IsFalse[int]{},
 							rx.HasNoError[int]{},
@@ -157,9 +158,9 @@ var _ = Describe("Observable operator", func() {
 			})
 		})
 
-		XContext("Error", func() {
-			Context("given: foo", func() {
-				It("🧪 should: ", func() {
+		Context("Error", func() {
+			Context("given: error occurs after predicate failure", func() {
+				It("🧪 should: not return error", func() {
 					// rxgo: Test_Observable_All_Parallel_Error
 					defer leaktest.Check(GinkgoT())()
 
@@ -168,9 +169,34 @@ var _ = Describe("Observable operator", func() {
 
 					rx.Assert(ctx, testObservable[int](ctx, 1, errFoo, 3).All(negative,
 						rx.WithContext[int](ctx),
-						rx.WithCPUPool[int](), // not supported yet
+						rx.WithCPUPool[int](),
 					),
 						rx.IsFalse[int]{},
+					)
+				})
+			})
+
+			Context("given: error occurs before predicate failure", func() {
+				XIt("🧪 should: return error", decorators.Label("Flakey"), func() {
+					// rxgo: Test_Observable_All_Parallel_Error
+					defer leaktest.Check(GinkgoT())()
+
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
+
+					// Flakey: (possible race)
+
+					// NB: Once an error has occurred, you can't rely on the
+					// result of All to be accurate. The result will only
+					// reflect the state of processing at the time the error
+					// occurred. In this particular case, the result of All will
+					// be true and so will rx.IsTrue[int], that is because
+					// 1 and 3 were not seen.
+					//
+					rx.Assert(ctx, testObservable[int](ctx, errFoo, 1, 3).All(negative,
+						rx.WithContext[int](ctx),
+						rx.WithCPUPool[int](),
+					),
 						rx.HasError[int]{
 							Expected: []error{errFoo},
 						},

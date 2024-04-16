@@ -52,20 +52,20 @@ var _ = Describe("Observable operator", func() {
 
 		Context("Parallel", func() {
 			When("foo", func() {
-				XIt("🧪 should: ", func() {
+				It("🧪 should: ", func() {
 					// rxgo: Test_Observable_Min_Parallel
 					defer leaktest.Check(GinkgoT())()
 
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
-					obs := rx.Range[int](0, 100).Min(
+					obs := rx.Range[int](10, 100).Min(
 						rx.NumericItemLimitComparator,
 						rx.MinNItemInitLimitInt,
 						rx.WithCPUPool[int](),
 					)
-					rx.Assert(ctx, obs, rx.HasItem[int]{
-						Expected: 0,
+					rx.Assert(ctx, obs, rx.HasNumber[int]{
+						Expected: 10,
 					})
 				})
 			})

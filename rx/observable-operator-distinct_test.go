@@ -117,22 +117,20 @@ var _ = Describe("Observable operator", func() {
 					// rxgo: Test_Observable_Distinct_Parallel
 					defer leaktest.Check(GinkgoT())()
 
-					/*
-						ctx, cancel := context.WithCancel(context.Background())
-						defer cancel()
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
 
-						obs := testObservable[int](ctx, 1, 2, 2, 1, 3).Distinct(
-							func(_ context.Context, item int) (int, error) {
-								return item, nil
-							}, rx.WithCPUPool[int]())
+					obs := testObservable[int](ctx, 1, 2, 2, 1, 3).Distinct(
+						func(_ context.Context, item int) (int, error) {
+							return item, nil
+						}, rx.WithCPUPool[int]())
 
-						rx.Assert(ctx, obs,
-							rx.HasItemsNoOrder[int]{
-								Expected: []int{1, 2, 3},
-							},
-							rx.HasNoError[int]{},
-						)
-					*/
+					rx.Assert(ctx, obs,
+						rx.HasItemsNoOrder[int]{
+							Expected: []int{1, 2, 3},
+						},
+						rx.HasNoError[int]{},
+					)
 				})
 			})
 		})
@@ -143,19 +141,17 @@ var _ = Describe("Observable operator", func() {
 					// rxgo: Test_Observable_Distinct_Parallel_Error
 					defer leaktest.Check(GinkgoT())()
 
-					/*
-						ctx, cancel := context.WithCancel(context.Background())
-						defer cancel()
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
 
-						obs := testObservable[int](ctx, 1, 2, 2, errFoo).Distinct(
-							func(_ context.Context, item int) (int, error) {
-								return item, nil
-							}, rx.WithContext[int](ctx), rx.WithCPUPool[int]())
+					obs := testObservable[int](ctx, 1, 2, 2, errFoo).Distinct(
+						func(_ context.Context, item int) (int, error) {
+							return item, nil
+						}, rx.WithContext[int](ctx), rx.WithCPUPool[int]())
 
-						rx.Assert(ctx, obs, rx.HasError[int]{
-							Expected: []error{errFoo},
-						})
-					*/
+					rx.Assert(ctx, obs, rx.HasError[int]{
+						Expected: []error{errFoo},
+					})
 				})
 			})
 
@@ -164,23 +160,21 @@ var _ = Describe("Observable operator", func() {
 					// rxgo: Test_Observable_Distinct_Parallel_Error2
 					defer leaktest.Check(GinkgoT())()
 
-					/*
-						ctx, cancel := context.WithCancel(context.Background())
-						defer cancel()
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
 
-						obs := testObservable[int](ctx, 1, 2, 2, 2, 3, 4).Distinct(
-							func(_ context.Context, item int) (int, error) {
-								if item == 3 {
-									return 0, errFoo
-								}
-								return item, nil
-							}, rx.WithContext[int](ctx), rx.WithCPUPool[int](),
-						)
+					obs := testObservable[int](ctx, 1, 2, 2, 2, 3, 4).Distinct(
+						func(_ context.Context, item int) (int, error) {
+							if item == 3 {
+								return 0, errFoo
+							}
+							return item, nil
+						}, rx.WithContext[int](ctx), rx.WithCPUPool[int](),
+					)
 
-						rx.Assert[int](ctx, obs, rx.HasError[int]{
-							Expected: []error{errFoo},
-						})
-					*/
+					rx.Assert[int](ctx, obs, rx.HasError[int]{
+						Expected: []error{errFoo},
+					})
 				})
 			})
 		})
