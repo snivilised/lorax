@@ -82,12 +82,9 @@ func (op *allOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 func (op *allOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	if !item.IsBoolean() {
-		// This panic is temporary
-		panic(fmt.Sprintf("item: '%+v' is not a Boolean", item))
-	}
-
-	if !item.Bool() {
+	// !!! This might be an Opaque value representing the op-predicate
+	//
+	if value, err := TryBool(item); err == nil && !value {
 		False[T]().SendContext(ctx, dst)
 
 		op.all = false
@@ -150,6 +147,7 @@ func (op *averageOperator[T]) gatherNext(_ context.Context, item Item[T],
 	_ = item
 
 	// TODO(fix): v := item.V.(*averageOperator[T])
+	// op.calc.Add(op.sum)
 	// op.sum += v.sum
 	// op.count += v.count
 	//
@@ -258,8 +256,12 @@ func (op *containsOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 func (op *containsOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	if item.IsBoolean() && item.Bool() {
-		True[T]().SendContext(ctx, dst)
+	if value, err := TryBool(item); err == nil && value {
+		// we can reuse the item here instead of creating a new one
+		// as we are sending true and we know that item already
+		// represents true
+		//
+		item.SendContext(ctx, dst)
 		operatorOptions.stop()
 
 		op.contains = true
@@ -1238,8 +1240,11 @@ func (op *maxOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 func (op *maxOperator[T]) gatherNext(ctx context.Context,
 	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	// TODO(check): op.next(ctx, Of(item.V.(*maxOperator).max), dst, operatorOptions)÷
-	op.next(ctx, Of(item.V), dst, operatorOptions)
+	if result, err := TryOpaque[T, *maxOperator[T]](item); err == nil {
+		// this is sent by runParallel
+		//
+		op.next(ctx, result.max, dst, operatorOptions)
+	}
 }
 
 // Min determines and emits the minimum-valued item emitted by an Observable
@@ -1259,6 +1264,45 @@ func (o *ObservableImpl[T]) Min(comparator Comparator[T], initLimit InitLimit[T]
 			empty:      true,
 		}
 	}, forceSeq, bypassGather, opts...)
+}
+
+type minOperator[T any] struct {
+	comparator Comparator[T]
+	empty      bool
+	min        Item[T]
+	limit      func(value T) bool
+}
+
+func (op *minOperator[T]) next(_ context.Context,
+	item Item[T], _ chan<- Item[T], _ operatorOptions[T],
+) {
+	op.empty = false
+
+	if op.comparator(op.min, item) > 0 {
+		op.min = item
+	}
+}
+
+func (op *minOperator[T]) err(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
+}
+
+func (op *minOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if !op.empty {
+		op.min.SendContext(ctx, dst)
+	}
+}
+
+func (op *minOperator[T]) gatherNext(ctx context.Context,
+	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
+) {
+	if result, err := TryOpaque[T, *minOperator[T]](item); err == nil {
+		// this is sent by runParallel
+		//
+		op.next(ctx, result.min, dst, operatorOptions)
+	}
 }
 
 // Map transforms the items emitted by an Observable by applying a function to each item.
@@ -1312,42 +1356,6 @@ func (op *mapOperator[T]) gatherNext(ctx context.Context,
 	// }
 	// TODO: check above switch not required
 	item.SendContext(ctx, dst)
-}
-
-type minOperator[T any] struct {
-	comparator Comparator[T]
-	empty      bool
-	min        Item[T]
-	limit      func(value T) bool
-}
-
-func (op *minOperator[T]) next(_ context.Context,
-	item Item[T], _ chan<- Item[T], _ operatorOptions[T],
-) {
-	op.empty = false
-
-	if op.comparator(op.min, item) > 0 {
-		op.min = item
-	}
-}
-
-func (op *minOperator[T]) err(ctx context.Context,
-	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
-) {
-	defaultErrorFuncOperator(ctx, item, dst, operatorOptions)
-}
-
-func (op *minOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
-	if !op.empty {
-		op.min.SendContext(ctx, dst)
-	}
-}
-
-func (op *minOperator[T]) gatherNext(ctx context.Context,
-	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
-) {
-	// TODO(check): op.next(ctx, Of(item.V.(*minOperator).min), dst, operatorOptions)
-	op.next(ctx, Of(item.V), dst, operatorOptions)
 }
 
 func (o *ObservableImpl[T]) Observe(opts ...Option[T]) <-chan Item[T] {
@@ -1476,7 +1484,7 @@ func (o *ObservableImpl[T]) Reduce(apply Func2[T], opts ...Option[T]) OptionalSi
 	return optionalSingle(o.parent, o, func() operator[T] {
 		return &reduceOperator[T]{
 			apply: apply,
-			acc:   Zero[T](),
+			acc:   Num[T](0), // acc needs to be a Num: bomb!!!
 			empty: true,
 		}
 	}, forceSeq, bypassGather, opts...)
@@ -1492,7 +1500,7 @@ func (op *reduceOperator[T]) next(ctx context.Context, item Item[T],
 	dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	op.empty = false
-	v, err := op.apply(ctx, op.acc, item)
+	v, err := op.apply(ctx, op.acc, item) // bomb!!!
 
 	if err != nil {
 		Error[T](err).SendContext(ctx, dst)
@@ -1525,11 +1533,9 @@ func (op *reduceOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 func (op *reduceOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	if !item.IsOpaque() {
-		panic("reduceOperator.gatherNext: item is not Opaque")
+	if result, err := TryOpaque[T, *reduceOperator[T]](item); err == nil {
+		op.next(ctx, result.acc, dst, operatorOptions)
 	}
-
-	op.next(ctx, item.Opaque().(*reduceOperator[T]).acc, dst, operatorOptions)
 }
 
 // Repeat returns an Observable that repeats the sequence of items emitted
@@ -2215,6 +2221,7 @@ func (o *ObservableImpl[T]) StartWith(iterable Iterable[T], opts ...Option[T]) O
 
 // Sum calculates the average emitted by an Observable and emits the result
 func (o *ObservableImpl[T]) Sum(calc Calculator[T], opts ...Option[T]) OptionalSingle[T] {
+	// TODO: bomb!!!: do we use Num?
 	return o.Reduce(func(_ context.Context, acc, item Item[T]) (T, error) {
 		return calc.Add(acc.V, item.V), nil
 	}, opts...)

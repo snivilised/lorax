@@ -52,7 +52,7 @@ var _ = Describe("Observable operator", func() {
 
 		Context("Parallel", func() {
 			When("foo", func() {
-				XIt("🧪 should: ", func() {
+				It("🧪 should: ", func() {
 					// rxgo: Test_Observable_Max_Parallel
 					defer leaktest.Check(GinkgoT())()
 
@@ -63,7 +63,7 @@ var _ = Describe("Observable operator", func() {
 						rx.MaxNItemInitLimitInt,
 						rx.WithCPUPool[int](),
 					)
-					rx.Assert(ctx, obs, rx.HasItem[int]{
+					rx.Assert(ctx, obs, rx.HasNumber[int]{
 						Expected: 99,
 					})
 				})
