@@ -40,11 +40,14 @@ var _ = Describe("Observable operator", func() {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
-				obs := rx.Range[int](0, 100).Max(
-					rx.NumericItemLimitComparator,
-					rx.MaxNItemInitLimitInt,
+				obs := rx.Range(&rx.NumericRangeIterator[int]{
+					StartAt: 0,
+					Whilst:  rx.LessThan(100),
+				}).Max(
+					rx.NativeItemLimitComparator,
+					rx.MaxItemInitLimitInt,
 				)
-				rx.Assert(ctx, obs, rx.HasNumber[int]{
+				rx.Assert(ctx, obs, rx.HasItem[int]{
 					Expected: 99,
 				})
 			})
@@ -58,12 +61,15 @@ var _ = Describe("Observable operator", func() {
 
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
-					obs := rx.Range[int](0, 100).Max(
-						rx.NumericItemLimitComparator,
-						rx.MaxNItemInitLimitInt,
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 0,
+						Whilst:  rx.LessThan(100),
+					}).Max(
+						rx.NativeItemLimitComparator,
+						rx.MaxItemInitLimitInt,
 						rx.WithCPUPool[int](),
 					)
-					rx.Assert(ctx, obs, rx.HasNumber[int]{
+					rx.Assert(ctx, obs, rx.HasItem[int]{
 						Expected: 99,
 					})
 				})

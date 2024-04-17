@@ -35,7 +35,7 @@ import (
 type Observable[T any] interface {
 	Iterable[T]
 	All(predicate Predicate[T], opts ...Option[T]) Single[T]
-	Average(calc Calculator[T], opts ...Option[T]) Single[T]
+	Average(opts ...Option[T]) Single[T]
 	BackOffRetry(backOffCfg backoff.BackOff, opts ...Option[T]) Observable[T]
 	Connect(ctx context.Context) (context.Context, Disposable)
 	Contains(equal Predicate[T], opts ...Option[T]) Single[T]
@@ -79,7 +79,7 @@ type Observable[T any] interface {
 	SkipLast(nth uint, opts ...Option[T]) Observable[T]
 	SkipWhile(apply Predicate[T], opts ...Option[T]) Observable[T]
 	StartWith(iterable Iterable[T], opts ...Option[T]) Observable[T]
-	Sum(calc Calculator[T], opts ...Option[T]) OptionalSingle[T]
+	Sum(opts ...Option[T]) OptionalSingle[T]
 	Take(nth uint, opts ...Option[T]) Observable[T]
 	TakeLast(nth uint, opts ...Option[T]) Observable[T]
 	TakeUntil(apply Predicate[T], opts ...Option[T]) Observable[T]

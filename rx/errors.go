@@ -57,3 +57,29 @@ func (e TryError[T]) Error() string {
 		enums.ItemDescriptions[e.expected], enums.ItemDescriptions[e.item.disc], e.item,
 	)
 }
+
+// MissingCalcError is triggered when if the client forgets to provide a
+// calculator option
+type MissingCalcError struct {
+	error string
+}
+
+func (e MissingCalcError) Error() string {
+	return "missing calculator"
+}
+
+func init() {
+	RangeMissingWhilstError = BadRangeIteratorError{
+		error: "range iterator missing whilst definition",
+	}
+}
+
+type BadRangeIteratorError struct {
+	error string
+}
+
+func (e BadRangeIteratorError) Error() string {
+	return fmt.Sprintf("bad range iterator (%v)", e.error)
+}
+
+var RangeMissingWhilstError BadRangeIteratorError

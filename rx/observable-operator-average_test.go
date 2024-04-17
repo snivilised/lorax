@@ -45,14 +45,14 @@ var _ = Describe("Observable operator", func() {
 				rx.Assert(ctx,
 					testObservable[float32](ctx,
 						float32(1), float32(20),
-					).Average(rx.Calc[float32]()),
+					).Average(rx.WithCalc(rx.Calc[float32]())),
 					rx.HasItem[float32]{
 						Expected: 10.5,
 					},
 				)
 				rx.Assert(ctx, testObservable[float32](ctx,
 					float32(1), float32(20),
-				).Average(rx.Calc[float32]()),
+				).Average(rx.WithCalc(rx.Calc[float32]())),
 					rx.HasItem[float32]{
 						Expected: 10.5,
 					},
@@ -70,7 +70,7 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 
 					rx.Assert(ctx,
-						rx.Empty[float32]().Average(rx.Calc[float32]()),
+						rx.Empty[float32]().Average(rx.WithCalc(rx.Calc[float32]())),
 						rx.HasItem[float32]{
 							Expected: 0.0,
 						},
@@ -90,8 +90,28 @@ var _ = Describe("Observable operator", func() {
 
 					rx.Assert(ctx, testObservable[float32](ctx,
 						"foo",
-					).Average(rx.Calc[float32]()),
+					).Average(rx.WithCalc(rx.Calc[float32]())),
 						rx.HasAnError[float32]{},
+					)
+				})
+			})
+
+			Context("missing calc", func() {
+				It("🧪 should: raise error", func() {
+					defer leaktest.Check(GinkgoT())()
+
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
+
+					rx.Assert(ctx,
+						testObservable[float32](ctx,
+							float32(1), float32(20),
+						).Average(
+						// forget to provide a calculator
+						),
+						rx.HasError[float32]{
+							Expected: []error{rx.MissingCalcError{}},
+						},
 					)
 				})
 			})
@@ -108,7 +128,7 @@ var _ = Describe("Observable operator", func() {
 
 					rx.Assert(ctx, testObservable[float32](ctx,
 						float32(1), float32(20),
-					).Average(rx.Calc[float32]()),
+					).Average(rx.WithCalc(rx.Calc[float32]())),
 						rx.HasItem[float32]{
 							Expected: float32(10.5),
 						},
@@ -116,7 +136,7 @@ var _ = Describe("Observable operator", func() {
 
 					rx.Assert(ctx, testObservable[float32](ctx,
 						float32(1), float32(20),
-					).Average(rx.Calc[float32]()),
+					).Average(rx.WithCalc(rx.Calc[float32]())),
 						rx.HasItem[float32]{
 							Expected: float32(10.5),
 						},
@@ -136,8 +156,10 @@ var _ = Describe("Observable operator", func() {
 
 					rx.Assert(ctx, testObservable[float32](ctx,
 						"foo",
-					).Average(rx.Calc[float32](),
-						rx.WithContext[float32](ctx), rx.WithCPUPool[float32](),
+					).Average(
+						rx.WithCalc(rx.Calc[float32]()),
+						rx.WithContext[float32](ctx),
+						rx.WithCPUPool[float32](),
 					),
 						rx.HasAnError[float32]{},
 					)

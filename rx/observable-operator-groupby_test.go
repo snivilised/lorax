@@ -42,10 +42,15 @@ var _ = Describe("Observable operator", func() {
 
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
+
 				length := 3
 				count := 11
-				obs := rx.Range[int](0, count).GroupBy(length, func(item rx.Item[int]) int {
-					return item.Num() % length
+				obs := rx.Range(&rx.NumericRangeIterator[int]{
+					StartAt: 0,
+					StepBy:  1,
+					Whilst:  rx.LessThan(count),
+				}).GroupBy(length, func(item rx.Item[int]) int {
+					return item.V % length
 				}, rx.WithBufferedChannel[int](count))
 				observables, err := obs.ToSlice(0)
 
@@ -58,19 +63,19 @@ var _ = Describe("Observable operator", func() {
 				}
 
 				rx.Assert(ctx, observables[0].Opaque().(rx.Observable[int]),
-					rx.HasNumbers[int]{
+					rx.HasItems[int]{
 						Expected: []int{0, 3, 6, 9},
 					},
 					rx.HasNoError[int]{},
 				)
 				rx.Assert(ctx, observables[1].Opaque().(rx.Observable[int]),
-					rx.HasNumbers[int]{
+					rx.HasItems[int]{
 						Expected: []int{1, 4, 7, 10},
 					},
 					rx.HasNoError[int]{},
 				)
 				rx.Assert(ctx, observables[2].Opaque().(rx.Observable[int]),
-					rx.HasNumbers[int]{
+					rx.HasItems[int]{
 						Expected: []int{2, 5, 8},
 					},
 					rx.HasNoError[int]{},
@@ -89,12 +94,16 @@ var _ = Describe("Observable operator", func() {
 				length := 3
 				count := 11
 
-				obs := rx.Range[int](0, count).GroupByDynamic(func(item rx.Item[int]) string {
-					if item.Num() == 10 {
+				obs := rx.Range(&rx.NumericRangeIterator[int]{
+					StartAt: 0,
+					StepBy:  1,
+					Whilst:  rx.LessThan(count),
+				}).GroupByDynamic(func(item rx.Item[int]) string {
+					if item.V == 10 {
 						return "10"
 					}
 
-					return strconv.Itoa(item.Num() % length)
+					return strconv.Itoa(item.V % length)
 				}, rx.WithBufferedChannel[int](count))
 				observablesGrouped, err := obs.ToSlice(0)
 
@@ -107,7 +116,7 @@ var _ = Describe("Observable operator", func() {
 				}
 
 				rx.Assert(ctx, observablesGrouped[0].Opaque().(rx.GroupedObservable[int]),
-					rx.HasNumbers[int]{
+					rx.HasItems[int]{
 						Expected: []int{0, 3, 6, 9},
 					},
 					rx.HasNoError[int]{},
@@ -115,7 +124,7 @@ var _ = Describe("Observable operator", func() {
 				Expect(observablesGrouped[0].Opaque().(rx.GroupedObservable[int]).Key).To(Equal("0"))
 
 				rx.Assert(ctx, observablesGrouped[1].Opaque().(rx.GroupedObservable[int]),
-					rx.HasNumbers[int]{
+					rx.HasItems[int]{
 						Expected: []int{1, 4, 7},
 					},
 					rx.HasNoError[int]{},
@@ -123,7 +132,7 @@ var _ = Describe("Observable operator", func() {
 				Expect(observablesGrouped[1].Opaque().(rx.GroupedObservable[int]).Key).To(Equal("1"))
 
 				rx.Assert(ctx, observablesGrouped[2].Opaque().(rx.GroupedObservable[int]),
-					rx.HasNumbers[int]{
+					rx.HasItems[int]{
 						Expected: []int{2, 5, 8},
 					},
 					rx.HasNoError[int]{},
@@ -131,7 +140,7 @@ var _ = Describe("Observable operator", func() {
 				Expect(observablesGrouped[2].Opaque().(rx.GroupedObservable[int]).Key).To(Equal("2"))
 
 				rx.Assert(ctx, observablesGrouped[3].Opaque().(rx.GroupedObservable[int]),
-					rx.HasNumbers[int]{
+					rx.HasItems[int]{
 						Expected: []int{10},
 					},
 					rx.HasNoError[int]{},
@@ -152,7 +161,11 @@ var _ = Describe("Observable operator", func() {
 					length := 3
 					count := 11
 
-					obs := rx.Range[int](0, count).GroupBy(length, func(_ rx.Item[int]) int {
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 0,
+						StepBy:  1,
+						Whilst:  rx.LessThan(count),
+					}).GroupBy(length, func(_ rx.Item[int]) int {
 						return 4
 					}, rx.WithBufferedChannel[int](count))
 					observables, err := obs.ToSlice(0)

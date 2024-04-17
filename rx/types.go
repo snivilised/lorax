@@ -24,6 +24,8 @@ package rx
 
 import (
 	"context"
+
+	"golang.org/x/exp/constraints"
 )
 
 type (
@@ -116,7 +118,6 @@ type (
 	Disposed <-chan struct{}
 	// Disposable is a function to be called in order to dispose a subscription.
 	Disposable context.CancelFunc
-
 	// NextFunc handles a next item in a stream.
 	NextFunc[T any] func(Item[T])
 	// NumVal is an integer value used by Item.N and Range
@@ -125,4 +126,45 @@ type (
 	ErrFunc func(error)
 	// CompletedFunc handles the end of a stream.
 	CompletedFunc func()
+	// Numeric defines a constraint that targets scalar types for whom numeric
+	// operators are natively defined.
+	Numeric interface {
+		constraints.Integer | constraints.Signed | constraints.Unsigned | constraints.Float
+	}
+	// WhilstFunc condition function as used by Range
+	WhilstFunc[T any] func(current T) bool
+	// RangeIterator allows the client defines how the Range operator emits derived
+	// items.
+	RangeIterator[T any] interface {
+		Init() error
+		// Start should return the initial index value
+		Start() (*T, error)
+		// Step is used by Increment and defines the size of increment for each iteration
+		Step() T
+		// Increment increments the index value
+		Increment(index *T) T
+		// Plus(index, by T)
+		// While defines a condition that must be true for the loop to
+		// continue iterating.
+		While(current T) bool
+	}
+
+	NominatedField[T any, O Numeric] interface {
+		Field() O
+		Inc(index *T, by T) *T
+		Index(int) *T
+	}
+
+	RangeIteratorNF[T NominatedField[T, O], O Numeric] interface {
+		Init() error
+		// Start should return the initial index value
+		Start() (*T, error)
+		// Step is used by Increment and defines the size of increment for each iteration
+		Step() O
+		// Increment returns a pointer to a new instance of with incremented index value
+		Increment(index *T) *T
+		// While defines a condition that must be true for the loop to
+		// continue iterating.
+		While(current T) bool
+	}
 )

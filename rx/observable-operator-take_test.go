@@ -44,7 +44,7 @@ var _ = Describe("Observable operator", func() {
 
 				obs := testObservable[int](ctx, 1, 2, 3, 4, 5).Take(3)
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 				)
@@ -84,7 +84,7 @@ var _ = Describe("Observable operator", func() {
 
 				obs := testObservable[int](ctx, 1, 2, 3, 4, 5).TakeLast(3)
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{3, 4, 5},
 					},
 				)
@@ -101,7 +101,7 @@ var _ = Describe("Observable operator", func() {
 
 				obs := testObservable[int](ctx, 4, 5).TakeLast(3)
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{4, 5},
 					},
 				)
@@ -118,7 +118,7 @@ var _ = Describe("Observable operator", func() {
 
 				obs := testObservable[int](ctx, 4, 5).TakeLast(100000)
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{4, 5},
 					},
 				)
@@ -139,7 +139,7 @@ var _ = Describe("Observable operator", func() {
 					func(item rx.Item[int]) bool {
 						return item.V == 3
 					})
-				rx.Assert(ctx, obs, rx.HasItems[int]{
+				rx.Assert(ctx, obs, rx.ContainItems[int]{
 					Expected: []int{1, 2, 3},
 				})
 			})
@@ -160,7 +160,7 @@ var _ = Describe("Observable operator", func() {
 						return item.V != 3
 					},
 				)
-				rx.Assert(ctx, obs, rx.HasItems[int]{
+				rx.Assert(ctx, obs, rx.ContainItems[int]{
 					Expected: []int{1, 2},
 				})
 			})

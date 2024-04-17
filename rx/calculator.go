@@ -1,14 +1,5 @@
 package rx
 
-import (
-	"golang.org/x/exp/constraints"
-)
-
-// Numeric
-type Numeric interface {
-	constraints.Integer | constraints.Signed | constraints.Unsigned | constraints.Float
-}
-
 func Calc[T Numeric]() Calculator[T] {
 	return new(NumericCalc[T])
 }

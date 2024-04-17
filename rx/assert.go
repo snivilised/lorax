@@ -165,6 +165,16 @@ func (f AssertFunc[T]) Check(actual AssertResources[T]) {
 	f(actual)
 }
 
+// ContainItems
+type ContainItems[T any] struct {
+	Expected []T
+}
+
+// HasItems checks if an observable contains expected items
+func (a ContainItems[T]) Check(actual AssertResources[T]) {
+	Expect(actual.Values()).To(ContainElements(a.Expected), reason("HasItems"))
+}
+
 // HasItems
 type HasItems[T any] struct {
 	Expected []T
@@ -172,7 +182,7 @@ type HasItems[T any] struct {
 
 // HasItems checks if an observable has an exact set of items.
 func (a HasItems[T]) Check(actual AssertResources[T]) {
-	Expect(actual.Values()).To(ContainElements(a.Expected), reason("HasItems"))
+	Expect(actual.Values()).To(HaveExactElements(a.Expected), reason("HasItems"))
 }
 
 // HasItem

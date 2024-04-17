@@ -18,23 +18,6 @@ func NativeItemLimitComparator[T constraints.Ordered](a, b Item[T]) int {
 	return 1
 }
 
-func NumericItemLimitComparator[T constraints.Ordered](a, b Item[T]) int {
-	var (
-		valA = a.Num()
-		valB = b.Num()
-	)
-
-	if valA == valB {
-		return 0
-	}
-
-	if valA < valB {
-		return -1
-	}
-
-	return 1
-}
-
 func MaxInitLimitInt() int {
 	return math.MinInt
 }
@@ -49,14 +32,6 @@ func MaxItemInitLimitInt() Item[int] {
 
 func MinItemInitLimitInt() Item[int] {
 	return Of(math.MaxInt)
-}
-
-func MaxNItemInitLimitInt() Item[int] {
-	return Num[int](math.MinInt)
-}
-
-func MinNItemInitLimitInt() Item[int] {
-	return Num[int](math.MaxInt)
 }
 
 // TODO: add limiters for other Ordered constraint types

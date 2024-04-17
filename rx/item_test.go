@@ -48,7 +48,7 @@ var _ = Describe("Item", Ordered, func() {
 
 					rx.Assert(context.Background(),
 						rx.FromChannel(ch),
-						rx.HasItems[int]{
+						rx.ContainItems[int]{
 							Expected: []int{1, 2, 3},
 						},
 						rx.HasNoError[int]{},
@@ -70,7 +70,7 @@ var _ = Describe("Item", Ordered, func() {
 
 					rx.Assert(context.Background(),
 						rx.FromChannel(ch),
-						rx.HasItems[int]{
+						rx.ContainItems[int]{
 							Expected: []int{1, 3},
 						},
 						rx.HasAnError[int]{},
@@ -86,7 +86,7 @@ var _ = Describe("Item", Ordered, func() {
 					ch := make(chan rx.Item[int], 3)
 					go rx.SendItems(context.Background(), ch, enums.CloseChannel, []int{1, 2, 3})
 					rx.Assert(context.Background(), rx.FromChannel(ch),
-						rx.HasItems[int]{
+						rx.ContainItems[int]{
 							Expected: []int{1, 2, 3},
 						},
 
@@ -103,7 +103,7 @@ var _ = Describe("Item", Ordered, func() {
 					ch := make(chan rx.Item[int], 3)
 					go rx.SendItems(context.Background(), ch, enums.CloseChannel, []any{1, errFoo, 3})
 					rx.Assert(context.Background(), rx.FromChannel(ch),
-						rx.HasItems[int]{
+						rx.ContainItems[int]{
 							Expected: []int{1, 3},
 						},
 

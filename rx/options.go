@@ -44,6 +44,7 @@ type Option[T any] interface {
 	isConnectable() bool
 	isConnectOperation() bool
 	isSerialized() (bool, func(T) int)
+	calc() Calculator[T]
 }
 
 type funcOption[T any] struct {
@@ -59,6 +60,7 @@ type funcOption[T any] struct {
 	connectable          bool
 	connectOperation     bool
 	serialized           func(T) int
+	calculator           Calculator[T]
 }
 
 func (fdo *funcOption[T]) toPropagate() bool {
@@ -125,6 +127,10 @@ func (fdo *funcOption[T]) isSerialized() (b bool, f func(T) int) {
 	}
 
 	return true, fdo.serialized
+}
+
+func (fdo *funcOption[T]) calc() Calculator[T] {
+	return fdo.calculator
 }
 
 func newFuncOption[T any](f func(*funcOption[T])) *funcOption[T] {
@@ -204,6 +210,12 @@ func WithPublishStrategy[T any]() Option[T] {
 func Serialize[T any](identifier func(T) int) Option[T] {
 	return newFuncOption(func(options *funcOption[T]) {
 		options.serialized = identifier
+	})
+}
+
+func WithCalc[T any](calculator Calculator[T]) Option[T] {
+	return newFuncOption(func(options *funcOption[T]) {
+		options.calculator = calculator
 	})
 }
 

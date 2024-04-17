@@ -67,37 +67,6 @@ func channelValue[T any](ctx context.Context, items ...any) chan rx.Item[T] {
 	return next
 }
 
-func channelValueN[T any](ctx context.Context, items ...any) chan rx.Item[T] {
-	next := make(chan rx.Item[T])
-	go func() {
-		for _, item := range items {
-			switch item := item.(type) {
-			case rx.Item[T]:
-				item.SendContext(ctx, next)
-
-			case error:
-				rx.Error[T](item).SendContext(ctx, next)
-
-			case int:
-				rx.Num[T](item).SendContext(ctx, next)
-
-			default:
-				// This error can occur, if the client instantiates with type T,
-				// but sends a value not of type T, eg, instantiate with float32,
-				// but send 42 through the channel, instead of float32(42).
-				//
-				err := fmt.Errorf("channel value: '%v' not sent (wrong type?)", item)
-
-				rx.Error[T](err).SendContext(ctx, next)
-			}
-		}
-
-		close(next)
-	}()
-
-	return next
-}
-
 func convertAllItemsToAny[T any](values []T) []any {
 	return lo.Map(values, func(value T, _ int) any {
 		return value
@@ -112,15 +81,87 @@ func testObservable[T any](ctx context.Context, items ...any) rx.Observable[T] {
 	return rx.FromChannel(channelValue[T](ctx, convertAllItemsToAny(items)...))
 }
 
-func testObservableN[T any](ctx context.Context, items ...any) rx.Observable[T] {
+func testObservableWith[T any](ctx context.Context, items ...any) func(opts ...rx.Option[T]) rx.Observable[T] {
 	// items is a collection of any because we need the ability to send a stream
 	// of events that may include errors; 1, 2, err, 4, ..., without enforcing
 	// that the client should manufacture Item[T]s; Of(1), Of(2), Error(err), Of(4).
 	//
-	return rx.FromChannel(channelValueN[T](ctx, convertAllItemsToAny(items)...))
+	return func(opts ...rx.Option[T]) rx.Observable[T] {
+		return rx.FromChannel(channelValue[T](ctx, convertAllItemsToAny(items)...), opts...)
+	}
 }
 
 type widget struct {
+	id     int
 	name   string
 	amount int
+}
+
+func (w widget) Field() int {
+	return w.id
+}
+
+func (w widget) Inc(index *widget, by widget) *widget {
+	// we can't increment w.wid, because Inc is a non pointer receiver,
+	// therefore, as a work-around, we must increment index which is a
+	// back-door copy of the original instance.
+	//
+	index.id += by.id
+
+	return index
+}
+
+func (w widget) Index(i int) *widget {
+	return &widget{
+		id: i,
+	}
+}
+
+type widgetByIDRangeIterator struct {
+	StartAt widget
+	StepBy  widget
+	Whilst  func(current widget) bool
+}
+
+func (i *widgetByIDRangeIterator) Init() error {
+	return nil
+}
+
+// Start should return the initial index value. If the StepBy has
+// not been set, it will default to 1.
+func (i *widgetByIDRangeIterator) Start() (*widget, error) {
+	if i.StepBy.id == 0 {
+		i.StepBy = widget{id: 1}
+	}
+
+	if i.Whilst == nil {
+		return &widget{}, rx.BadRangeIteratorError{}
+	}
+
+	index := i.StartAt
+
+	return &index, nil
+}
+
+func (i *widgetByIDRangeIterator) Step() int {
+	return i.StepBy.id
+}
+
+// Increment returns a pointer to a new instance of with incremented index value
+func (i *widgetByIDRangeIterator) Increment(index *widget) *widget {
+	index.id += i.StepBy.id
+
+	return index
+}
+
+// While defines a condition that must be true for the loop to
+// continue iterating.
+func (i *widgetByIDRangeIterator) While(current widget) bool {
+	return i.Whilst(current)
+}
+
+func widgetLessThan(until widget) func(widget) bool {
+	return func(current widget) bool {
+		return current.id < until.id
+	}
 }

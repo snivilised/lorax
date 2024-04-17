@@ -44,7 +44,7 @@ var _ = Describe("Observable operator", func() {
 				obs := testObservable[int](ctx, 1, 2, 3).Map(func(_ context.Context, v int) (int, error) {
 					return v + 1, nil
 				})
-				rx.Assert(ctx, obs, rx.HasItems[int]{
+				rx.Assert(ctx, obs, rx.ContainItems[int]{
 					Expected: []int{2, 3, 4},
 				},
 					rx.HasNoError[int]{},
@@ -65,7 +65,7 @@ var _ = Describe("Observable operator", func() {
 				}).Map(func(_ context.Context, v int) (int, error) {
 					return v * 10, nil
 				})
-				rx.Assert(ctx, obs, rx.HasItems[int]{
+				rx.Assert(ctx, obs, rx.ContainItems[int]{
 					Expected: []int{20, 30, 40},
 				}, rx.HasNoError[int]{})
 			})
@@ -99,7 +99,7 @@ var _ = Describe("Observable operator", func() {
 					obs := testObservable[int](ctx, 1, 2, 3, errFoo).Map(func(_ context.Context, v int) (int, error) {
 						return v + 1, nil
 					})
-					rx.Assert(ctx, obs, rx.HasItems[int]{
+					rx.Assert(ctx, obs, rx.ContainItems[int]{
 						Expected: []int{2, 3, 4},
 					}, rx.HasError[int]{
 						Expected: []error{errFoo},
