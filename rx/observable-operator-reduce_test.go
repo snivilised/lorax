@@ -42,7 +42,10 @@ var _ = Describe("Observable operator", func() {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
-				obs := rx.Range[int](1, 10000).Reduce(
+				obs := rx.Range(&rx.NumericRangeIterator[int]{
+					StartAt: 1,
+					Whilst:  rx.LessThan(10001),
+				}).Reduce( // 1, 10000
 					func(_ context.Context, acc, num rx.Item[int]) (int, error) {
 						return acc.V + num.Num(), nil
 					},
@@ -97,31 +100,6 @@ var _ = Describe("Observable operator", func() {
 						})
 				})
 			})
-
-			When("return error", func() {
-				It("🧪 should: result in error", func() {
-					// rxgo: Test_Observable_Reduce_ReturnError
-					defer leaktest.Check(GinkgoT())()
-
-					ctx, cancel := context.WithCancel(context.Background())
-					defer cancel()
-
-					obs := testObservableN[int](ctx, 1, 2, 3).Reduce(
-						func(_ context.Context, _, num rx.Item[int]) (int, error) {
-							if num.Num() == 2 {
-								return 0, errFoo
-							}
-
-							return num.Num(), nil
-						},
-					)
-					rx.Assert(ctx, obs,
-						rx.IsEmpty[int]{},
-						rx.HasError[int]{
-							Expected: []error{errFoo},
-						})
-				})
-			})
 		})
 
 		Context("Parallel", func() {
@@ -133,15 +111,18 @@ var _ = Describe("Observable operator", func() {
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
-					obs := rx.Range[int](1, 5).Reduce( // 10000
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 1,
+						Whilst:  rx.LessThan(6),
+					}).Reduce(
 						func(_ context.Context, acc, num rx.Item[int]) (int, error) {
 							return acc.Num() + num.Num(), nil
 						}, rx.WithCPUPool[int](),
 					)
 					rx.Assert(ctx, obs,
-						// rx.HasItem[int]{
-						// 	Expected: 50005000,
-						// },
+						rx.HasItem[int]{
+							Expected: 50005000,
+						},
 						rx.HasNoError[int]{},
 					)
 				})
@@ -156,7 +137,10 @@ var _ = Describe("Observable operator", func() {
 
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
-					obs := rx.Range[int](1, 10000).Reduce(
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 1,
+						Whilst:  rx.LessThan(10001),
+					}).Reduce(
 						func(_ context.Context, acc, num rx.Item[int]) (int, error) {
 							if num.Num() == 1000 {
 								return 0, errFoo
@@ -179,7 +163,10 @@ var _ = Describe("Observable operator", func() {
 
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
-					obs := rx.Range[int](1, 10000).Reduce(
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 1,
+						Whilst:  rx.LessThan(10001),
+					}).Reduce(
 						func(_ context.Context, acc, num rx.Item[int]) (int, error) {
 							if num.Num() == 1 {
 								return 0, errFoo

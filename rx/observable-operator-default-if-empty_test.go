@@ -41,7 +41,7 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				obs := rx.Empty[int]().DefaultIfEmpty(3)
-				rx.Assert(ctx, obs, rx.HasItems[int]{
+				rx.Assert(ctx, obs, rx.ContainItems[int]{
 					Expected: []int{3},
 				})
 			})
@@ -56,7 +56,7 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				obs := testObservable[int](ctx, 1, 2).DefaultIfEmpty(3)
-				rx.Assert(ctx, obs, rx.HasItems[int]{
+				rx.Assert(ctx, obs, rx.ContainItems[int]{
 					Expected: []int{1, 2},
 				})
 			})
@@ -74,7 +74,7 @@ var _ = Describe("Observable operator", func() {
 					obs := rx.Empty[int]().DefaultIfEmpty(3,
 						rx.WithCPUPool[int](),
 					)
-					rx.Assert(ctx, obs, rx.HasItems[int]{
+					rx.Assert(ctx, obs, rx.ContainItems[int]{
 						Expected: []int{3},
 					})
 				})
@@ -91,7 +91,7 @@ var _ = Describe("Observable operator", func() {
 					obs := testObservable[int](ctx, 1, 2).DefaultIfEmpty(3,
 						rx.WithCPUPool[int](),
 					)
-					rx.Assert(ctx, obs, rx.HasItems[int]{
+					rx.Assert(ctx, obs, rx.ContainItems[int]{
 						Expected: []int{1, 2},
 					})
 				})

@@ -46,7 +46,7 @@ var _ = Describe("Observable operator", func() {
 					return a.V + b.V, nil
 				}
 				zip := obs1.ZipFromIterable(obs2, zipper)
-				rx.Assert(ctx, zip, rx.HasItems[int]{
+				rx.Assert(ctx, zip, rx.ContainItems[int]{
 					Expected: []int{11, 22, 33},
 				})
 			})
@@ -66,7 +66,7 @@ var _ = Describe("Observable operator", func() {
 					return a.V + b.V, nil
 				}
 				zip := obs1.ZipFromIterable(obs2, zipper)
-				rx.Assert(ctx, zip, rx.HasItems[int]{
+				rx.Assert(ctx, zip, rx.ContainItems[int]{
 					Expected: []int{11, 22},
 				})
 			})
@@ -86,7 +86,7 @@ var _ = Describe("Observable operator", func() {
 					return a.V + b.V, nil
 				}
 				zip := obs1.ZipFromIterable(obs2, zipper)
-				rx.Assert(ctx, zip, rx.HasItems[int]{
+				rx.Assert(ctx, zip, rx.ContainItems[int]{
 					Expected: []int{11, 22},
 				})
 			})

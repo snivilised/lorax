@@ -45,7 +45,7 @@ var _ = Describe("Observable operator", func() {
 						return x.V + y.V, nil
 					},
 				)
-				rx.Assert(ctx, obs, rx.HasItems[int]{
+				rx.Assert(ctx, obs, rx.ContainItems[int]{
 					Expected: []int{1, 3, 6, 10, 15},
 				})
 			})

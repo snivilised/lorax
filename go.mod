@@ -18,6 +18,7 @@ require (
 require (
 	github.com/avfs/avfs v0.33.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 )
 

@@ -32,8 +32,8 @@ import (
 	"github.com/snivilised/lorax/rx"
 )
 
-var positiveN = func(it rx.Item[int]) bool {
-	return it.Num() > 0
+var positive = func(it rx.Item[int]) bool {
+	return it.V > 0
 }
 
 var negative = func(it rx.Item[int]) bool {
@@ -51,7 +51,12 @@ var _ = Describe("Observable operator", func() {
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
-					rx.Assert(ctx, rx.Range[int](1, 3).All(positiveN),
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 1,
+						Whilst:  rx.LessThan(4),
+					}).All(positive)
+
+					rx.Assert(ctx, obs,
 						rx.IsTrue[int]{},
 						rx.HasNoError[int]{},
 					)
@@ -64,7 +69,13 @@ var _ = Describe("Observable operator", func() {
 						ctx, cancel := context.WithCancel(context.Background())
 						defer cancel()
 
-						rx.Assert(ctx, rx.Range[int](1, 3).All(positiveN),
+						obs := rx.Range(&rx.NumericRangeIterator[int]{
+							StartAt: 1,
+							Whilst:  rx.LessThan(4),
+						}).All(positive)
+
+						rx.Assert(ctx,
+							obs,
 							rx.HasTrue[int]{},
 						)
 					})
@@ -126,10 +137,15 @@ var _ = Describe("Observable operator", func() {
 						ctx, cancel := context.WithCancel(context.Background())
 						defer cancel()
 
-						rx.Assert(ctx, rx.Range[int](1, 3).All(positiveN,
+						obs := rx.Range(&rx.NumericRangeIterator[int]{
+							StartAt: 1,
+							Whilst:  rx.LessThan(4),
+						}).All(positive,
 							rx.WithContext[int](ctx),
 							rx.WithCPUPool[int](),
-						),
+						)
+
+						rx.Assert(ctx, obs,
 							rx.HasTrue[int]{},
 							rx.HasNoError[int]{},
 						)

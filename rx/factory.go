@@ -24,7 +24,6 @@ package rx
 
 import (
 	"context"
-	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -95,11 +94,12 @@ func Amb[T any](observables []Observable[T], opts ...Option[T]) Observable[T] {
 // CombineLatest combines the latest item emitted by each Observable via a specified function
 // and emit items based on the results of this function.
 func CombineLatest[T any](f FuncN[T], observables []Observable[T],
-	calc Calculator[T], opts ...Option[T],
+	opts ...Option[T],
 ) Observable[T] {
 	option := parseOptions(opts...)
 	ctx := option.buildContext(emptyContext)
 	next := option.buildChannel()
+	calc := option.calc()
 
 	go func() {
 		var counter uint32
@@ -115,6 +115,12 @@ func CombineLatest[T any](f FuncN[T], observables []Observable[T],
 			defer wg.Done()
 
 			observe := it.Observe(opts...)
+
+			if calc == nil {
+				Error[T](MissingCalcError{}).SendContext(ctx, next)
+
+				return
+			}
 
 			for {
 				select {
@@ -381,21 +387,27 @@ func Never[T any]() Observable[T] {
 
 // Range creates an Observable that emits count sequential integers beginning
 // at start.
-func Range[T any](start, count NumVal, opts ...Option[T]) Observable[T] {
-	if count < 0 {
-		return Thrown[T](IllegalInputError{
-			error: "count must be positive", // TODO(i18n)
-		})
-	}
-
-	if start+count-1 > math.MaxInt32 {
-		return Thrown[T](IllegalInputError{
-			error: "max value is bigger than math.MaxInt32",
-		})
+func Range[T Numeric](iterator RangeIterator[T], opts ...Option[T]) Observable[T] {
+	if err := iterator.Init(); err != nil {
+		return Thrown[T](err)
 	}
 
 	return &ObservableImpl[T]{
-		iterable: newRangeIterable(start, count, opts...),
+		iterable: newRangeIterable(iterator, opts...),
+	}
+}
+
+// RangeNF creates an Observable that emits count sequential integers beginning
+// at start, for non numeric types, which do contain a nominated Numeric member
+func RangeNF[T NominatedField[T, O], O Numeric](iterator RangeIteratorNF[T, O],
+	opts ...Option[T],
+) Observable[T] {
+	if err := iterator.Init(); err != nil {
+		return Thrown[T](err)
+	}
+
+	return &ObservableImpl[T]{
+		iterable: newRangeIterableNF(iterator, opts...),
 	}
 }
 

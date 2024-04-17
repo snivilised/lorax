@@ -48,7 +48,7 @@ var _ = Describe("Observable operator", func() {
 				)
 
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 					rx.HasNoError[int]{},
@@ -72,7 +72,7 @@ var _ = Describe("Observable operator", func() {
 					)
 
 					rx.Assert(ctx, obs,
-						rx.HasItems[int]{
+						rx.ContainItems[int]{
 							Expected: []int{1, 2},
 						},
 						rx.HasError[int]{
@@ -101,7 +101,7 @@ var _ = Describe("Observable operator", func() {
 					)
 
 					rx.Assert(ctx, obs,
-						rx.HasItems[int]{
+						rx.ContainItems[int]{
 							Expected: []int{1, 2},
 						}, rx.HasError[int]{
 							Expected: []error{errFoo},
@@ -195,7 +195,7 @@ var _ = Describe("Observable operator", func() {
 					}, rx.NativeItemLimitComparator, rx.WithCPUPool[int]())
 
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 1, 3},
 					})
 			})
@@ -215,7 +215,7 @@ var _ = Describe("Observable operator", func() {
 							return value, nil
 						}, rx.NativeItemLimitComparator, rx.WithCPUPool[int]())
 
-					rx.Assert(ctx, obs, rx.HasItems[int]{
+					rx.Assert(ctx, obs, rx.ContainItems[int]{
 						Expected: []int{1, 2, 1, 3},
 					})
 				})

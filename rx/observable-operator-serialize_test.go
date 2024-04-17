@@ -52,7 +52,7 @@ var _ = Describe("Observable operator", func() {
 					return i.(message).id
 				})
 				rx.Assert(ctx, obs,
-					rx.HasItems[message]{
+					rx.ContainItems[message]{
 						Expected: []message{
 							{1}, {2}, {3}, {4}, {5},
 						},
@@ -73,7 +73,7 @@ var _ = Describe("Observable operator", func() {
 					Serialize(1, func(i interface{}) int {
 						return i.(int)
 					})
-				rx.Assert(ctx, obs, rx.HasItems[int]{
+				rx.Assert(ctx, obs, rx.ContainItems[int]{
 					Expected: []int{1, 2, 3, 4, 5, 6},
 				})
 			})
@@ -85,7 +85,10 @@ var _ = Describe("Observable operator", func() {
 				defer leaktest.Check(GinkgoT())()
 
 				idx := 0
-				<-rx.Range[int](1, 10000).
+				<-rx.Range(&rx.NumericRangeIterator[int]{
+					StartAt: 1,
+					Whilst:  rx.LessThan(10001),
+				}).
 					Serialize(0, func(i any) int {
 						return i.(int)
 					}).
@@ -117,7 +120,7 @@ var _ = Describe("Observable operator", func() {
 					return i.(message).id
 				})
 				rx.Assert(ctx, obs,
-					rx.HasItems[message]{
+					rx.ContainItems[message]{
 						Expected: []message{
 							{11}, {12}, {13}, {14}, {15},
 						},
@@ -177,7 +180,7 @@ var _ = Describe("Observable operator", func() {
 						return i.(message).id
 					})
 					rx.Assert(ctx, obs,
-						rx.HasItems[message]{
+						rx.ContainItems[message]{
 							Expected: []message{{1}},
 						},
 						rx.HasError[message]{

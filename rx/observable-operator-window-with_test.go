@@ -45,13 +45,13 @@ var _ = Describe("Observable operator", func() {
 				observe := testObservable[int](ctx, 1, 2, 3, 4, 5).WindowWithCount(2).Observe()
 
 				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2},
 					},
 				)
 
 				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{3, 4},
 					},
 				)
@@ -75,7 +75,7 @@ var _ = Describe("Observable operator", func() {
 				observe := testObservable[int](ctx, 1, 2, 3, 4, 5).WindowWithCount(0).Observe()
 
 				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3, 4, 5},
 					},
 				)
@@ -94,7 +94,7 @@ var _ = Describe("Observable operator", func() {
 					observe := testObservable[int](ctx, 1, 2, errFoo, 4, 5).WindowWithCount(2).Observe()
 
 					rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
-						rx.HasItems[int]{
+						rx.ContainItems[int]{
 							Expected: []int{1, 2},
 						},
 					)
@@ -151,7 +151,7 @@ var _ = Describe("Observable operator", func() {
 				).Observe()
 
 				rx.Assert(ctx, (<-observe).Opaque().(rx.Observable[int]),
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2},
 					},
 				)

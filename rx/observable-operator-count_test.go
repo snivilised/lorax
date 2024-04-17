@@ -40,7 +40,10 @@ var _ = Describe("Observable operator", func() {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
-				rx.Assert(ctx, rx.Range[int](1, 100).Count(),
+				rx.Assert(ctx, rx.Range(&rx.NumericRangeIterator[int]{
+					StartAt: 1,
+					Whilst:  rx.LessThan(101),
+				}).Count(),
 					rx.HasNumber[int]{
 						Expected: 100,
 					})
@@ -56,7 +59,10 @@ var _ = Describe("Observable operator", func() {
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
-					rx.Assert(ctx, rx.Range[int](1, 100).Count(
+					rx.Assert(ctx, rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 1,
+						Whilst:  rx.LessThan(101),
+					}).Count(
 						rx.WithCPUPool[int](),
 					),
 						rx.HasNumber[int]{

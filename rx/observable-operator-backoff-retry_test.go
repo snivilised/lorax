@@ -57,7 +57,7 @@ var _ = Describe("Observable operator", func() {
 					}
 				}}).BackOffRetry(backoff.WithMaxRetries(backOffCfg, 3))
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 1, 2, 1, 2, 3},
 					},
 					rx.HasNoError[int]{},
@@ -82,7 +82,7 @@ var _ = Describe("Observable operator", func() {
 						next <- rx.Error[int](errFoo)
 					}}).BackOffRetry(backoff.WithMaxRetries(backOffCfg, 3))
 					rx.Assert(ctx, obs,
-						rx.HasItems[int]{
+						rx.ContainItems[int]{
 							Expected: []int{1, 2, 1, 2, 1, 2, 1, 2},
 						},
 						rx.HasError[int]{

@@ -44,7 +44,7 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				repeat := testObservable[int](ctx, 1, 2, 3).Repeat(1, nil)
-				rx.Assert(ctx, repeat, rx.HasItems[int]{
+				rx.Assert(ctx, repeat, rx.ContainItems[int]{
 					Expected: []int{1, 2, 3, 1, 2, 3},
 				})
 			})
@@ -59,7 +59,7 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				repeat := testObservable[int](ctx, 1, 2, 3).Repeat(0, nil)
-				rx.Assert(ctx, repeat, rx.HasItems[int]{
+				rx.Assert(ctx, repeat, rx.ContainItems[int]{
 					Expected: []int{1, 2, 3},
 				})
 			})

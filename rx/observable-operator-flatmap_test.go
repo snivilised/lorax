@@ -43,7 +43,7 @@ var _ = Describe("Observable operator", func() {
 				obs := testObservable[int](ctx, 1, 2, 3).FlatMap(func(item rx.Item[int]) rx.Observable[int] {
 					return testObservable[int](ctx, item.V+1, item.V*10)
 				})
-				rx.Assert[int](ctx, obs, rx.HasItems[int]{
+				rx.Assert[int](ctx, obs, rx.ContainItems[int]{
 					Expected: []int{2, 10, 3, 20, 4, 30},
 				})
 			})
@@ -64,7 +64,7 @@ var _ = Describe("Observable operator", func() {
 						}
 						return testObservable[int](ctx, i.V+1, i.V*10)
 					})
-					rx.Assert[int](ctx, obs, rx.HasItems[int]{
+					rx.Assert[int](ctx, obs, rx.ContainItems[int]{
 						Expected: []int{2, 10},
 					}, rx.HasError[int]{
 						Expected: []error{errFoo},
@@ -87,7 +87,7 @@ var _ = Describe("Observable operator", func() {
 						return testObservable[int](ctx, i.V+1, i.V*10)
 					})
 					rx.Assert[int](ctx, obs,
-						rx.HasItems[int]{
+						rx.ContainItems[int]{
 							Expected: []int{2, 10, 0, 4, 30},
 						}, rx.HasNoError[int]{},
 					)

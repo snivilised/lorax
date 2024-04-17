@@ -49,10 +49,11 @@ var _ = Describe("Observable operator", func() {
 					// an error ("channel value: '1' not sent (wrong type?)").
 					//
 					float32(1.0), float32(2.0), float32(3.0),
-				).Sum(rx.Calc[float32]()),
+				).Sum(rx.WithCalc(rx.Calc[float32]())),
 					rx.HasItem[float32]{
 						Expected: 6.0,
-					})
+					},
+				)
 			})
 		})
 
@@ -65,7 +66,7 @@ var _ = Describe("Observable operator", func() {
 				defer cancel()
 
 				rx.Assert(ctx,
-					rx.Empty[float32]().Sum(rx.Calc[float32]()),
+					rx.Empty[float32]().Sum(rx.WithCalc(rx.Calc[float32]())),
 					rx.IsEmpty[float32]{},
 				)
 			})
@@ -89,8 +90,27 @@ var _ = Describe("Observable operator", func() {
 						// be the case, to enforce a resulting error.
 						//
 						1.1, 2.2, 3.3,
-					).Sum(rx.Calc[float32]()),
+					).Sum(rx.WithCalc(rx.Calc[float32]())),
 						rx.HasAnError[float32]{},
+					)
+				})
+			})
+
+			Context("missing calc", func() {
+				It("🧪 should: raise error", func() {
+					defer leaktest.Check(GinkgoT())()
+
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
+
+					rx.Assert(ctx, testObservable[float32](ctx,
+						float32(1.0), float32(2.0), float32(3.0),
+					).Sum(
+					// forget to provide a calculator
+					),
+						rx.HasError[float32]{
+							Expected: []error{rx.MissingCalcError{}},
+						},
 					)
 				})
 			})

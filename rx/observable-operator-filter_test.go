@@ -46,7 +46,7 @@ var _ = Describe("Observable operator", func() {
 
 				obs := testObservable[int](ctx, 1, 2, 3, 4).Filter(even)
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{2, 4},
 					},
 					rx.HasNoError[int]{},

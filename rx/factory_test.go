@@ -29,7 +29,8 @@ import (
 
 	"github.com/fortytw2/leaktest"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
-	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
+	"github.com/onsi/ginkgo/v2/dsl/decorators"
+	. "github.com/onsi/gomega" //nolint:revive // gomega ok
 	"github.com/samber/lo"
 
 	"github.com/snivilised/lorax/enums"
@@ -50,7 +51,7 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, 1, 2, 3),
 					rx.Empty[int](),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems[int]{
+				rx.Assert(context.Background(), obs, rx.ContainItems[int]{
 					Expected: []int{1, 2, 3},
 				})
 			})
@@ -70,7 +71,7 @@ var _ = Describe("Factory", func() {
 					rx.Empty[int](),
 					rx.Empty[int](),
 				})
-				rx.Assert(context.Background(), obs, rx.HasItems[int]{
+				rx.Assert(context.Background(), obs, rx.ContainItems[int]{
 					Expected: []int{1, 2, 3},
 				})
 			})
@@ -86,22 +87,25 @@ var _ = Describe("Factory", func() {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
+				withCalc := rx.WithCalc(rx.Calc[int]())
 				obs := rx.CombineLatest(func(values ...int) int {
 					return lo.Sum(values)
 				},
 					lo.Map([]rx.Observable[int]{
-						testObservable[int](ctx, 1, 2),
-						testObservable[int](ctx, 10, 11),
+						testObservableWith[int](ctx, 10, 11)(withCalc),
+						testObservableWith[int](ctx, 10, 11)(withCalc),
 					}, func(it rx.Observable[int], _ int) rx.Observable[int] {
 						return it
-					}), rx.Calc[int]())
+					}),
+					rx.WithCalc(rx.Calc[int]()),
+				)
 
 				rx.Assert(context.Background(), obs, rx.IsNotEmpty[int]{})
 			})
 		})
 
 		When("Empty", func() {
-			It("🧪 should: be able to detect empty observable", func() {
+			It("🧪 should: result in empty observable", func() {
 				// Test_CombineLatest_Empty
 				defer leaktest.Check(GinkgoT())()
 
@@ -111,18 +115,19 @@ var _ = Describe("Factory", func() {
 				obs := rx.CombineLatest(func(values ...int) int {
 					return lo.Sum(values)
 				}, lo.Map([]rx.Observable[int]{
-					testObservable[int](ctx, 1, 2),
+					testObservableWith[int](ctx, 1, 2)(rx.WithCalc(rx.Calc[int]())),
 					rx.Empty[int](),
 				}, func(it rx.Observable[int], _ int) rx.Observable[int] {
 					return it
-				}), rx.Calc[int]())
+				}),
+				)
 
 				rx.Assert(context.Background(), obs, rx.IsEmpty[int]{})
 			})
 		})
 
 		When("Contains error", func() {
-			It("🧪 should: be able to detect error", func() {
+			It("🧪 should: result in error", func() {
 				// Test_CombineLatest_Error
 				defer leaktest.Check(GinkgoT())()
 
@@ -136,12 +141,40 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, errFoo),
 				}, func(it rx.Observable[int], _ int) rx.Observable[int] {
 					return it
-				}), rx.Calc[int]())
+				}),
+					rx.WithCalc(rx.Calc[int]()),
+				)
 
 				rx.Assert(context.Background(), obs,
 					rx.IsEmpty[int]{},
 					rx.HasError[int]{
 						Expected: []error{errFoo},
+					},
+				)
+			})
+		})
+
+		When("Missing calc", func() {
+			It("🧪 should: result in error", func() {
+				defer leaktest.Check(GinkgoT())()
+
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				obs := rx.CombineLatest(func(values ...int) int {
+					return lo.Sum(values)
+				},
+					lo.Map([]rx.Observable[int]{
+						testObservable[int](ctx, 10, 11),
+						testObservable[int](ctx, 10, 11),
+					}, func(it rx.Observable[int], _ int) rx.Observable[int] {
+						return it
+					}),
+				)
+
+				rx.Assert(context.Background(), obs,
+					rx.HasError[int]{
+						Expected: []error{rx.MissingCalcError{}},
 					},
 				)
 			})
@@ -161,7 +194,7 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, 1, 2, 3),
 				})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 				)
@@ -181,7 +214,7 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, 4, 5, 6),
 				})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3, 4, 5, 6},
 					},
 				)
@@ -202,7 +235,7 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, 7, 8, 9),
 				})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
 					},
 				)
@@ -238,7 +271,7 @@ var _ = Describe("Factory", func() {
 					testObservable[int](ctx, 1, 2, 3),
 				})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 				)
@@ -248,7 +281,7 @@ var _ = Describe("Factory", func() {
 					rx.Empty[int](),
 				})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					})
 			})
@@ -267,7 +300,7 @@ var _ = Describe("Factory", func() {
 					next <- rx.Of(3)
 				}})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 					rx.HasNoError[int]{},
@@ -286,7 +319,7 @@ var _ = Describe("Factory", func() {
 					next <- rx.Of(3)
 				}})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 					rx.HasNoError[int]{})
@@ -338,7 +371,7 @@ var _ = Describe("Factory", func() {
 						next <- rx.Of(3)
 					}})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 					rx.HasNoError[int]{},
@@ -408,12 +441,12 @@ var _ = Describe("Factory", func() {
 					next <- rx.Of(3)
 				}})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 					rx.HasNoError[int]{})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 					rx.HasNoError[int]{},
@@ -436,13 +469,13 @@ var _ = Describe("Factory", func() {
 					return i + 1, nil
 				})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{3, 4, 5},
 					},
 					rx.HasNoError[int]{},
 				)
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{3, 4, 5},
 					},
 					rx.HasNoError[int]{},
@@ -465,7 +498,7 @@ var _ = Describe("Factory", func() {
 					return i + 1, nil
 				})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{3, 4, 5},
 					},
 					rx.HasNoError[int]{},
@@ -490,7 +523,7 @@ var _ = Describe("Factory", func() {
 					next <- rx.Error[int](errFoo)
 				}})
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2},
 					},
 					rx.HasError[int]{
@@ -527,7 +560,7 @@ var _ = Describe("Factory", func() {
 
 			obs := rx.FromChannel(ch)
 			rx.Assert(context.Background(), obs,
-				rx.HasItems[int]{
+				rx.ContainItems[int]{
 					Expected: []int{1, 2, 3},
 				},
 				rx.HasNoError[int]{},
@@ -555,13 +588,19 @@ var _ = Describe("Factory", func() {
 				obs1 := rx.FromChannel(make(chan rx.Item[int], 10)).
 					Map(func(_ context.Context, _ int) (int, error) {
 						return 1, nil
-					}, rx.WithContext[int](ctx), rx.WithBufferedChannel[int](11))
+					},
+						rx.WithContext[int](ctx),
+						rx.WithBufferedChannel[int](11),
+					)
 
 				Expect(cap(obs1.Observe())).To(Equal(11))
 
 				obs2 := obs1.Map(func(_ context.Context, _ int) (int, error) {
 					return 1, nil
-				}, rx.WithContext[int](ctx), rx.WithBufferedChannel[int](12))
+				},
+					rx.WithContext[int](ctx),
+					rx.WithBufferedChannel[int](12),
+				)
 
 				Expect(cap(obs2.Observe())).To(Equal(12))
 			})
@@ -633,7 +672,7 @@ var _ = Describe("Factory", func() {
 		})
 	})
 
-	// FIXME: Test_Interval
+	// FIXME: rxgo:Test_Interval
 
 	Context("JustItem", func() {
 		When("given: a value", func() {
@@ -665,13 +704,13 @@ var _ = Describe("Factory", func() {
 
 				obs := rx.Just(1, 2, 3)()
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 					rx.HasNoError[int]{},
 				)
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 3},
 					},
 					rx.HasNoError[int]{},
@@ -690,14 +729,14 @@ var _ = Describe("Factory", func() {
 
 				obs := rx.Just([]customer{{id: 1}, {id: 2}, {id: 3}}...)()
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[customer]{
+					rx.ContainItems[customer]{
 						Expected: []customer{{id: 1}, {id: 2}, {id: 3}},
 					},
 					rx.HasNoError[customer]{},
 				)
 
 				rx.Assert(context.Background(), obs,
-					rx.HasItems[customer]{
+					rx.ContainItems[customer]{
 						Expected: []customer{{id: 1}, {id: 2}, {id: 3}},
 					},
 					rx.HasNoError[customer]{},
@@ -802,63 +841,227 @@ var _ = Describe("Factory", func() {
 	})
 
 	Context("Range", func() {
-		When("positive count", func() {
-			It("🧪 should: create observable", func() {
-				// Test_Range
-				defer leaktest.Check(GinkgoT())()
+		Context("principle", func() {
+			When("positive count", func() {
+				It("🧪 should: create observable", func() {
+					// Test_Range
+					defer leaktest.Check(GinkgoT())()
 
-				/*
-					TODO: needs to accommodate item.Num(), ie the numeric aux value
-					and also should be modified to support all the other
-					new ways of interpreting an item (Ch, Tick, Tv)
-				*/
-
-				const (
-					start = 5
-					count = 3
-				)
-
-				obs := rx.Range[int](start, count)
-				rx.Assert(context.Background(), obs,
-					rx.HasNumbers[int]{
-						Expected: []int{5, 6, 7},
-					},
-				)
-				// Test whether the observable is reproducible
-				rx.Assert(context.Background(), obs,
-					rx.HasNumbers[int]{
-						Expected: []int{5, 6, 7},
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 5,
+						Whilst:  rx.LessThan(8),
 					})
+
+					rx.Assert(context.Background(), obs,
+						rx.HasItems[int]{
+							Expected: []int{5, 6, 7},
+						},
+					)
+				})
+			})
+
+			When("missing StartAt", func() {
+				It("🧪 should: default to 0", func() {
+					// Test_Range
+					defer leaktest.Check(GinkgoT())()
+
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						Whilst: rx.LessThan(8),
+					})
+
+					rx.Assert(context.Background(), obs,
+						rx.HasItems[int]{
+							Expected: []int{0, 1, 2, 3, 4, 5, 6, 7},
+						},
+					)
+				})
+			})
+
+			When("missing StepBy", func() {
+				It("🧪 should: default to 1", func() {
+					defer leaktest.Check(GinkgoT())()
+
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 5,
+						Whilst:  rx.LessThan(12),
+					})
+
+					rx.Assert(context.Background(), obs,
+						rx.HasItems[int]{
+							Expected: []int{5, 6, 7, 8, 9, 10, 11},
+						},
+					)
+				})
+			})
+
+			When("StepBy 2", func() {
+				It("🧪 should: create observable", func() {
+					defer leaktest.Check(GinkgoT())()
+
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 5,
+						StepBy:  2,
+						Whilst:  rx.LessThan(12),
+					})
+
+					rx.Assert(context.Background(), obs,
+						rx.HasItems[int]{
+							Expected: []int{5, 7, 9, 11},
+						},
+					)
+				})
+			})
+
+			When("StepBy 2 and reverse StepBy", func() {
+				It("🧪 should: create observable", func() {
+					defer leaktest.Check(GinkgoT())()
+
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 11,
+						StepBy:  -2,
+						Whilst:  rx.MoreThan(4),
+					})
+
+					rx.Assert(context.Background(), obs,
+						rx.HasItems[int]{
+							Expected: []int{11, 9, 7, 5},
+						},
+					)
+				})
 			})
 		})
 
-		When("negative count", func() {
-			It("🧪 should: contain detectable error", func() {
-				// Test_Range_NegativeCount
-				defer leaktest.Check(GinkgoT())()
+		// Context("default", func() {
+		// 	XIt("🧪 should: create observable", func() {
+		// 		defer leaktest.Check(GinkgoT())()
 
-				obs := rx.Range[int](1, -5)
-				rx.Assert(context.Background(), obs,
-					rx.HasAnError[int]{},
-				)
+		// 		const (
+		// 			start = 5
+		// 			count = 3
+		// 		)
+
+		// 		rx.Range(&rx.NumericRangeIterator[int]{
+		// 			StartAt: 5,
+		// 			Whilst:  rx.LessThan(8),
+		// 		})
+
+		// 		obs := rx.RangeL[int](start, count)
+		// 		rx.Assert(context.Background(), obs,
+		// 			rx.HasNumbers[int]{
+		// 				Expected: []int{5, 6, 7},
+		// 			},
+		// 		)
+		// 		// Test whether the observable is reproducible
+		// 		rx.Assert(context.Background(), obs,
+		// 			rx.HasNumbers[int]{
+		// 				Expected: []int{5, 6, 7},
+		// 			},
+		// 		)
+		// 	})
+		// })
+
+		//
+
+		// When("negative count", func() {
+		// 	It("🧪 should: contain detectable error", func() {
+		// 		// Test_Range_NegativeCount
+		// 		defer leaktest.Check(GinkgoT())()
+
+		// 		obs := rx.RangeL[int](1, -5)
+		// 		rx.Assert(context.Background(), obs,
+		// 			rx.HasAnError[int]{},
+		// 		)
+		// 	})
+		// })
+
+		//
+
+		// When("maximum exceeded", func() {
+		// 	It("🧪 should: contain detectable error", func() {
+		// 		// Test_Range_MaximumExceeded
+		// 		defer leaktest.Check(GinkgoT())()
+
+		// 		const (
+		// 			start = 1 << 31
+		// 			count = 1
+		// 		)
+
+		// 		obs := rx.RangeL[int](start, count)
+		// 		rx.Assert(context.Background(), obs,
+		// 			rx.HasAnError[int]{},
+		// 		)
+		// 	})
+		// })
+
+		Context("errors", func() {
+			When("missing WhileFn", func() {
+				It("🧪 should: result in error", func() {
+					// Test_Range
+					defer leaktest.Check(GinkgoT())()
+
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 5,
+					})
+
+					rx.Assert(context.Background(), obs,
+						rx.HasError[int]{
+							Expected: []error{rx.RangeMissingWhilstError},
+						},
+					)
+				})
 			})
 		})
 
-		When("maximum exceeded", func() {
-			It("🧪 should: contain detectable error", func() {
-				// Test_Range_MaximumExceeded
-				defer leaktest.Check(GinkgoT())()
+		Context("custom range iterator with nominated field", func() {
+			When("positive count", func() {
+				It("🧪 should: create observable", func() {
+					// Test_Range
+					defer leaktest.Check(GinkgoT())()
 
-				const (
-					start = 1 << 31
-					count = 1
-				)
+					obs := rx.RangeNF(&widgetByIDRangeIterator{
+						StartAt: widget{id: 5},
+						StepBy:  widget{id: 1},
+						Whilst:  widgetLessThan(widget{id: 8}),
+					})
 
-				obs := rx.Range[int](start, count)
-				rx.Assert(context.Background(), obs,
-					rx.HasAnError[int]{},
-				)
+					rx.Assert(context.Background(), obs,
+						rx.HasItems[widget]{
+							Expected: []widget{
+								{id: 5},
+								{id: 6},
+								{id: 7},
+							},
+						},
+					)
+				})
 			})
+		})
+
+		Context("NominatedRangeIterator", func() {
+			When("positive count", func() {
+				It("🧪 should: create observable", decorators.Label("need pointer receiver on T"), func() {
+					// Test_Range
+					defer leaktest.Check(GinkgoT())()
+
+					obs := rx.RangeNF(&rx.NominatedRangeIterator[widget, int]{
+						StartAt: widget{id: 5},
+						StepBy:  widget{id: 1},
+						Whilst:  rx.LessThanNF(widget{id: 8}),
+					})
+
+					rx.Assert(context.Background(), obs,
+						rx.HasItems[widget]{
+							Expected: []widget{
+								{id: 5},
+								{id: 6},
+								{id: 7},
+							},
+						},
+					)
+				})
+			})
+
+			// reverse
 		})
 	})
 

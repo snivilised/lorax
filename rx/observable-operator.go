@@ -93,17 +93,18 @@ func (op *allOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	}
 }
 
-func (o *ObservableImpl[T]) Average(calc Calculator[T],
-	opts ...Option[T],
+func (o *ObservableImpl[T]) Average(opts ...Option[T],
 ) Single[T] {
 	const (
 		forceSeq     = false
 		bypassGather = false
 	)
 
+	option := parseOptions(opts...)
+
 	return single(o.parent, o, func() operator[T] {
 		return &averageOperator[T]{
-			calc: calc,
+			calc: option.calc(),
 		}
 	}, forceSeq, bypassGather, opts...)
 }
@@ -123,6 +124,12 @@ func (op *averageOperator[T]) next(ctx context.Context, item Item[T],
 		).SendContext(ctx, dst)
 	}
 
+	if op.calc == nil {
+		Error[T](MissingCalcError{}).SendContext(ctx, dst)
+
+		return
+	}
+
 	op.sum = op.calc.Add(op.sum, item.V)
 	op.count = op.calc.Inc(op.count)
 }
@@ -134,6 +141,10 @@ func (op *averageOperator[T]) err(ctx context.Context, item Item[T],
 }
 
 func (op *averageOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
+	if op.calc == nil {
+		return
+	}
+
 	if op.calc.IsZero(op.count) {
 		Of(op.calc.Zero()).SendContext(ctx, dst)
 	} else {
@@ -268,6 +279,7 @@ func (op *containsOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	}
 }
 
+// Count counts the number of items emitted by the source Observable and emit only this value.
 func (o *ObservableImpl[T]) Count(opts ...Option[T]) Single[T] {
 	const (
 		forceSeq     = true
@@ -2220,9 +2232,20 @@ func (o *ObservableImpl[T]) StartWith(iterable Iterable[T], opts ...Option[T]) O
 }
 
 // Sum calculates the average emitted by an Observable and emits the result
-func (o *ObservableImpl[T]) Sum(calc Calculator[T], opts ...Option[T]) OptionalSingle[T] {
+func (o *ObservableImpl[T]) Sum(opts ...Option[T]) OptionalSingle[T] {
+	options := parseOptions[T]()
+	calc := options.calc()
+
 	// TODO: bomb!!!: do we use Num?
 	return o.Reduce(func(_ context.Context, acc, item Item[T]) (T, error) {
+		if calc == nil {
+			var (
+				zero T
+			)
+
+			return zero, MissingCalcError{}
+		}
+
 		return calc.Add(acc.V, item.V), nil
 	}, opts...)
 }

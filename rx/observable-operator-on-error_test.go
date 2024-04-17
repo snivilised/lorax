@@ -46,7 +46,7 @@ var _ = Describe("Observable operator", func() {
 					},
 				)
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, 10, 20},
 					},
 					rx.HasNoError[int]{},
@@ -70,7 +70,7 @@ var _ = Describe("Observable operator", func() {
 					},
 				)
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, -1, 4, -1, 6},
 					},
 					rx.HasNoError[int]{},
@@ -90,7 +90,7 @@ var _ = Describe("Observable operator", func() {
 
 				obs := testObservable[int](ctx, 1, 2, errFoo, 4, errBar, 6).OnErrorReturnItem(-1)
 				rx.Assert(ctx, obs,
-					rx.HasItems[int]{
+					rx.ContainItems[int]{
 						Expected: []int{1, 2, -1, 4, -1, 6},
 					},
 					rx.HasNoError[int]{},

@@ -40,10 +40,15 @@ var _ = Describe("Observable operator", func() {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
-				obs := rx.Range[int](0, 100).ElementAt(99)
-				rx.Assert(ctx, obs, rx.HasNumbers[int]{
-					Expected: []int{99},
-				})
+				obs := rx.Range(&rx.NumericRangeIterator[int]{
+					StartAt: 0,
+					Whilst:  rx.LessThan(100),
+				}).ElementAt(99)
+				rx.Assert(ctx, obs,
+					rx.HasItems[int]{
+						Expected: []int{99},
+					},
+				)
 			})
 		})
 
@@ -57,7 +62,10 @@ var _ = Describe("Observable operator", func() {
 					defer cancel()
 
 					obs := testObservable[int](ctx, 0, 1, 2, 3, 4).ElementAt(10)
-					rx.Assert(ctx, obs, rx.IsEmpty[int]{}, rx.HasAnError[int]{})
+					rx.Assert(ctx, obs,
+						rx.IsEmpty[int]{},
+						rx.HasAnError[int]{},
+					)
 				})
 			})
 		})
@@ -71,10 +79,15 @@ var _ = Describe("Observable operator", func() {
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
-					obs := rx.Range[int](0, 100).ElementAt(99, rx.WithCPUPool[int]())
-					rx.Assert(ctx, obs, rx.HasNumbers[int]{
-						Expected: []int{99},
-					})
+					obs := rx.Range(&rx.NumericRangeIterator[int]{
+						StartAt: 0,
+						Whilst:  rx.LessThan(11),
+					}).ElementAt(10, rx.WithCPUPool[int]())
+					rx.Assert(ctx, obs,
+						rx.HasItems[int]{
+							Expected: []int{10},
+						},
+					)
 				})
 			})
 		})
