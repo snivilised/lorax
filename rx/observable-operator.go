@@ -156,14 +156,10 @@ func (op *averageOperator[T]) end(ctx context.Context, dst chan<- Item[T]) {
 func (op *averageOperator[T]) gatherNext(_ context.Context, item Item[T],
 	_ chan<- Item[T], _ operatorOptions[T],
 ) {
-	_ = item
-
-	// TODO(fix): v := item.V.(*averageOperator[T])
-	// op.calc.Add(op.sum)
-	// op.sum += v.sum
-	// op.count += v.count
-	//
-	panic("averageOperator.gatherNext NOT-IMPL")
+	if v, err := TryOpaque[T, *averageOperator[T]](item); err != nil {
+		op.sum = op.calc.Add(op.sum, v.sum)
+		op.count = op.calc.Add(op.count, v.count)
+	}
 }
 
 // BackOffRetry implements a backoff retry if a source Observable sends an error,
