@@ -93,6 +93,7 @@ func (op *allOperator[T]) gatherNext(ctx context.Context, item Item[T],
 	}
 }
 
+// Average calculates the average of numbers emitted by an Observable and emits the result.
 func (o *ObservableImpl[T]) Average(opts ...Option[T],
 ) Single[T] {
 	const (
@@ -1496,7 +1497,7 @@ func (o *ObservableImpl[T]) Reduce(apply Func2[T], opts ...Option[T]) OptionalSi
 	return optionalSingle(o.parent, o, func() operator[T] {
 		return &reduceOperator[T]{
 			apply: apply,
-			acc:   Num[T](0), // acc needs to be a Num: bomb!!!
+			acc:   Zero[T](),
 			empty: true,
 		}
 	}, forceSeq, bypassGather, opts...)
@@ -1512,7 +1513,7 @@ func (op *reduceOperator[T]) next(ctx context.Context, item Item[T],
 	dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
 	op.empty = false
-	v, err := op.apply(ctx, op.acc, item) // bomb!!!
+	v, err := op.apply(ctx, op.acc, item)
 
 	if err != nil {
 		Error[T](err).SendContext(ctx, dst)
@@ -2233,10 +2234,9 @@ func (o *ObservableImpl[T]) StartWith(iterable Iterable[T], opts ...Option[T]) O
 
 // Sum calculates the average emitted by an Observable and emits the result
 func (o *ObservableImpl[T]) Sum(opts ...Option[T]) OptionalSingle[T] {
-	options := parseOptions[T]()
+	options := parseOptions(opts...)
 	calc := options.calc()
 
-	// TODO: bomb!!!: do we use Num?
 	return o.Reduce(func(_ context.Context, acc, item Item[T]) (T, error) {
 		if calc == nil {
 			var (

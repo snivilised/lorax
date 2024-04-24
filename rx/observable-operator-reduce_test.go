@@ -27,13 +27,12 @@ import (
 
 	"github.com/fortytw2/leaktest"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
-	"github.com/onsi/ginkgo/v2/dsl/decorators"
 	"github.com/snivilised/lorax/enums"
 	"github.com/snivilised/lorax/rx"
 )
 
 var _ = Describe("Observable operator", func() {
-	XContext("Reduce", decorators.Label("broken by reduce acc"), func() {
+	Context("Reduce", func() {
 		When("using Range", func() {
 			It("🧪 should: compute reduction ok", func() {
 				// rxgo: Test_Observable_Reduce
@@ -45,9 +44,9 @@ var _ = Describe("Observable operator", func() {
 				obs := rx.Range(&rx.NumericRangeIterator[int]{
 					StartAt: 1,
 					Whilst:  rx.LessThan(10001),
-				}).Reduce( // 1, 10000
-					func(_ context.Context, acc, num rx.Item[int]) (int, error) {
-						return acc.V + num.Num(), nil
+				}).Reduce(
+					func(_ context.Context, acc, item rx.Item[int]) (int, error) {
+						return acc.V + item.V, nil
 					},
 				)
 				rx.Assert(ctx, obs,
@@ -104,7 +103,7 @@ var _ = Describe("Observable operator", func() {
 
 		Context("Parallel", func() {
 			When("using Range", func() {
-				XIt("🧪 should: compute reduction ok", decorators.Label("repairing"), func() {
+				It("🧪 should: compute reduction ok", func() {
 					// rxgo: Test_Observable_Reduce_Parallel
 					defer leaktest.Check(GinkgoT())()
 
@@ -113,10 +112,10 @@ var _ = Describe("Observable operator", func() {
 
 					obs := rx.Range(&rx.NumericRangeIterator[int]{
 						StartAt: 1,
-						Whilst:  rx.LessThan(6),
+						Whilst:  rx.LessThan(10001),
 					}).Reduce(
-						func(_ context.Context, acc, num rx.Item[int]) (int, error) {
-							return acc.Num() + num.Num(), nil
+						func(_ context.Context, acc, item rx.Item[int]) (int, error) {
+							return acc.V + item.V, nil
 						}, rx.WithCPUPool[int](),
 					)
 					rx.Assert(ctx, obs,
@@ -131,7 +130,7 @@ var _ = Describe("Observable operator", func() {
 
 		Context("Parallel/Error", func() {
 			When("using Range", func() {
-				XIt("🧪 should: result in error", func() {
+				It("🧪 should: result in error", func() {
 					// rxgo: Test_Observable_Reduce_Parallel_Error
 					defer leaktest.Check(GinkgoT())()
 
@@ -141,11 +140,11 @@ var _ = Describe("Observable operator", func() {
 						StartAt: 1,
 						Whilst:  rx.LessThan(10001),
 					}).Reduce(
-						func(_ context.Context, acc, num rx.Item[int]) (int, error) {
-							if num.Num() == 1000 {
+						func(_ context.Context, acc, item rx.Item[int]) (int, error) {
+							if item.V == 1000 {
 								return 0, errFoo
 							}
-							return acc.Num() + num.Num(), nil
+							return acc.V + item.V, nil
 						}, rx.WithContext[int](ctx), rx.WithCPUPool[int](),
 					)
 					rx.Assert(ctx, obs,
@@ -157,21 +156,22 @@ var _ = Describe("Observable operator", func() {
 			})
 
 			When("error with error strategy", func() {
-				XIt("🧪 should: result in error", func() {
+				It("🧪 should: result in error", func() {
 					// rxgo: Test_Observable_Reduce_Parallel_WithErrorStrategy
 					defer leaktest.Check(GinkgoT())()
 
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
+
 					obs := rx.Range(&rx.NumericRangeIterator[int]{
 						StartAt: 1,
 						Whilst:  rx.LessThan(10001),
 					}).Reduce(
-						func(_ context.Context, acc, num rx.Item[int]) (int, error) {
-							if num.Num() == 1 {
+						func(_ context.Context, acc, item rx.Item[int]) (int, error) {
+							if item.V == 1 {
 								return 0, errFoo
 							}
-							return acc.Num() + num.Num(), nil
+							return acc.V + item.V, nil
 						}, rx.WithCPUPool[int](), rx.WithErrorStrategy[int](enums.ContinueOnError),
 					)
 					rx.Assert(ctx, obs,
