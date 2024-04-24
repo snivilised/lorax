@@ -149,13 +149,13 @@ type (
 		While(current T) bool
 	}
 
-	NominatedField[T any, O Numeric] interface {
+	ProxyField[T any, O Numeric] interface {
 		Field() O
 		Inc(index *T, by T) *T
 		Index(int) *T
 	}
 
-	RangeIteratorNF[T NominatedField[T, O], O Numeric] interface {
+	RangeIteratorPF[T ProxyField[T, O], O Numeric] interface {
 		Init() error
 		// Start should return the initial index value
 		Start() (*T, error)

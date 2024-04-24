@@ -22,11 +22,6 @@ package rx
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// type rangeIterableL[T any] struct {
-// 	start, count NumVal
-// 	opts         []Option[T]
-// }
-
 type rangeIterable[T any] struct {
 	start, count NumVal
 	iterator     RangeIterator[T]
@@ -59,21 +54,21 @@ func (i *rangeIterable[T]) Observe(opts ...Option[T]) <-chan Item[T] {
 	return next
 }
 
-type rangeIterableNF[T NominatedField[T, O], O Numeric] struct {
-	iterator RangeIteratorNF[T, O]
+type rangeIterablePF[T ProxyField[T, O], O Numeric] struct {
+	iterator RangeIteratorPF[T, O]
 	opts     []Option[T]
 }
 
-func newRangeIterableNF[T NominatedField[T, O], O Numeric](iterator RangeIteratorNF[T, O],
+func newRangeIterableNF[T ProxyField[T, O], O Numeric](iterator RangeIteratorPF[T, O],
 	opts ...Option[T],
 ) Iterable[T] {
-	return &rangeIterableNF[T, O]{
+	return &rangeIterablePF[T, O]{
 		iterator: iterator,
 		opts:     opts,
 	}
 }
 
-func (i *rangeIterableNF[T, O]) Observe(opts ...Option[T]) <-chan Item[T] {
+func (i *rangeIterablePF[T, O]) Observe(opts ...Option[T]) <-chan Item[T] {
 	option := parseOptions(append(i.opts, opts...)...)
 	ctx := option.buildContext(emptyContext)
 	next := option.buildChannel()
@@ -113,7 +108,7 @@ func Count[T Numeric](count T) WhilstFunc[T] {
 
 type NumericRangeIterator[T Numeric] struct {
 	StartAt T
-	StepBy  T
+	By      T
 	Whilst  WhilstFunc[T]
 	zero    T
 }
@@ -126,11 +121,11 @@ func (i *NumericRangeIterator[T]) Init() error {
 	return nil
 }
 
-// Start should return the initial index value. If the StepBy has
+// Start should return the initial index value. If the By value has
 // not been set, it will default to 1.
 func (i *NumericRangeIterator[T]) Start() (*T, error) {
-	if i.StepBy == 0 {
-		i.StepBy = 1
+	if i.By == 0 {
+		i.By = 1
 	}
 
 	if i.Whilst == nil {
@@ -141,12 +136,12 @@ func (i *NumericRangeIterator[T]) Start() (*T, error) {
 }
 
 func (i *NumericRangeIterator[T]) Step() T {
-	return i.StepBy
+	return i.By
 }
 
 // Increment increments the index value
 func (i *NumericRangeIterator[T]) Increment(index *T) T {
-	*(index) += i.StepBy
+	*(index) += i.By
 
 	return *(index)
 }
@@ -157,14 +152,14 @@ func (i *NumericRangeIterator[T]) While(current T) bool {
 	return i.Whilst(current)
 }
 
-type NominatedRangeIterator[T NominatedField[T, O], O Numeric] struct {
+type ProxyRangeIterator[T ProxyField[T, O], O Numeric] struct {
 	StartAt T
-	StepBy  T
+	By      T
 	Whilst  WhilstFunc[T]
 	zero    T
 }
 
-func (i *NominatedRangeIterator[T, O]) Init() error {
+func (i *ProxyRangeIterator[T, O]) Init() error {
 	if i.Whilst == nil {
 		return RangeMissingWhilstError
 	}
@@ -172,11 +167,11 @@ func (i *NominatedRangeIterator[T, O]) Init() error {
 	return nil
 }
 
-// Start should return the initial index value. If the StepBy has
+// Start should return the initial index value. If By has
 // not been set, a panic occurs
-func (i *NominatedRangeIterator[T, O]) Start() (*T, error) {
-	if i.StepBy.Field() == 0 {
-		panic("bad step-by, can't be zero")
+func (i *ProxyRangeIterator[T, O]) Start() (*T, error) {
+	if i.By.Field() == 0 {
+		panic("bad by value, can't be zero")
 	}
 
 	if i.Whilst == nil {
@@ -188,12 +183,12 @@ func (i *NominatedRangeIterator[T, O]) Start() (*T, error) {
 	return &index, nil
 }
 
-func (i *NominatedRangeIterator[T, O]) Step() O {
-	return i.StepBy.Field()
+func (i *ProxyRangeIterator[T, O]) Step() O {
+	return i.By.Field()
 }
 
 // Increment increments index value
-func (i *NominatedRangeIterator[T, O]) Increment(index *T) *T {
+func (i *ProxyRangeIterator[T, O]) Increment(index *T) *T {
 	// This does look a bit strange but its a work around
 	// for the fact that the instance of T is implemented with
 	// non-pointer receivers and therefore can't make modifications
@@ -205,24 +200,24 @@ func (i *NominatedRangeIterator[T, O]) Increment(index *T) *T {
 	// index receives a pointer to a copy of itself, via Increment
 	// and increments the copy.
 	//
-	(*index).Inc(index, i.StepBy)
+	(*index).Inc(index, i.By)
 
 	return index
 }
 
 // While defines a condition that must be true for the loop to
 // continue iterating.
-func (i *NominatedRangeIterator[T, O]) While(current T) bool {
+func (i *ProxyRangeIterator[T, O]) While(current T) bool {
 	return i.Whilst(current)
 }
 
-func LessThanNF[T NominatedField[T, O], O Numeric](until T) WhilstFunc[T] {
+func LessThanPF[T ProxyField[T, O], O Numeric](until T) WhilstFunc[T] {
 	return func(current T) bool {
 		return current.Field() < until.Field()
 	}
 }
 
-func MoreThanNF[T NominatedField[T, O], O Numeric](until T) WhilstFunc[T] {
+func MoreThanPF[T ProxyField[T, O], O Numeric](until T) WhilstFunc[T] {
 	return func(current T) bool {
 		return current.Field() > until.Field()
 	}

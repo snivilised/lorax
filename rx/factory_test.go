@@ -877,7 +877,7 @@ var _ = Describe("Factory", func() {
 				})
 			})
 
-			When("missing StepBy", func() {
+			When("missing By", func() {
 				It("🧪 should: default to 1", func() {
 					defer leaktest.Check(GinkgoT())()
 
@@ -894,13 +894,13 @@ var _ = Describe("Factory", func() {
 				})
 			})
 
-			When("StepBy 2", func() {
+			When("By 2", func() {
 				It("🧪 should: create observable", func() {
 					defer leaktest.Check(GinkgoT())()
 
 					obs := rx.Range(&rx.NumericRangeIterator[int]{
 						StartAt: 5,
-						StepBy:  2,
+						By:      2,
 						Whilst:  rx.LessThan(12),
 					})
 
@@ -912,13 +912,13 @@ var _ = Describe("Factory", func() {
 				})
 			})
 
-			When("StepBy 2 and reverse StepBy", func() {
+			When("By 2 and reverse By", func() {
 				It("🧪 should: create observable", func() {
 					defer leaktest.Check(GinkgoT())()
 
 					obs := rx.Range(&rx.NumericRangeIterator[int]{
 						StartAt: 11,
-						StepBy:  -2,
+						By:      -2,
 						Whilst:  rx.MoreThan(4),
 					})
 
@@ -1012,7 +1012,7 @@ var _ = Describe("Factory", func() {
 			})
 		})
 
-		Context("custom range iterator with nominated field", func() {
+		Context("custom range iterator with proxy field", func() {
 			When("positive count", func() {
 				It("🧪 should: create observable", func() {
 					// Test_Range
@@ -1020,7 +1020,7 @@ var _ = Describe("Factory", func() {
 
 					obs := rx.RangeNF(&widgetByIDRangeIterator{
 						StartAt: widget{id: 5},
-						StepBy:  widget{id: 1},
+						By:      widget{id: 1},
 						Whilst:  widgetLessThan(widget{id: 8}),
 					})
 
@@ -1037,16 +1037,16 @@ var _ = Describe("Factory", func() {
 			})
 		})
 
-		Context("NominatedRangeIterator", func() {
+		Context("ProxyRangeIterator", func() {
 			When("positive count", func() {
 				It("🧪 should: create observable", func() {
 					// Test_Range
 					defer leaktest.Check(GinkgoT())()
 
-					obs := rx.RangeNF(&rx.NominatedRangeIterator[widget, int]{
+					obs := rx.RangeNF(&rx.ProxyRangeIterator[widget, int]{
 						StartAt: widget{id: 5},
-						StepBy:  widget{id: 1},
-						Whilst:  rx.LessThanNF(widget{id: 8}),
+						By:      widget{id: 1},
+						Whilst:  rx.LessThanPF(widget{id: 8}),
 					})
 
 					rx.Assert(context.Background(), obs,

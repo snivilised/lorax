@@ -398,8 +398,8 @@ func Range[T Numeric](iterator RangeIterator[T], opts ...Option[T]) Observable[T
 }
 
 // RangeNF creates an Observable that emits count sequential integers beginning
-// at start, for non numeric types, which do contain a nominated Numeric member
-func RangeNF[T NominatedField[T, O], O Numeric](iterator RangeIteratorNF[T, O],
+// at start, for non numeric types, which do contain a nominated proxy Numeric member
+func RangeNF[T ProxyField[T, O], O Numeric](iterator RangeIteratorPF[T, O],
 	opts ...Option[T],
 ) Observable[T] {
 	if err := iterator.Init(); err != nil {
