@@ -119,23 +119,24 @@ func (w widget) Index(i int) *widget {
 
 type widgetByIDRangeIterator struct {
 	StartAt widget
-	StepBy  widget
+	By      widget
 	Whilst  func(current widget) bool
+	zero    widget
 }
 
 func (i *widgetByIDRangeIterator) Init() error {
 	return nil
 }
 
-// Start should return the initial index value. If the StepBy has
+// Start should return the initial index value. If the By value has
 // not been set, it will default to 1.
 func (i *widgetByIDRangeIterator) Start() (*widget, error) {
-	if i.StepBy.id == 0 {
-		i.StepBy = widget{id: 1}
+	if i.By.id == 0 {
+		i.By = widget{id: 1}
 	}
 
 	if i.Whilst == nil {
-		return &widget{}, rx.BadRangeIteratorError{}
+		return &i.zero, rx.BadRangeIteratorError{}
 	}
 
 	index := i.StartAt
@@ -144,12 +145,12 @@ func (i *widgetByIDRangeIterator) Start() (*widget, error) {
 }
 
 func (i *widgetByIDRangeIterator) Step() int {
-	return i.StepBy.id
+	return i.By.id
 }
 
 // Increment returns a pointer to a new instance of with incremented index value
 func (i *widgetByIDRangeIterator) Increment(index *widget) *widget {
-	index.id += i.StepBy.id
+	index.id += i.By.id
 
 	return index
 }

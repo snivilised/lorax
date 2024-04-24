@@ -47,7 +47,7 @@ var _ = Describe("Observable operator", func() {
 				count := 11
 				obs := rx.Range(&rx.NumericRangeIterator[int]{
 					StartAt: 0,
-					StepBy:  1,
+					By:      1,
 					Whilst:  rx.LessThan(count),
 				}).GroupBy(length, func(item rx.Item[int]) int {
 					return item.V % length
@@ -96,7 +96,7 @@ var _ = Describe("Observable operator", func() {
 
 				obs := rx.Range(&rx.NumericRangeIterator[int]{
 					StartAt: 0,
-					StepBy:  1,
+					By:      1,
 					Whilst:  rx.LessThan(count),
 				}).GroupByDynamic(func(item rx.Item[int]) string {
 					if item.V == 10 {
@@ -163,7 +163,7 @@ var _ = Describe("Observable operator", func() {
 
 					obs := rx.Range(&rx.NumericRangeIterator[int]{
 						StartAt: 0,
-						StepBy:  1,
+						By:      1,
 						Whilst:  rx.LessThan(count),
 					}).GroupBy(length, func(_ rx.Item[int]) int {
 						return 4
