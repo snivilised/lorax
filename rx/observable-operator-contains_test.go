@@ -91,7 +91,6 @@ var _ = Context("Observable operator", func() {
 					// rxgo: Test_Observable_Contain_Parallel
 					defer leaktest.Check(GinkgoT())()
 
-					// TODO(impl): CPUPool
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 

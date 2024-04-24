@@ -31,13 +31,13 @@ import (
 )
 
 type (
-	// Item is a wrapper having either a value, error or an auxiliary value.
+	// Item is a wrapper having either a value, error or an opaque value
 	//
 	Item[T any] struct {
-		V    T
-		E    error
-		aux  any
-		disc enums.ItemDiscriminator
+		V      T
+		E      error
+		opaque any
+		disc   enums.ItemDiscriminator
 	}
 
 	// TimestampItem attach a timestamp to an item.
@@ -79,29 +79,29 @@ func Error[T any](err error) Item[T] {
 // Bool creates a type safe boolean instance
 func Bool[T any](b bool) Item[T] {
 	return Item[T]{
-		aux:  b,
-		disc: enums.ItemDiscBoolean,
+		opaque: b,
+		disc:   enums.ItemDiscBoolean,
 	}
 }
 
 // Returns the tick value of item
 func (it Item[T]) Bool() bool {
-	return it.aux.(bool)
+	return it.opaque.(bool)
 }
 
 // True creates a type safe boolean instance set to true
 func True[T any]() Item[T] {
 	return Item[T]{
-		aux:  true,
-		disc: enums.ItemDiscBoolean,
+		opaque: true,
+		disc:   enums.ItemDiscBoolean,
 	}
 }
 
 // False creates a type safe boolean instance set to false
 func False[T any]() Item[T] {
 	return Item[T]{
-		aux:  false,
-		disc: enums.ItemDiscBoolean,
+		opaque: false,
+		disc:   enums.ItemDiscBoolean,
 	}
 }
 
@@ -109,8 +109,8 @@ func False[T any]() Item[T] {
 func WCh[T any](ch any) Item[T] {
 	if c, ok := ch.(chan<- Item[T]); ok {
 		return Item[T]{
-			aux:  c,
-			disc: enums.ItemDiscWChan,
+			opaque: c,
+			disc:   enums.ItemDiscWChan,
 		}
 	}
 
@@ -119,33 +119,33 @@ func WCh[T any](ch any) Item[T] {
 
 // Returns the channel value of item
 func (it Item[T]) Ch() chan<- Item[T] {
-	return it.aux.(chan<- Item[T])
+	return it.opaque.(chan<- Item[T])
 }
 
 // Num creates a type safe tick value instance
 func Num[T any](n NumVal) Item[T] {
 	return Item[T]{
-		aux:  n,
-		disc: enums.ItemDiscNumber,
+		opaque: n,
+		disc:   enums.ItemDiscNumber,
 	}
 }
 
 // Returns the tick value of item
 func (it Item[T]) Num() NumVal {
-	return it.aux.(NumVal)
+	return it.opaque.(NumVal)
 }
 
 // Opaque creates an item from any type of value
 func Opaque[T any](o any) Item[T] {
 	return Item[T]{
-		aux:  o,
-		disc: enums.ItemDiscOpaque,
+		opaque: o,
+		disc:   enums.ItemDiscOpaque,
 	}
 }
 
 // Opaque returns the opaque value of item without typecast
 func (it Item[T]) Opaque() any {
-	return it.aux
+	return it.opaque
 }
 
 // TV creates a type safe tick instance (no value)
@@ -158,14 +158,14 @@ func Tick[T any]() Item[T] {
 // TV creates a type safe tick value instance
 func TV[T any](tv int) Item[T] {
 	return Item[T]{
-		aux:  tv,
-		disc: enums.ItemDiscTickValue,
+		opaque: tv,
+		disc:   enums.ItemDiscTickValue,
 	}
 }
 
 // Returns the tick value of item
 func (it Item[T]) TV() int {
-	return it.aux.(int)
+	return it.opaque.(int)
 }
 
 // Disc returns the discriminator of the item

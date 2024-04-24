@@ -19,7 +19,7 @@ func must[T, O any](item Item[T], fn tryFunc[T, O]) (result O) {
 }
 
 func try[T, O any](item Item[T], expected enums.ItemDiscriminator) (O, error) {
-	if value, ok := item.aux.(O); ok {
+	if value, ok := item.opaque.(O); ok {
 		return value, nil
 	}
 

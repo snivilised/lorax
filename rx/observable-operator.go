@@ -1363,11 +1363,6 @@ func (op *mapOperator[T]) end(_ context.Context, _ chan<- Item[T]) {
 func (op *mapOperator[T]) gatherNext(ctx context.Context,
 	item Item[T], dst chan<- Item[T], _ operatorOptions[T],
 ) {
-	// switch item.V.(type) {
-	// case *mapOperator:
-	// 	return
-	// }
-	// TODO: check above switch not required
 	item.SendContext(ctx, dst)
 }
 

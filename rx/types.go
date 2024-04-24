@@ -42,16 +42,6 @@ type (
 		IsZero(T) bool
 		Zero() T
 	}
-
-	// CalculatorItem defines numeric operations for T
-	CalculatorItem[T any] interface {
-		Add(Item[T], Item[T]) Item[T]
-		Div(Item[T], Item[T]) Item[T]
-		Inc(Item[T]) Item[T]
-		IsZero(Item[T]) bool
-		Zero() Item[T]
-	}
-
 	// Comparator defines a func that returns an int:
 	// - 0 if two elements are equals
 	// - A negative value if the first argument is less than the second
@@ -59,10 +49,8 @@ type (
 	Comparator[T any] func(Item[T], Item[T]) int
 	// DistributionFunc used by GroupBy
 	DistributionFunc[T any] func(Item[T]) int
-
 	// DistributionFunc used by GroupByDynamic
 	DynamicDistributionFunc[T any] func(Item[T]) string
-
 	// InitLimit defines a function to be used with Min and Max operators that defines
 	// a limit initialiser, that is to say, for Max we need to initialise the internal
 	// maximum reference point to be minimum value for type T and the reverse for the
@@ -97,7 +85,6 @@ type (
 	// With generics, Map is a very awkward operator that needs special attention.
 	// In the short term, what we can say is that the base functionality only
 	// allows mapping to different values within the same type.
-	// FuncIntM[T any] func(context.Context, int) (int, error)
 	// FuncN defines a function that computes a value from N input values.
 	FuncN[T any] func(...T) T
 	// ErrorFunc defines a function that computes a value from an error.
@@ -136,6 +123,7 @@ type (
 	// RangeIterator allows the client defines how the Range operator emits derived
 	// items.
 	RangeIterator[T any] interface {
+		// Init performs pre iteration check and returns an error on failure.
 		Init() error
 		// Start should return the initial index value
 		Start() (*T, error)
@@ -143,19 +131,29 @@ type (
 		Step() T
 		// Increment increments the index value
 		Increment(index *T) T
-		// Plus(index, by T)
 		// While defines a condition that must be true for the loop to
 		// continue iterating.
 		While(current T) bool
 	}
 
+	// ProxyField assists the client when dealing with struct type of T. Used
+	// by RangeIteratorPF. Any struct type that is used as the type T must nominate
+	// a field (the proxy), that will be used as the iterator field. T represents
+	// the parent type and O represents the proxied field type.
 	ProxyField[T any, O Numeric] interface {
+		// Field defines the nominated proxy field
 		Field() O
+		// Inc is the incrementor function invoked by the iterator. Implementations
+		// should add the value of by to index.
 		Inc(index *T, by T) *T
-		Index(int) *T
+		// Index should return an instance of T that represents the numeric value
+		// of i. Typically, this requires returning an instance of T whose nominated
+		// proxied field is set to i.
+		Index(i int) *T
 	}
 
 	RangeIteratorPF[T ProxyField[T, O], O Numeric] interface {
+		// Init performs pre iteration check and returns an error on failure.
 		Init() error
 		// Start should return the initial index value
 		Start() (*T, error)

@@ -95,10 +95,6 @@ type mapOperatorOptionalSingle[T any] struct {
 func (op *mapOperatorOptionalSingle[T]) next(ctx context.Context,
 	item Item[T], dst chan<- Item[T], operatorOptions operatorOptions[T],
 ) {
-	// TODO: no longer needed: if !item.IsNumeric() {
-	// 	panic(fmt.Errorf("not a number (%v)", item))
-	// }
-	//
 	res, err := op.apply(ctx, item.V)
 	if err != nil {
 		dst <- Error[T](err)
