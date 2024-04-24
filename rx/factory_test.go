@@ -719,7 +719,7 @@ var _ = Describe("Factory", func() {
 		})
 
 		When("given: custom structure", func() {
-			It("🧪 should:  ", func() {
+			It("🧪 should: create observable without error", func() {
 				// Test_Just_CustomStructure
 				defer leaktest.Check(GinkgoT())()
 
@@ -745,7 +745,7 @@ var _ = Describe("Factory", func() {
 		})
 
 		When("given: channel", func() {
-			XIt("🧪 should: ???", func() {
+			XIt("🧪 should: ???", decorators.Label("sending chan not supported yet"), func() {
 				// Test_Just_Channel
 				defer leaktest.Check(GinkgoT())()
 
@@ -1039,7 +1039,7 @@ var _ = Describe("Factory", func() {
 
 		Context("NominatedRangeIterator", func() {
 			When("positive count", func() {
-				It("🧪 should: create observable", decorators.Label("need pointer receiver on T"), func() {
+				It("🧪 should: create observable", func() {
 					// Test_Range
 					defer leaktest.Check(GinkgoT())()
 
