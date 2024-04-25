@@ -92,7 +92,8 @@ func Amb[T any](observables []Observable[T], opts ...Option[T]) Observable[T] {
 }
 
 // CombineLatest combines the latest item emitted by each Observable via a specified function
-// and emit items based on the results of this function.
+// and emit items based on the results of this function. Requires a calculator, so specify
+// this with the WithCalc option.
 func CombineLatest[T any](f FuncN[T], observables []Observable[T],
 	opts ...Option[T],
 ) Observable[T] {
@@ -397,9 +398,9 @@ func Range[T Numeric](iterator RangeIterator[T], opts ...Option[T]) Observable[T
 	}
 }
 
-// RangeNF creates an Observable that emits count sequential integers beginning
+// RangePF creates an Observable that emits count sequential integers beginning
 // at start, for non numeric types, which do contain a nominated proxy Numeric member
-func RangeNF[T ProxyField[T, O], O Numeric](iterator RangeIteratorPF[T, O],
+func RangePF[T ProxyField[T, O], O Numeric](iterator RangeIteratorPF[T, O],
 	opts ...Option[T],
 ) Observable[T] {
 	if err := iterator.Init(); err != nil {
