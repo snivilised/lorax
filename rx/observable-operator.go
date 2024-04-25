@@ -94,6 +94,7 @@ func (op *allOperator[T]) gatherNext(ctx context.Context, item Item[T],
 }
 
 // Average calculates the average of numbers emitted by an Observable and emits the result.
+// Requires a calculator, so specify this with the WithCalc option.
 func (o *ObservableImpl[T]) Average(opts ...Option[T],
 ) Single[T] {
 	const (
@@ -2223,7 +2224,8 @@ func (o *ObservableImpl[T]) StartWith(iterable Iterable[T], opts ...Option[T]) O
 	}
 }
 
-// Sum calculates the average emitted by an Observable and emits the result
+// Sum calculates the average emitted by an Observable and emits the result.
+// Requires a calculator, so specify this with the WithCalc option.
 func (o *ObservableImpl[T]) Sum(opts ...Option[T]) OptionalSingle[T] {
 	options := parseOptions(opts...)
 	calc := options.calc()

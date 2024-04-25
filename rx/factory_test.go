@@ -1018,7 +1018,7 @@ var _ = Describe("Factory", func() {
 					// Test_Range
 					defer leaktest.Check(GinkgoT())()
 
-					obs := rx.RangeNF(&widgetByIDRangeIterator{
+					obs := rx.RangePF(&widgetByIDRangeIterator{
 						StartAt: widget{id: 5},
 						By:      widget{id: 1},
 						Whilst:  widgetLessThan(widget{id: 8}),
@@ -1043,7 +1043,7 @@ var _ = Describe("Factory", func() {
 					// Test_Range
 					defer leaktest.Check(GinkgoT())()
 
-					obs := rx.RangeNF(&rx.ProxyRangeIterator[widget, int]{
+					obs := rx.RangePF(&rx.ProxyRangeIterator[widget, int]{
 						StartAt: widget{id: 5},
 						By:      widget{id: 1},
 						Whilst:  rx.LessThanPF(widget{id: 8}),
