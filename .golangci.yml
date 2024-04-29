@@ -62,6 +62,13 @@ linters:
     - whitespace
     - wsl
 
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  fix: true
+  exclude:
+    - "cuddle"
+
 run:
   issues-exit-code: 1
   timeout: 5m

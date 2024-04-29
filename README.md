@@ -140,9 +140,9 @@ The ___Range___ function needed special attention, because of the need to send n
   }
 ```
 
-The index ___idx___ is an int and is sent as such, but this is no longer possible. We could have used item as a ___Num___ instance, but doing so would have caused rippling knock-on effects through a chain of operators. That is to say, when ___Range___ is used in combination with an operator like ___Max___, then Max would also have to be aware of ___Item___ being a ___Num___. This is undesirable, so instead, the iterator variable is declared to be of type T and therefore can be carried by a native ___Item___. This works ok for ___numeric___ scalar types (float32, int, ...), but for compound types this is a bit more complicated, imposing constraints on the type T (see ___ProxyField___).
+The index ___idx___ is an int and is sent as such, but this is no longer possible. We could have used item as a ___Num___ instance, but doing so would have caused rippling knock-on effects through a chain of operators. That is to say, when ___Range___ is used in combination with an operator like ___Max___, then Max would also have to be aware of ___Item___ being a ___Num___. This leaky abstraction is undesirable, so instead, the iterator variable is declared to be of type T and therefore can be carried by a native ___Item___. This works ok for ___numeric___ scalar types (float32, int, ...), but for compound types this is a bit more complicated, imposing constraints on the type T (see ___ProxyField___).
 
-We now have 2 Range functions, 1 for numeric scalar types and the other for compound struct types. The body of both of these are the same:
+We now have 2 Range functions, 1 for numeric scalar types and the other for compound struct types. The core of both of these are the same:
 
 ```go
   for idx, _ := i.iterator.Start(); i.iterator.While(*idx); i.iterator.Increment(idx) {
@@ -154,7 +154,7 @@ We now have 2 Range functions, 1 for numeric scalar types and the other for comp
   }
 ```
 
-The iterator contains methods, that should be implemented by the client. ___Start___ creates an initial value of type T and returns a pointer to it. ___While___ is a condition function that returns true whilst the iteration should continue to run and ___Increment___ receives a pointer to the index variable so that it can be incremented.
+The iterator contains methods, that should be implemented by the client for the type ___T___. ___Start___ creates an initial value of type ___T___ and returns a pointer to it. ___While___ is a condition function that returns true whilst the iteration should continue to run and ___Increment___ receives a pointer to the index variable so that it can be incremented.
 
 The following is an example of how to use the Range operator for scalar types:
 
@@ -182,7 +182,7 @@ The user can also perform reverse iteration by using a negative ___By___ value a
 
 #### 🎙️ Proxy field
 
-In order for ___RangePF___ to work on struct types, a constraint has to be placed on type T. We need type T to have certain methods and is defined as:
+In order for ___RangePF___ to work on struct types, a constraint has to be placed on type ___T___. We need type ___T___ to have certain methods and is defined as:
 
 ```go
 	Numeric interface {
@@ -196,7 +196,7 @@ In order for ___RangePF___ to work on struct types, a constraint has to be place
 	}
 ```
 
-So for a type T, T has to nominate a member field (the proxy) which will act as the iterator value of type O and this is the purpose of the ___Field___ function. ___Inc___ is the function that performs the increment, by the value specified as ___By___ and ___Index___ allows us to derive an index value of type T from an integer source.
+So for a type ___T___, ___T___ has to nominate a member field (the proxy) which will act as the iterator value of type O and this is the purpose of the ___Field___ function. ___Inc___ is the function that performs the increment, by the value specified as ___By___ and ___Index___ allows us to derive an index value of type ___T___ from an integer source.
 
 This makes for a flexible approach that allows the type T to be in control of incrementing the index value over each iteration.
 
@@ -228,17 +228,17 @@ func (w widget) Inc(index *widget, by widget) *widget {
 }
 ```
 
-This may look strange, but is necessary since the type T can not be defined with pointer receivers with respect to the ___Numeric___ constraint. The reason for this is to keep in line with the original rxgo functionality of being able to compose an observable with literal scalar values and we can't take the address of literal scalars that would be required in order to be able to define ___Inc___ as:
+This may look strange, but is necessary since the type ___T___ can not be defined with pointer receivers with respect to the ___Numeric___ constraint. The reason for this is to keep in line with the original rxgo functionality of being able to compose an observable with literal scalar values and we can't take the address of literal scalars that would be required in order to be able to define ___Inc___ as:
 
 > func (w *widget) Inc(by widget) *widget
 
-So ___Numeric___ receivers on T being of the non pointer variety is a strict invariant.
+So ___Numeric___ receivers on ___T___ being of the non pointer variety is a strict invariant.
 
 The aspect to focus on in ___widget.Inc___ is that ___index___ is incremented with the ___by___ value, not ___w.id___. Effectively, widget is passed a pointer to its original self as index, but w is the copy of index in which we're are running. For this to work properly, the original widget (index) must be incremented, not the copy (w), which would have no effect, resulting in an infinite loop owing to the exit condition never being met.
 
 ### 🎭 Map
 
-The ___Map___ functionality poses a new challenge. If we wanted to map a value of type T to a value other than T, the mapped to value could not be sent through the channel because it is of the wrong type. A work-around would be to use an opaque instance of Item, but then that could easily become very messy as we no no longer have consistent types of emitted values which would be difficult to keep track of.
+The ___Map___ functionality poses a new challenge. If we wanted to map a value of type ___T___ to a value other than ___T___, the mapped to value could not be sent through the channel because it is of the wrong type. A work-around would be to use an opaque instance of Item, but then that could easily become very messy as we no longer have consistent types of emitted values which would be difficult to keep track of.
 
 So, in the short term, what we say is that the ___Map___ operator works, but can only map to different values of the same type, but this is also a little too restricting. Mapping to a different type is not a niche feature, but we can speculate as to what a solution would look like (this is not implemented yet, to be addressed under issue [#230](https://github.com/snivilised/lorax/issues/230))
 
