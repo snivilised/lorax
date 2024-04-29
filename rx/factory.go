@@ -408,7 +408,7 @@ func RangePF[T ProxyField[T, O], O Numeric](iterator RangeIteratorPF[T, O],
 	}
 
 	return &ObservableImpl[T]{
-		iterable: newRangeIterableNF(iterator, opts...),
+		iterable: newRangeIterablePF(iterator, opts...),
 	}
 }
 
