@@ -59,7 +59,7 @@ type rangeIterablePF[T ProxyField[T, O], O Numeric] struct {
 	opts     []Option[T]
 }
 
-func newRangeIterableNF[T ProxyField[T, O], O Numeric](iterator RangeIteratorPF[T, O],
+func newRangeIterablePF[T ProxyField[T, O], O Numeric](iterator RangeIteratorPF[T, O],
 	opts ...Option[T],
 ) Iterable[T] {
 	return &rangeIterablePF[T, O]{

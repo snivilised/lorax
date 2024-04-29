@@ -14,6 +14,7 @@ type Consumer[O any] struct {
 	interval    time.Duration
 	OutputsChIn boost.JobOutputStreamR[O]
 	Count       int
+	verbose     bool
 }
 
 func StartConsumer[O any](
@@ -21,12 +22,14 @@ func StartConsumer[O any](
 	quitter boost.AnnotatedWgQuitter,
 	outputsChIn boost.JobOutputStreamR[O],
 	interval time.Duration,
+	verbose bool,
 ) *Consumer[O] {
 	consumer := &Consumer[O]{
 		quitter:     quitter,
 		RoutineName: boost.GoRoutineName("💠 consumer"),
 		interval:    interval,
 		OutputsChIn: outputsChIn,
+		verbose:     verbose,
 	}
 
 	go consumer.run(parentContext)
@@ -37,9 +40,13 @@ func StartConsumer[O any](
 func (c *Consumer[O]) run(parentContext context.Context) {
 	defer func() {
 		c.quitter.Done(c.RoutineName)
-		fmt.Printf("<<<< 💠 consumer.run - finished (QUIT). 💠💠💠 \n")
+		if c.verbose {
+			fmt.Printf("<<<< 💠 consumer.run - finished (QUIT). 💠💠💠 \n")
+		}
 	}()
-	fmt.Printf("<<<< 💠 consumer.run ...(ctx:%+v)\n", parentContext)
+	if c.verbose {
+		fmt.Printf("<<<< 💠 consumer.run ...(ctx:%+v)\n", parentContext)
+	}
 
 	for running := true; running; {
 		<-time.After(c.interval)
@@ -47,17 +54,23 @@ func (c *Consumer[O]) run(parentContext context.Context) {
 		case <-parentContext.Done():
 			running = false
 
-			fmt.Println("<<<< 💠 consumer.run - done received 💔💔💔")
+			if c.verbose {
+				fmt.Println("<<<< 💠 consumer.run - done received 💔💔💔")
+			}
 
 		case result, ok := <-c.OutputsChIn:
 			if ok {
 				c.Count++
-				fmt.Printf("<<<< 💠 consumer.run - new result arrived(#%v): '%+v' \n",
-					c.Count, result.Payload,
-				)
+				if c.verbose {
+					fmt.Printf("<<<< 💠 consumer.run - new result arrived(#%v): '%+v' \n",
+						c.Count, result.Payload,
+					)
+				}
 			} else {
 				running = false
-				fmt.Printf("<<<< 💠 consumer.run - no more results available (running: %+v)\n", running)
+				if c.verbose {
+					fmt.Printf("<<<< 💠 consumer.run - no more results available (running: %+v)\n", running)
+				}
 			}
 		}
 	}

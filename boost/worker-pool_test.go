@@ -134,6 +134,7 @@ func start[I, O any](outputsDupCh *boost.Duplex[boost.JobOutput[O]]) *pipeline[I
 func (p *pipeline[I, O]) produce(parentContext context.Context,
 	interval time.Duration,
 	provider helpers.ProviderFunc[I],
+	verbose bool,
 ) {
 	p.cancel = func(_ context.Context,
 		parentCancel context.CancelFunc,
@@ -142,6 +143,7 @@ func (p *pipeline[I, O]) produce(parentContext context.Context,
 		go helpers.CancelProducerAfter[I, O](
 			delay,
 			parentCancel,
+			verbose,
 		)
 	}
 	p.stop = func(_ context.Context,
@@ -152,14 +154,17 @@ func (p *pipeline[I, O]) produce(parentContext context.Context,
 			parentContext,
 			p.producer,
 			delay,
+			verbose,
 		)
 	}
+
 	p.producer = helpers.StartProducer[I, O](
 		parentContext,
 		p.wgan,
 		JobChSize,
 		provider,
 		interval,
+		verbose,
 	)
 
 	p.wgan.Add(1, p.producer.RoutineName)
@@ -186,11 +191,14 @@ func (p *pipeline[I, O]) process(parentContext context.Context,
 	go p.pool.Start(parentContext, parentCancel, p.outputsDup.WriterCh)
 }
 
-func (p *pipeline[I, O]) consume(parentContext context.Context, interval time.Duration) {
+func (p *pipeline[I, O]) consume(parentContext context.Context,
+	interval time.Duration, verbose bool,
+) {
 	p.consumer = helpers.StartConsumer(parentContext,
 		p.wgan,
 		p.outputsDup.ReaderCh,
 		interval,
+		verbose,
 	)
 
 	p.wgan.Add(1, p.consumer.RoutineName)
@@ -286,6 +294,7 @@ var (
 			pipe.producer.Count,
 		)
 	}
+	silentSummariser summariseFunc = func(_ TestPipeline) {}
 )
 
 type durations struct {
@@ -311,6 +320,10 @@ var _ = Describe("WorkerPool", Ordered, func() {
 		func(specContext SpecContext, entry *poolTE) {
 			defer leaktest.Check(GinkgoT())()
 
+			const (
+				verbose = false
+			)
+
 			outputDup := lo.TernaryF(entry.outputsChSize > 0,
 				func() *boost.Duplex[boost.JobOutput[TestOutput]] {
 					return boost.NewDuplex(make(TestJobOutputStream, entry.outputsChSize))
@@ -323,10 +336,14 @@ var _ = Describe("WorkerPool", Ordered, func() {
 			pipe := start[TestInput, TestOutput](outputDup)
 
 			defer func() {
-				if counter, ok := (pipe.wgan).(boost.AnnotatedWgCounter); ok {
+				if counter, ok := (pipe.wgan).(boost.AnnotatedWgCounter); ok && verbose {
 					fmt.Printf("🎈🎈🎈🎈 remaining count: '%v'\n", counter.Count())
 				}
 			}()
+
+			if !verbose {
+				entry.summarise = silentSummariser
+			}
 
 			parentContext, parentCancel := context.WithCancel(specContext)
 
@@ -337,9 +354,10 @@ var _ = Describe("WorkerPool", Ordered, func() {
 					Recipient: audience[recipient],
 				}
 			}
+
 			pipe.produce(parentContext, lo.Ternary(entry.intervals.producer > 0,
 				entry.intervals.producer, defaults.producerInterval,
-			), provider)
+			), provider, verbose)
 
 			By("👾 WAIT-GROUP ADD(worker-pool)\n")
 			now := lo.Ternary(entry.now > 0, entry.now, defaults.noOfWorkers)
@@ -354,7 +372,7 @@ var _ = Describe("WorkerPool", Ordered, func() {
 				By("👾 WAIT-GROUP ADD(consumer)")
 				pipe.consume(parentContext, lo.Ternary(entry.intervals.consumer > 0,
 					entry.intervals.consumer, defaults.consumerInterval,
-				))
+				), verbose)
 			}
 
 			By("👾 NOW AWAITING TERMINATION")

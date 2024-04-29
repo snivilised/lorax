@@ -23,6 +23,7 @@ type Producer[I, O any] struct {
 	terminateDup terminationDuplex
 	JobsCh       boost.JobStream[I]
 	Count        int
+	verbose      bool
 }
 
 // The producer owns the Jobs channel as it knows when to close it. This producer is
@@ -34,6 +35,7 @@ func StartProducer[I, O any](
 	capacity int,
 	provider ProviderFunc[I],
 	interval time.Duration,
+	verbose bool,
 ) *Producer[I, O] {
 	if interval == 0 {
 		panic(fmt.Sprintf("Invalid delay requested: '%v'", interval))
@@ -46,6 +48,7 @@ func StartProducer[I, O any](
 		interval:     interval,
 		terminateDup: boost.NewDuplex(make(chan termination)),
 		JobsCh:       make(boost.JobStream[I], capacity),
+		verbose:      verbose,
 	}
 
 	go producer.run(parentContext)
@@ -57,24 +60,35 @@ func (p *Producer[I, O]) run(parentContext context.Context) {
 	defer func() {
 		close(p.JobsCh)
 		p.quitter.Done(p.RoutineName)
-		fmt.Printf(">>>> ✨ producer.run - finished (QUIT). ✨✨✨ \n")
-	}()
 
-	fmt.Printf(">>>> ✨ producer.run ...(ctx:%+v)\n", parentContext)
+		if p.verbose {
+			fmt.Printf(">>>> ✨ producer.run - finished (QUIT). ✨✨✨ \n")
+		}
+	}()
+	if p.verbose {
+		fmt.Printf(">>>> ✨ producer.run ...(ctx:%+v)\n", parentContext)
+	}
 
 	for running := true; running; {
 		select {
 		case <-parentContext.Done():
 			running = false
 
-			fmt.Println(">>>> ✨ producer.run - done received ⛔⛔⛔")
+			if p.verbose {
+				fmt.Println(">>>> ✨ producer.run - done received ⛔⛔⛔")
+			}
 
 		case <-p.terminateDup.ReaderCh:
 			running = false
-			fmt.Printf(">>>> ✨ producer.run - termination detected (running: %v)\n", running)
+
+			if p.verbose {
+				fmt.Printf(">>>> ✨ producer.run - termination detected (running: %v)\n", running)
+			}
 
 		case <-time.After(p.interval):
-			fmt.Printf(">>>> ✨ producer.run - default (running: %v) ...\n", running)
+			if p.verbose {
+				fmt.Printf(">>>> ✨ producer.run - default (running: %v) ...\n", running)
+			}
 
 			if !p.item(parentContext) {
 				running = false
@@ -95,28 +109,37 @@ func (p *Producer[I, O]) item(parentContext context.Context) bool {
 		SequenceNo: p.sequenceNo,
 	}
 
-	fmt.Printf(">>>> ✨ producer.item, 🟠 waiting to post item: '%+v'\n", i)
+	if p.verbose {
+		fmt.Printf(">>>> ✨ producer.item, 🟠 waiting to post item: '%+v'\n", i)
+	}
 
 	select {
 	case <-parentContext.Done():
-		fmt.Println(">>>> ✨ producer.item - done received ⛔⛔⛔")
+		if p.verbose {
+			fmt.Println(">>>> ✨ producer.item - done received ⛔⛔⛔")
+		}
 
 		result = false
 
 	case p.JobsCh <- j:
 	}
 
-	if result {
-		fmt.Printf(">>>> ✨ producer.item, 🟢 posted item: '%+v'\n", i)
-	} else {
-		fmt.Printf(">>>> ✨ producer.item, 🔴 item NOT posted: '%+v'\n", i)
+	if p.verbose {
+		if result {
+			fmt.Printf(">>>> ✨ producer.item, 🟢 posted item: '%+v'\n", i)
+		} else {
+			fmt.Printf(">>>> ✨ producer.item, 🔴 item NOT posted: '%+v'\n", i)
+		}
 	}
 
 	return result
 }
 
 func (p *Producer[I, O]) Stop() {
-	fmt.Println(">>>> 🧲 producer terminating ...")
+	if p.verbose {
+		fmt.Println(">>>> 🧲 producer terminating ...")
+	}
+
 	p.terminateDup.WriterCh <- termination("done")
 	close(p.terminateDup.Channel)
 }
@@ -126,32 +149,47 @@ func StopProducerAfter[I, O any](
 	parentContext context.Context,
 	producer *Producer[I, O],
 	delay time.Duration,
+	verbose bool,
 ) {
-	fmt.Printf("		>>> 💤 StopAfter - Sleeping before requesting stop (%v) ...\n", delay)
+	if verbose {
+		fmt.Printf("		>>> 💤 StopAfter - Sleeping before requesting stop (%v) ...\n", delay)
+	}
+
 	select {
 	case <-parentContext.Done():
 	case <-time.After(delay):
 	}
 
 	producer.Stop()
-	fmt.Printf("		>>> StopAfter - 🍧🍧🍧 stop submitted.\n")
+
+	if verbose {
+		fmt.Printf("		>>> StopAfter - 🍧🍧🍧 stop submitted.\n")
+	}
 }
 
 func CancelProducerAfter[I, O any](
 	delay time.Duration,
 	parentCancel context.CancelFunc,
+	verbose bool,
 ) {
-	fmt.Printf("		>>> 💤 CancelAfter - Sleeping before requesting cancellation (%v) ...\n", delay)
+	if verbose {
+		fmt.Printf("		>>> 💤 CancelAfter - Sleeping before requesting cancellation (%v) ...\n", delay)
+	}
 	<-time.After(delay)
 
 	// we should always expect to get a cancel function back, even if we don't
 	// ever use it, so it is still relevant to get it in the stop test case
 	//
 	if parentCancel != nil {
-		fmt.Printf("		>>> CancelAfter - 🛑🛑🛑 cancellation submitted.\n")
+		if verbose {
+			fmt.Printf("		>>> CancelAfter - 🛑🛑🛑 cancellation submitted.\n")
+		}
 		parentCancel()
-		fmt.Printf("		>>> CancelAfter - ➖➖➖ CANCELLED\n")
-	} else {
+
+		if verbose {
+			fmt.Printf("		>>> CancelAfter - ➖➖➖ CANCELLED\n")
+		}
+	} else if verbose {
 		fmt.Printf("		>>> CancelAfter(noc) - ✖️✖️✖️ cancellation attempt benign.\n")
 	}
 }
