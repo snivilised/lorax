@@ -166,3 +166,26 @@ func widgetLessThan(until widget) func(widget) bool {
 		return current.id < until.id
 	}
 }
+
+// nugget use to test struct with pointer receivers
+type nugget struct {
+	id     int
+	name   string
+	amount int
+}
+
+func (n *nugget) Field() int {
+	return n.id
+}
+
+func (n *nugget) Inc(index *nugget, by nugget) *nugget {
+	index.id += by.id
+
+	return index
+}
+
+func (n *nugget) Index(i int) *nugget {
+	return &nugget{
+		id: i,
+	}
+}

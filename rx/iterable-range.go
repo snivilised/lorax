@@ -152,6 +152,9 @@ func (i *NumericRangeIterator[T]) While(current T) bool {
 	return i.Whilst(current)
 }
 
+// ProxyRangeIterator iterator required for struct types of T, where the
+// client has nominated a member of T to be the proxy field with
+// which numeric operations are performed to generate indexes for iteration.
 type ProxyRangeIterator[T ProxyField[T, O], O Numeric] struct {
 	StartAt T
 	By      T
@@ -159,6 +162,8 @@ type ProxyRangeIterator[T ProxyField[T, O], O Numeric] struct {
 	zero    T
 }
 
+// Init is invoked prior to iteration and returns an error if not
+// defined correctly.
 func (i *ProxyRangeIterator[T, O]) Init() error {
 	if i.Whilst == nil {
 		return RangeMissingWhilstError
