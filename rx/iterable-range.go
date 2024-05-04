@@ -152,10 +152,10 @@ func (i *NumericRangeIterator[T]) While(current T) bool {
 	return i.Whilst(current)
 }
 
-// ProxyRangeIterator iterator required for struct types of T, where the
+// RangeIteratorByProxy iterator required for struct types of T, where the
 // client has nominated a member of T to be the proxy field with
 // which numeric operations are performed to generate indexes for iteration.
-type ProxyRangeIterator[T ProxyField[T, O], O Numeric] struct {
+type RangeIteratorByProxy[T ProxyField[T, O], O Numeric] struct {
 	StartAt T
 	By      T
 	Whilst  WhilstFunc[T]
@@ -164,7 +164,7 @@ type ProxyRangeIterator[T ProxyField[T, O], O Numeric] struct {
 
 // Init is invoked prior to iteration and returns an error if not
 // defined correctly.
-func (i *ProxyRangeIterator[T, O]) Init() error {
+func (i *RangeIteratorByProxy[T, O]) Init() error {
 	if i.Whilst == nil {
 		return RangeMissingWhilstError
 	}
@@ -174,7 +174,7 @@ func (i *ProxyRangeIterator[T, O]) Init() error {
 
 // Start should return the initial index value. If By has
 // not been set, a panic occurs
-func (i *ProxyRangeIterator[T, O]) Start() (*T, error) {
+func (i *RangeIteratorByProxy[T, O]) Start() (*T, error) {
 	if i.By.Field() == 0 {
 		panic("bad by value, can't be zero")
 	}
@@ -188,12 +188,12 @@ func (i *ProxyRangeIterator[T, O]) Start() (*T, error) {
 	return &index, nil
 }
 
-func (i *ProxyRangeIterator[T, O]) Step() O {
+func (i *RangeIteratorByProxy[T, O]) Step() O {
 	return i.By.Field()
 }
 
 // Increment increments index value
-func (i *ProxyRangeIterator[T, O]) Increment(index *T) *T {
+func (i *RangeIteratorByProxy[T, O]) Increment(index *T) *T {
 	// This does look a bit strange but its a work around
 	// for the fact that the instance of T is implemented with
 	// non-pointer receivers and therefore can't make modifications
@@ -212,7 +212,7 @@ func (i *ProxyRangeIterator[T, O]) Increment(index *T) *T {
 
 // While defines a condition that must be true for the loop to
 // continue iterating.
-func (i *ProxyRangeIterator[T, O]) While(current T) bool {
+func (i *RangeIteratorByProxy[T, O]) While(current T) bool {
 	return i.Whilst(current)
 }
 

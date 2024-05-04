@@ -1037,13 +1037,13 @@ var _ = Describe("Factory", func() {
 			})
 		})
 
-		Context("ProxyRangeIterator", func() {
+		Context("RangeIteratorByProxy", func() {
 			When("positive count", func() {
 				It("🧪 should: create observable", func() {
 					// Test_Range
 					defer leaktest.Check(GinkgoT())()
 
-					obs := rx.RangePF(&rx.ProxyRangeIterator[widget, int]{
+					obs := rx.RangePF(&rx.RangeIteratorByProxy[widget, int]{
 						StartAt: widget{id: 5},
 						By:      widget{id: 1},
 						Whilst:  rx.LessThanPF(widget{id: 8}),
@@ -1069,7 +1069,7 @@ var _ = Describe("Factory", func() {
 						// Test_Range
 						defer leaktest.Check(GinkgoT())()
 
-						obs := rx.RangePF(&rx.ProxyRangeIterator[rx.Envelope[nugget, int], int]{
+						obs := rx.RangePF(&rx.RangeIteratorByProxy[rx.Envelope[nugget, int], int]{
 							StartAt: rx.Envelope[nugget, int]{P: 5},
 							By:      rx.Envelope[nugget, int]{P: 1},
 							Whilst:  rx.LessThanPF(rx.Envelope[nugget, int]{P: 8}),
