@@ -168,10 +168,10 @@ The following is an example of how to use the Range operator for scalar types:
 
 ___NumericRangeIterator___ is defined for all numeric types and is therefore able to use the native operators for calculation operations.
 
-For struct types, the above is identical, but instead using ___ProxyRangeIterator___:
+For struct types, the above is identical, but instead using ___RangeIteratorByProxy___:
 
 ```go
-  obs := rx.RangePF(&rx.ProxyRangeIterator[widget, int]{
+  obs := rx.RangePF(&rx.RangeIteratorByProxy[widget, int]{
     StartAt: widget{id: 5},
     By:      widget{id: 1},
     Whilst:  rx.LessThanPF(widget{id: 8}),
@@ -230,11 +230,31 @@ func (w widget) Inc(index *widget, by widget) *widget {
 
 This may look strange, but is necessary since the type ___T___ can not be defined with pointer receivers with respect to the ___Numeric___ constraint. The reason for this is to keep in line with the original rxgo functionality of being able to compose an observable with literal scalar values and we can't take the address of literal scalars that would be required in order to be able to define ___Inc___ as:
 
-> func (w *widget) Inc(by widget) *widget
+```go
+func (w *widget) Inc(by widget) *widget
+```
 
 So ___Numeric___ receivers on ___T___ being of the non pointer variety is a strict invariant.
 
 The aspect to focus on in ___widget.Inc___ is that ___index___ is incremented with the ___by___ value, not ___w.id___. Effectively, widget is passed a pointer to its original self as index, but w is the copy of index in which we're are running. For this to work properly, the original widget (index) must be incremented, not the copy (w), which would have no effect, resulting in an infinite loop owing to the exit condition never being met.
+
+#### 📨 Envelope
+
+The above description regarding pointer receivers on T may appear to be burdensome for prospective types. However, there is a mitigation for this in the form of the type ___Envelope[T any, O Numeric]___. This serves 2 purposes:
+
++ __permit pointer receiver:__ The envelope wraps the type T addressed as a pointer and also contains a __numeric__ member P of type O. This is particularly useful large struct instances, where copying by value could be non trivial and thus inefficient.
+
++ __satisfy ProxyField constraint:__ The presence of the proxy field P means that Envelope is able to implement all the methods on the ___ProxyField___ constraint, freeing the client from this obligation.
+
+The following is an example of how to use the ___Envelope___ with the iterator ___RangeIteratorByProxy___:
+
+```go
+  obs := rx.RangePF(&rx.RangeIteratorByProxy[rx.Envelope[nugget, int], int]{
+    StartAt: rx.Envelope[nugget, int]{P: 5},
+    By:      rx.Envelope[nugget, int]{P: 1},
+    Whilst:  rx.LessThanPF(rx.Envelope[nugget, int]{P: 8}),
+  })
+```
 
 ### 🎭 Map
 
