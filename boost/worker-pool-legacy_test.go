@@ -114,7 +114,7 @@ type pipeline[I, O any] struct {
 	outputsDup *boost.Duplex[boost.JobOutput[O]]
 	provider   helpers.ProviderFuncL[I]
 	producer   *helpers.ProducerL[I, O]
-	pool       *boost.WorkerPool[I, O]
+	pool       *boost.WorkerPoolL[I, O]
 	consumer   *helpers.ConsumerL[O]
 	cancel     TerminatorFunc[I, O]
 	stop       TerminatorFunc[I, O]
@@ -176,8 +176,8 @@ func (p *pipeline[I, O]) process(parentContext context.Context,
 	noWorkers int,
 	executive boost.ExecutiveFunc[I, O],
 ) {
-	p.pool = boost.NewWorkerPool[I, O](
-		&boost.NewWorkerPoolParams[I, O]{
+	p.pool = boost.NewWorkerPoolL[I, O](
+		&boost.NewWorkerPoolParamsL[I, O]{
 			NoWorkers:       noWorkers,
 			OutputChTimeout: outputChTimeout,
 			Exec:            executive,

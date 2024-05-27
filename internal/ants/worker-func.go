@@ -27,15 +27,15 @@ import (
 	"time"
 )
 
-// goWorker is the actual executor who runs the tasks,
+// goWorkerWithFunc is the actual executor who runs the tasks,
 // it starts a goroutine that accepts tasks and
 // performs function calls.
-type goWorker struct {
+type goWorkerWithFunc struct {
 	// pool who owns this worker.
-	pool *Pool
+	pool *PoolWithFunc
 
-	// taskCh is a job should be done.
-	taskCh TaskStream
+	// inputCh is a job should be done.
+	inputCh InputStream
 
 	// lastUsed will be updated when putting a worker back into queue.
 	lastUsed time.Time
@@ -43,7 +43,7 @@ type goWorker struct {
 
 // run starts a goroutine to repeat the process
 // that performs the function calls.
-func (w *goWorker) run() {
+func (w *goWorkerWithFunc) run() {
 	w.pool.addRunning(1)
 
 	go func() {
@@ -54,18 +54,21 @@ func (w *goWorker) run() {
 				if ph := w.pool.o.PanicHandler; ph != nil {
 					ph(p)
 				} else {
-					w.pool.o.Logger.Printf("worker exits from panic: %v\n%s\n", p, debug.Stack())
+					w.pool.o.Logger.Printf("worker exits from panic: %v\n%s\n",
+						p, debug.Stack(),
+					)
 				}
 			}
-			// Call Signal() here in case there are goroutines waiting for available workers.
+			// Call Signal() here in case there are goroutines waiting for
+			// available workers.
 			w.pool.cond.Signal()
 		}()
 
-		for f := range w.taskCh {
-			if f == nil { // ✨
+		for jobs := range w.inputCh {
+			if jobs == nil { // ✨
 				return
 			}
-			f()
+			w.pool.poolFunc(jobs)
 			if ok := w.pool.revertWorker(w); !ok {
 				return
 			}
@@ -73,18 +76,18 @@ func (w *goWorker) run() {
 	}()
 }
 
-func (w *goWorker) finish() {
-	w.taskCh <- nil // ✨
+func (w *goWorkerWithFunc) finish() {
+	w.inputCh <- nil // ✨
 }
 
-func (w *goWorker) lastUsedTime() time.Time {
+func (w *goWorkerWithFunc) lastUsedTime() time.Time {
 	return w.lastUsed
 }
 
-func (w *goWorker) sendTask(fn TaskFunc) {
-	w.taskCh <- fn
+func (w *goWorkerWithFunc) sendTask(TaskFunc) {
+	panic("unreachable")
 }
 
-func (w *goWorker) sendParam(InputParam) {
-	panic("unreachable")
+func (w *goWorkerWithFunc) sendParam(job InputParam) {
+	w.inputCh <- job
 }

@@ -1,11 +1,9 @@
 package ants_test
 
 import (
-	"runtime"
 	"sync"
 	"time"
 
-	"github.com/fortytw2/leaktest"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ok
 	. "github.com/onsi/gomega"    //nolint:revive // ok
 
@@ -13,129 +11,148 @@ import (
 )
 
 var _ = Describe("Ants", func() {
-	Context("Submit", func() {
-		When("default pool", func() {
-			It("🧪 should: run ok", func() {
-				// TestAntsPool
-				defer leaktest.Check(GinkgoT())()
-				defer ants.Release()
+	Context("NewPool", func() {
+		Context("Submit", func() {
+			When("non-blocking", func() {
+				It("🧪 should: not fail", func() {
+					// TestNonblockingSubmit
+					// ??? defer leaktest.Check(GinkgoT())()
 
-				var (
-					wg  sync.WaitGroup
-					err error
-				)
+					poolSize := 10
+					pool, err := ants.NewPool(poolSize, ants.WithNonblocking(true))
+					Expect(err).To(Succeed(), "create TimingPool failed")
 
-				for i := 0; i < n; i++ {
-					wg.Add(1)
-					err = ants.Submit(func() {
-						demoFunc()
-						wg.Done()
-					})
-				}
-				wg.Wait()
+					defer pool.Release()
 
-				GinkgoWriter.Printf("pool, capacity:%d", ants.Cap())
-				GinkgoWriter.Printf("pool, running workers number:%d", ants.Running())
-				GinkgoWriter.Printf("pool, free workers number:%d", ants.Free())
-
-				mem := runtime.MemStats{}
-				runtime.ReadMemStats(&mem)
-				curMem = mem.TotalAlloc/MiB - curMem
-
-				Expect(err).To(Succeed())
-				GinkgoWriter.Printf("memory usage:%d MB", curMem)
-			})
-		})
-
-		When("non-blocking", func() {
-			It("🧪 should: not fail", func() {
-				// TestNonblockingSubmit
-				// ??? defer leaktest.Check(GinkgoT())()
-
-				poolSize := 10
-				p, err := ants.NewPool(poolSize, ants.WithNonblocking(true))
-				Expect(err).To(Succeed(), "create TimingPool failed")
-
-				defer p.Release()
-
-				for i := 0; i < poolSize-1; i++ {
-					Expect(p.Submit(longRunningFunc)).To(Succeed(),
+					for i := 0; i < poolSize-1; i++ {
+						Expect(pool.Submit(longRunningFunc)).To(Succeed(),
+							"nonblocking submit when pool is not full shouldn't return error",
+						)
+					}
+					firstCh := make(chan struct{})
+					secondCh := make(chan struct{})
+					fn := func() {
+						<-firstCh
+						close(secondCh)
+					}
+					// p is full now.
+					Expect(pool.Submit(fn)).To(Succeed(),
 						"nonblocking submit when pool is not full shouldn't return error",
 					)
-				}
-				ch := make(chan struct{})
-				ch1 := make(chan struct{})
-				f := func() {
-					<-ch
-					close(ch1)
-				}
-				// p is full now.
-				Expect(p.Submit(f)).To(Succeed(),
-					"nonblocking submit when pool is not full shouldn't return error",
-				)
-				Expect(p.Submit(demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
-					"nonblocking submit when pool is full should get an ErrPoolOverload",
-				)
+					Expect(pool.Submit(demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
+						"nonblocking submit when pool is full should get an ErrPoolOverload",
+					)
 
-				// interrupt f to get an available worker
-				close(ch)
-				<-ch1
-				Expect(p.Submit(demoFunc)).To(Succeed(),
-					"nonblocking submit when pool is not full shouldn't return error",
-				)
+					// interrupt fn to get an available worker
+					close(firstCh)
+					<-secondCh
+					Expect(pool.Submit(demoFunc)).To(Succeed(),
+						"nonblocking submit when pool is not full shouldn't return error",
+					)
+				})
+			})
+
+			When("max blocking", func() {
+				It("🧪 should: not fail", func() {
+					// TestMaxBlockingSubmit
+					// ??? defer leaktest.Check(GinkgoT())()
+
+					poolSize := 10
+					pool, err := ants.NewPool(poolSize, ants.WithMaxBlockingTasks(1))
+					Expect(err).To(Succeed(), "create TimingPool failed")
+
+					defer pool.Release()
+
+					for i := 0; i < poolSize-1; i++ {
+						Expect(pool.Submit(longRunningFunc)).To(Succeed(),
+							"blocking submit when pool is not full shouldn't return error",
+						)
+					}
+					ch := make(chan struct{})
+					fn := func() {
+						<-ch
+					}
+					// p is full now.
+					Expect(pool.Submit(fn)).To(Succeed(),
+						"nonblocking submit when pool is not full shouldn't return error",
+					)
+
+					var wg sync.WaitGroup
+					wg.Add(1)
+					errCh := make(chan error, 1)
+					go func() {
+						// should be blocked. blocking num == 1
+						if err := pool.Submit(demoFunc); err != nil {
+							errCh <- err
+						}
+						wg.Done()
+					}()
+					time.Sleep(1 * time.Second)
+					// already reached max blocking limit
+					Expect(pool.Submit(demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
+						"blocking submit when pool reach max blocking submit should return ErrPoolOverload",
+					)
+
+					// interrupt f to make blocking submit successful.
+					close(ch)
+					wg.Wait()
+					select {
+					case <-errCh:
+						// t.Fatalf("blocking submit when pool is full should not return error")
+						Fail("blocking submit when pool is full should not return error")
+					default:
+					}
+				})
 			})
 		})
+	})
 
-		When("max blocking", func() {
-			It("🧪 should: not fail", func() {
-				// TestMaxBlockingSubmit
-				// ??? defer leaktest.Check(GinkgoT())()
+	Context("NewPoolWithFunc", func() {
+		Context("Invoke", func() {
+			When("waiting to get worker", func() {
+				It("🧪 should: not fail", func() {
+					// TestAntsPoolWithFuncWaitToGetWorker
 
-				poolSize := 10
-				p, err := ants.NewPool(poolSize, ants.WithMaxBlockingTasks(1))
-				Expect(err).To(Succeed(), "create TimingPool failed")
+					var wg sync.WaitGroup
+					pool, _ := ants.NewPoolWithFunc(AntsSize, func(i ants.InputParam) {
+						demoPoolFunc(i)
+						wg.Done()
+					})
+					defer pool.Release()
 
-				defer p.Release()
-
-				for i := 0; i < poolSize-1; i++ {
-					Expect(p.Submit(longRunningFunc)).To(Succeed(),
-						"blocking submit when pool is not full shouldn't return error",
-					)
-				}
-				ch := make(chan struct{})
-				f := func() {
-					<-ch
-				}
-				// p is full now.
-				Expect(p.Submit(f)).To(Succeed(),
-					"nonblocking submit when pool is not full shouldn't return error",
-				)
-
-				var wg sync.WaitGroup
-				wg.Add(1)
-				errCh := make(chan error, 1)
-				go func() {
-					// should be blocked. blocking num == 1
-					if err := p.Submit(demoFunc); err != nil {
-						errCh <- err
+					for i := 0; i < n; i++ {
+						wg.Add(1)
+						_ = pool.Invoke(Param)
 					}
-					wg.Done()
-				}()
-				time.Sleep(1 * time.Second)
-				// already reached max blocking limit
-				Expect(p.Submit(demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
-					"blocking submit when pool reach max blocking submit should return ErrPoolOverload",
-				)
+					wg.Wait()
+					GinkgoWriter.Printf("pool with func, running workers number:%d\n",
+						pool.Running(),
+					)
+					ShowMemStats()
+				})
+			})
 
-				// interrupt f to make blocking submit successful.
-				close(ch)
-				wg.Wait()
-				select {
-				case <-errCh:
-					// t.Fatalf("blocking submit when pool is full should not return error")
-					Fail("blocking submit when pool is full should not return error")
-				default:
-				}
+			When("waiting to get worker with pre malloc", func() {
+				It("🧪 should: not fail", func() {
+					// TestAntsPoolWithFuncWaitToGetWorkerPreMalloc
+
+					var wg sync.WaitGroup
+					pool, _ := ants.NewPoolWithFunc(AntsSize, func(i ants.InputParam) {
+						demoPoolFunc(i)
+						wg.Done()
+					}, ants.WithPreAlloc(true))
+					defer pool.Release()
+
+					for i := 0; i < n; i++ {
+						wg.Add(1)
+						_ = pool.Invoke(Param)
+					}
+					wg.Wait()
+					GinkgoWriter.Printf("pool with func, running workers number:%d\n",
+						pool.Running(),
+					)
+					ShowMemStats()
+				})
 			})
 		})
 	})
