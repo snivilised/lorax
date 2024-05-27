@@ -23,7 +23,6 @@
 package ants
 
 import (
-	"errors"
 	"log"
 	"math"
 	"os"
@@ -48,30 +47,6 @@ const (
 )
 
 var (
-	// ErrLackPoolFunc will be returned when invokers don't provide function for pool.
-	ErrLackPoolFunc = errors.New("must provide function for pool")
-
-	// ErrInvalidPoolExpiry will be returned when setting a negative number as the periodic duration to purge goroutines.
-	ErrInvalidPoolExpiry = errors.New("invalid expiry for pool")
-
-	// ErrPoolClosed will be returned when submitting task to a closed pool.
-	ErrPoolClosed = errors.New("this pool has been closed")
-
-	// ErrPoolOverload will be returned when the pool is full and no workers available.
-	ErrPoolOverload = errors.New("too many goroutines blocked on submit or Nonblocking is set")
-
-	// ErrInvalidPreAllocSize will be returned when trying to set up a negative capacity under PreAlloc mode.
-	ErrInvalidPreAllocSize = errors.New("can not set up a negative capacity under PreAlloc mode")
-
-	// ErrTimeout will be returned after the operations timed out.
-	ErrTimeout = errors.New("operation timed out")
-
-	// ErrInvalidPoolIndex will be returned when trying to retrieve a pool with an invalid index.
-	ErrInvalidPoolIndex = errors.New("invalid pool index")
-
-	// ErrInvalidLoadBalancingStrategy will be returned when trying to create a MultiPool with an invalid load-balancing strategy.
-	ErrInvalidLoadBalancingStrategy = errors.New("invalid load-balancing strategy")
-
 	// workerChanCap determines whether the channel of a worker should be a buffered channel
 	// to get the best performance. Inspired by fasthttp at
 	// https://github.com/valyala/fasthttp/blob/master/workerpool.go#L139
@@ -91,9 +66,6 @@ var (
 	// log.Lmsgprefix is not available in go1.13, just make an identical value for it.
 	logLmsgprefix = 64
 	defaultLogger = Logger(log.New(os.Stderr, "[ants]: ", log.LstdFlags|logLmsgprefix|log.Lmicroseconds))
-
-	// Init an instance pool when importing ants.
-	defaultAntsPool, _ = NewPool(DefaultAntsPoolSize)
 )
 
 const nowTimeUpdateInterval = 500 * time.Millisecond
@@ -104,37 +76,15 @@ type Logger interface {
 	Printf(format string, args ...interface{})
 }
 
-// Submit submits a task to pool.
-func Submit(task func()) error {
-	return defaultAntsPool.Submit(task)
-}
+type (
+	TaskFunc    func()
+	TaskStream  chan TaskFunc
+	InputParam  interface{}
+	PoolFunc    func(InputParam)
+	InputStream chan InputParam
+	Nothing     struct{}
+)
 
-// Running returns the number of the currently running goroutines.
-func Running() int {
-	return defaultAntsPool.Running()
-}
-
-// Cap returns the capacity of this default pool.
-func Cap() int {
-	return defaultAntsPool.Cap()
-}
-
-// Free returns the available goroutines to work.
-func Free() int {
-	return defaultAntsPool.Free()
-}
-
-// Release Closes the default pool.
-func Release() {
-	defaultAntsPool.Release()
-}
-
-// ReleaseTimeout is like Release but with a timeout, it waits all workers to exit before timing out.
-func ReleaseTimeout(timeout time.Duration) error {
-	return defaultAntsPool.ReleaseTimeout(timeout)
-}
-
-// Reboot reboots the default pool.
-func Reboot() {
-	defaultAntsPool.Reboot()
-}
+const (
+	releaseTimeoutInterval = 10
+)

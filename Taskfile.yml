@@ -41,6 +41,10 @@ tasks:
     cmds:
       - ginkgo -p ./internal/ants
 
+  tb:
+    cmds:
+      - ginkgo -p ./boost
+
   ti:
     cmds:
       - go test ./i18n

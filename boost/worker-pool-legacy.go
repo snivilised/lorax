@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// privateWpInfo (dmz!) contains any state that needs to be mutated in a non concurrent manner
+// privateWpInfoL (dmz!) contains any state that needs to be mutated in a non concurrent manner
 // and therefore should be exclusively accessed by a single go routine. Actually, due to
 // our ability to compose functionality with channels as opposed to shared state, the
 // pool does not contain any state that is accessed directly or indirectly from other
@@ -23,18 +23,18 @@ import (
 // is to clearly indicate what state can be accessed in different concurrency contexts,
 // to ensure future updates can be applied with minimal cognitive overload.
 //
-// There is another purpose for privateWpInfo and that is to do with "confinement" as
+// There is another purpose for privateWpInfoL and that is to do with "confinement" as
 // described on page 86 of CiG. The aim here is to use "lexical confinement" for
 // duplex channel definitions, so although a channel is thread safe so ordinarily
-// would not be a candidate member of privateWpInfo, a duplex channel ought to be
+// would not be a candidate member of privateWpInfoL, a duplex channel ought to be
 // protected from accidentally being used incorrectly, ie trying to write to a channel
 // that is meant to be read only. So methods that use a channel should now receive the
 // channel through a method parameter (defined as either chan<-, or <-chan), rather
 // than be expected to simply access the member variable directly. This clearly signals
-// that any channel defined in privateWpInfo should never to accessed directly (other
+// that any channel defined in privateWpInfoL should never to accessed directly (other
 // than for passing it to another method). This is an experimental convention that
 // is being established for all snivilised projects.
-type privateWpInfo[I, O any] struct {
+type privateWpInfoL[I, O any] struct {
 	pool          workersCollectionL[I, O]
 	workersJobsCh chan Job[I]
 	finishedCh    finishedStream
@@ -42,11 +42,11 @@ type privateWpInfo[I, O any] struct {
 	resultOutCh   PoolResultStreamW
 }
 
-// WorkerPool owns the resultOut channel, because it is the only entity that knows
+// WorkerPoolL owns the resultOut channel, because it is the only entity that knows
 // when all workers have completed their work due to the finished channel, which it also
 // owns.
-type WorkerPool[I, O any] struct {
-	private         privateWpInfo[I, O]
+type WorkerPoolL[I, O any] struct {
+	private         privateWpInfoL[I, O]
 	outputChTimeout time.Duration
 	exec            ExecutiveFunc[I, O]
 	noWorkers       int
@@ -57,7 +57,7 @@ type WorkerPool[I, O any] struct {
 	Logger          *slog.Logger
 }
 
-type NewWorkerPoolParams[I, O any] struct {
+type NewWorkerPoolParamsL[I, O any] struct {
 	NoWorkers       int
 	OutputChTimeout time.Duration
 	Exec            ExecutiveFunc[I, O]
@@ -67,7 +67,7 @@ type NewWorkerPoolParams[I, O any] struct {
 	Logger          *slog.Logger
 }
 
-func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O] {
+func NewWorkerPoolL[I, O any](params *NewWorkerPoolParamsL[I, O]) *WorkerPoolL[I, O] {
 	noWorkers := runtime.NumCPU()
 	if params.NoWorkers > 1 && params.NoWorkers <= MaxWorkers {
 		noWorkers = params.NoWorkers
@@ -86,8 +86,8 @@ func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O
 		},
 	)
 
-	wp := &WorkerPool[I, O]{
-		private: privateWpInfo[I, O]{
+	wp := &WorkerPoolL[I, O]{
+		private: privateWpInfoL[I, O]{
 			pool:          make(workersCollectionL[I, O], noWorkers),
 			workersJobsCh: make(JobStream[I], noWorkers),
 			finishedCh:    make(finishedStream, noWorkers),
@@ -113,7 +113,7 @@ var eyeballs = []string{
 	"❤️", "💙", "💚", "💜", "💛", "🤍", "💖", "💗", "💝",
 }
 
-func (p *WorkerPool[I, O]) composeID() workerID {
+func (p *WorkerPoolL[I, O]) composeID() workerID {
 	n := len(p.private.pool)
 	index := (n) % len(eyeballs)
 	emoji := eyeballs[index]
@@ -121,7 +121,7 @@ func (p *WorkerPool[I, O]) composeID() workerID {
 	return workerID(fmt.Sprintf("(%v)WORKER-ID-%v:%v", emoji, n, uuid.NewString()))
 }
 
-func (p *WorkerPool[I, O]) Start(
+func (p *WorkerPoolL[I, O]) Start(
 	parentContext context.Context,
 	parentCancel context.CancelFunc,
 	outputsChOut chan<- JobOutput[O],
@@ -134,7 +134,7 @@ func (p *WorkerPool[I, O]) Start(
 	)
 }
 
-func (p *WorkerPool[I, O]) run(
+func (p *WorkerPoolL[I, O]) run(
 	parentContext context.Context,
 	parentCancel context.CancelFunc,
 	outputChTimeout time.Duration,
@@ -230,7 +230,7 @@ func (p *WorkerPool[I, O]) run(
 	}
 }
 
-func (p *WorkerPool[I, O]) spawn(
+func (p *WorkerPoolL[I, O]) spawn(
 	parentContext context.Context,
 	parentCancel context.CancelFunc,
 	outputChTimeout time.Duration,
@@ -257,7 +257,7 @@ func (p *WorkerPool[I, O]) spawn(
 	)
 }
 
-func (p *WorkerPool[I, O]) drain(finishedChIn finishedStreamR) error {
+func (p *WorkerPoolL[I, O]) drain(finishedChIn finishedStreamR) error {
 	p.Logger.Debug("waiting for remaining workers...",
 		slog.String("source", "WorkerPool.drain"),
 		slog.Int("pool size", len(p.private.pool)),

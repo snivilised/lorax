@@ -1,4 +1,4 @@
-package ants_test
+package boost_test
 
 import (
 	"runtime"
@@ -20,6 +20,7 @@ const (
 	AntsSize = 1000
 	TestSize = 10000
 	n        = 100000
+	PoolSize = 10
 )
 
 const (

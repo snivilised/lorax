@@ -46,6 +46,14 @@ type (
 	PoolResultStream  = chan *PoolResult
 	PoolResultStreamR = <-chan *PoolResult
 	PoolResultStreamW = chan<- *PoolResult
+
+	// IDGenerator is a sequential unique id generator interface
+	IDGenerator interface {
+		Generate() string
+	}
+
+	// Next is a sequential unique id generator func type
+	Next func() string
 )
 
 type ExecutiveFunc[I, O any] func(j Job[I]) (JobOutput[O], error)

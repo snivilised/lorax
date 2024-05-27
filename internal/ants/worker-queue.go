@@ -39,12 +39,12 @@ type worker interface {
 	run()
 	finish()
 	lastUsedTime() time.Time
-	inputFunc(func())
-	inputParam(interface{})
+	sendTask(TaskFunc)
+	sendParam(InputParam)
 }
 
 type workerQueue interface {
-	len() int
+	len() int // rename to length
 	isEmpty() bool
 	insert(worker) error
 	detach() worker
