@@ -12,13 +12,13 @@ import (
 type termination string
 type terminationDuplex *boost.Duplex[termination]
 
-type ProviderFunc[I any] func() I
+type ProviderFuncL[I any] func() I
 
-type Producer[I, O any] struct {
+type ProducerL[I, O any] struct {
 	quitter      boost.AnnotatedWgQuitter
 	RoutineName  boost.GoRoutineName
 	sequenceNo   int
-	provider     ProviderFunc[I]
+	provider     ProviderFuncL[I]
 	interval     time.Duration
 	terminateDup terminationDuplex
 	JobsCh       boost.JobStream[I]
@@ -29,19 +29,19 @@ type Producer[I, O any] struct {
 // The producer owns the Jobs channel as it knows when to close it. This producer is
 // a fake producer and exposes a stop method that the client go routine can call to
 // indicate end of the work load.
-func StartProducer[I, O any](
+func StartProducerL[I, O any](
 	parentContext context.Context,
 	quitter boost.AnnotatedWgQuitter,
 	capacity int,
-	provider ProviderFunc[I],
+	provider ProviderFuncL[I],
 	interval time.Duration,
 	verbose bool,
-) *Producer[I, O] {
+) *ProducerL[I, O] {
 	if interval == 0 {
 		panic(fmt.Sprintf("Invalid delay requested: '%v'", interval))
 	}
 
-	producer := Producer[I, O]{
+	producer := ProducerL[I, O]{
 		quitter:      quitter,
 		RoutineName:  boost.GoRoutineName("✨ producer"),
 		provider:     provider,
@@ -56,7 +56,7 @@ func StartProducer[I, O any](
 	return &producer
 }
 
-func (p *Producer[I, O]) run(parentContext context.Context) {
+func (p *ProducerL[I, O]) run(parentContext context.Context) {
 	defer func() {
 		close(p.JobsCh)
 		p.quitter.Done(p.RoutineName)
@@ -97,7 +97,7 @@ func (p *Producer[I, O]) run(parentContext context.Context) {
 	}
 }
 
-func (p *Producer[I, O]) item(parentContext context.Context) bool {
+func (p *ProducerL[I, O]) item(parentContext context.Context) bool {
 	p.sequenceNo++
 	p.Count++
 
@@ -135,7 +135,7 @@ func (p *Producer[I, O]) item(parentContext context.Context) bool {
 	return result
 }
 
-func (p *Producer[I, O]) Stop() {
+func (p *ProducerL[I, O]) Stop() {
 	if p.verbose {
 		fmt.Println(">>>> 🧲 producer terminating ...")
 	}
@@ -147,7 +147,7 @@ func (p *Producer[I, O]) Stop() {
 // StopProducerAfter, run in a new go routine
 func StopProducerAfter[I, O any](
 	parentContext context.Context,
-	producer *Producer[I, O],
+	producer *ProducerL[I, O],
 	delay time.Duration,
 	verbose bool,
 ) {
@@ -167,7 +167,7 @@ func StopProducerAfter[I, O any](
 	}
 }
 
-func CancelProducerAfter[I, O any](
+func CancelProducerAfterL[I, O any](
 	delay time.Duration,
 	parentCancel context.CancelFunc,
 	verbose bool,
