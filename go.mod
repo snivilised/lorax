@@ -3,7 +3,7 @@ module github.com/snivilised/lorax
 go 1.22.0
 
 require (
-	github.com/onsi/ginkgo/v2 v2.18.0
+	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	github.com/samber/lo v1.39.0
 	github.com/snivilised/extendio v0.7.0
