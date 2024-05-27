@@ -57,6 +57,7 @@ Please refer to the documentation already available on [___RxGo___](https://gith
 
 + unit testing with [Ginkgo](https://onsi.github.io/ginkgo/)/[Gomega](https://onsi.github.io/gomega/)
 + implemented with [🐍 Cobra](https://cobra.dev/) cli framework, assisted by [🐲 Cobrass](https://github.com/snivilised/cobrass)
++ uses a heavily modified version of [🐜🐜🐜 ants](https://github.com/panjf2000/ants)
 + i18n with [go-i18n](https://github.com/nicksnyder/go-i18n)
 + linting configuration and pre-commit hooks, (see: [linting-golang](https://freshman.tech/linting-golang/)).
 

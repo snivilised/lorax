@@ -37,6 +37,10 @@ tasks:
     cmds:
       - ginkgo -p ./...
 
+  ta:
+    cmds:
+      - ginkgo -p ./internal/ants
+
   ti:
     cmds:
       - go test ./i18n
