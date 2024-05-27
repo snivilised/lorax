@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type worker[I any, O any] struct {
+type workerL[I any, O any] struct {
 	id            workerID
 	exec          ExecutiveFunc[I, O]
 	jobsChIn      JobStreamR[I]
@@ -17,7 +17,7 @@ type worker[I any, O any] struct {
 	logger        *slog.Logger
 }
 
-func (w *worker[I, O]) run(parentContext context.Context,
+func (w *workerL[I, O]) run(parentContext context.Context,
 	parentCancel context.CancelFunc,
 	outputChTimeout time.Duration,
 ) {
@@ -68,7 +68,7 @@ func (w *worker[I, O]) run(parentContext context.Context,
 	}
 }
 
-func (w *worker[I, O]) invoke(parentContext context.Context,
+func (w *workerL[I, O]) invoke(parentContext context.Context,
 	parentCancel context.CancelFunc,
 	outputChTimeout time.Duration,
 	job Job[I],

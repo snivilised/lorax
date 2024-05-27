@@ -35,7 +35,7 @@ import (
 // than for passing it to another method). This is an experimental convention that
 // is being established for all snivilised projects.
 type privateWpInfo[I, O any] struct {
-	pool          workersCollection[I, O]
+	pool          workersCollectionL[I, O]
 	workersJobsCh chan Job[I]
 	finishedCh    finishedStream
 	cancelCh      CancelStream
@@ -88,7 +88,7 @@ func NewWorkerPool[I, O any](params *NewWorkerPoolParams[I, O]) *WorkerPool[I, O
 
 	wp := &WorkerPool[I, O]{
 		private: privateWpInfo[I, O]{
-			pool:          make(workersCollection[I, O], noWorkers),
+			pool:          make(workersCollectionL[I, O], noWorkers),
 			workersJobsCh: make(JobStream[I], noWorkers),
 			finishedCh:    make(finishedStream, noWorkers),
 			cancelCh:      params.CancelCh,
@@ -238,8 +238,8 @@ func (p *WorkerPool[I, O]) spawn(
 	outputsChOut JobOutputStreamW[O],
 	finishedChOut finishedStreamW,
 ) {
-	w := &workerWrapper[I, O]{
-		core: &worker[I, O]{
+	w := &workerWrapperL[I, O]{
+		core: &workerL[I, O]{
 			id:            p.composeID(),
 			exec:          p.exec,
 			jobsChIn:      jobsChIn,

@@ -8,7 +8,7 @@ import (
 	"github.com/snivilised/lorax/boost"
 )
 
-type Consumer[O any] struct {
+type ConsumerL[O any] struct {
 	quitter     boost.AnnotatedWgQuitter
 	RoutineName boost.GoRoutineName
 	interval    time.Duration
@@ -17,14 +17,14 @@ type Consumer[O any] struct {
 	verbose     bool
 }
 
-func StartConsumer[O any](
+func StartConsumerL[O any](
 	parentContext context.Context,
 	quitter boost.AnnotatedWgQuitter,
 	outputsChIn boost.JobOutputStreamR[O],
 	interval time.Duration,
 	verbose bool,
-) *Consumer[O] {
-	consumer := &Consumer[O]{
+) *ConsumerL[O] {
+	consumer := &ConsumerL[O]{
 		quitter:     quitter,
 		RoutineName: boost.GoRoutineName("💠 consumer"),
 		interval:    interval,
@@ -37,7 +37,7 @@ func StartConsumer[O any](
 	return consumer
 }
 
-func (c *Consumer[O]) run(parentContext context.Context) {
+func (c *ConsumerL[O]) run(parentContext context.Context) {
 	defer func() {
 		c.quitter.Done(c.RoutineName)
 		if c.verbose {

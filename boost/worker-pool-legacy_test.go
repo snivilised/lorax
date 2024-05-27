@@ -112,10 +112,10 @@ type pipeline[I, O any] struct {
 	wgan       boost.WaitGroupAn
 	sequence   int
 	outputsDup *boost.Duplex[boost.JobOutput[O]]
-	provider   helpers.ProviderFunc[I]
-	producer   *helpers.Producer[I, O]
+	provider   helpers.ProviderFuncL[I]
+	producer   *helpers.ProducerL[I, O]
 	pool       *boost.WorkerPool[I, O]
-	consumer   *helpers.Consumer[O]
+	consumer   *helpers.ConsumerL[O]
 	cancel     TerminatorFunc[I, O]
 	stop       TerminatorFunc[I, O]
 }
@@ -133,14 +133,14 @@ func start[I, O any](outputsDupCh *boost.Duplex[boost.JobOutput[O]]) *pipeline[I
 
 func (p *pipeline[I, O]) produce(parentContext context.Context,
 	interval time.Duration,
-	provider helpers.ProviderFunc[I],
+	provider helpers.ProviderFuncL[I],
 	verbose bool,
 ) {
 	p.cancel = func(_ context.Context,
 		parentCancel context.CancelFunc,
 		delay time.Duration,
 	) {
-		go helpers.CancelProducerAfter[I, O](
+		go helpers.CancelProducerAfterL[I, O](
 			delay,
 			parentCancel,
 			verbose,
@@ -158,7 +158,7 @@ func (p *pipeline[I, O]) produce(parentContext context.Context,
 		)
 	}
 
-	p.producer = helpers.StartProducer[I, O](
+	p.producer = helpers.StartProducerL[I, O](
 		parentContext,
 		p.wgan,
 		JobChSize,
@@ -194,7 +194,7 @@ func (p *pipeline[I, O]) process(parentContext context.Context,
 func (p *pipeline[I, O]) consume(parentContext context.Context,
 	interval time.Duration, verbose bool,
 ) {
-	p.consumer = helpers.StartConsumer(parentContext,
+	p.consumer = helpers.StartConsumerL(parentContext,
 		p.wgan,
 		p.outputsDup.ReaderCh,
 		interval,

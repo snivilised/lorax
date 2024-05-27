@@ -18,9 +18,9 @@ type (
 	finishedStreamR = <-chan *workerFinishedResult
 	finishedStreamW = chan<- *workerFinishedResult
 
-	workerWrapper[I any, O any] struct {
-		core *worker[I, O]
+	workerWrapperL[I any, O any] struct {
+		core *workerL[I, O]
 	}
 
-	workersCollection[I, O any] map[workerID]*workerWrapper[I, O]
+	workersCollectionL[I, O any] map[workerID]*workerWrapperL[I, O]
 )
