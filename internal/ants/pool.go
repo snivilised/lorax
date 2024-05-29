@@ -34,6 +34,9 @@ import (
 // Pool accepts the tasks and process them concurrently,
 // it limits the total of goroutines to a given number by recycling goroutines.
 type Pool struct {
+	// client defined context
+	ctx context.Context
+
 	// capacity of the pool, a negative value means that the capacity of pool is
 	// limitless, an infinite pool is used to avoid potential issue of endless
 	// blocking caused by nested usage of a pool: submitting a task to pool which
@@ -76,7 +79,7 @@ type Pool struct {
 
 // purgeStaleWorkers clears stale workers periodically, it runs in an
 // individual goroutine, as a scavenger.
-func (p *Pool) purgeStaleWorkers(ctx context.Context) {
+func (p *Pool) purgeStaleWorkers(purgeCtx context.Context) {
 	ticker := time.NewTicker(p.o.ExpiryDuration)
 
 	defer func() {
@@ -86,7 +89,7 @@ func (p *Pool) purgeStaleWorkers(ctx context.Context) {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-purgeCtx.Done():
 			return
 		case <-ticker.C:
 		}
@@ -107,7 +110,7 @@ func (p *Pool) purgeStaleWorkers(ctx context.Context) {
 		// may be blocking and may consume a lot of time if many workers
 		// are located on non-local CPUs.
 		for i := range staleWorkers {
-			staleWorkers[i].finish()
+			staleWorkers[i].finish(p.ctx)
 			staleWorkers[i] = nil
 		}
 
@@ -121,7 +124,7 @@ func (p *Pool) purgeStaleWorkers(ctx context.Context) {
 }
 
 // ticktock is a goroutine that updates the current time in the pool regularly.
-func (p *Pool) ticktock(ctx context.Context) {
+func (p *Pool) ticktock(ticktockCtx context.Context) {
 	ticker := time.NewTicker(nowTimeUpdateInterval)
 	defer func() {
 		ticker.Stop()
@@ -130,7 +133,7 @@ func (p *Pool) ticktock(ctx context.Context) {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-ticktockCtx.Done():
 			return
 		case <-ticker.C:
 		}
@@ -150,14 +153,14 @@ func (p *Pool) goPurge() {
 
 	// Start a goroutine to clean up expired workers periodically.
 	var ctx context.Context
-	ctx, p.stopPurge = context.WithCancel(context.Background())
+	ctx, p.stopPurge = context.WithCancel(p.ctx)
 	go p.purgeStaleWorkers(ctx)
 }
 
 func (p *Pool) goTicktock() {
 	p.now.Store(time.Now())
 	var ctx context.Context
-	ctx, p.stopTicktock = context.WithCancel(context.Background())
+	ctx, p.stopTicktock = context.WithCancel(p.ctx)
 	go p.ticktock(ctx)
 }
 
@@ -166,7 +169,7 @@ func (p *Pool) nowTime() time.Time {
 }
 
 // NewPool instantiates a Pool with customized options.
-func NewPool(size int, options ...Option) (*Pool, error) {
+func NewPool(ctx context.Context, size int, options ...Option) (*Pool, error) {
 	if size <= 0 {
 		size = -1
 	}
@@ -186,6 +189,7 @@ func NewPool(size int, options ...Option) (*Pool, error) {
 	}
 
 	p := &Pool{
+		ctx:      ctx,
 		capacity: int32(size),
 		lock:     async.NewSpinLock(),
 		o:        opts,
@@ -222,14 +226,14 @@ func NewPool(size int, options ...Option) (*Pool, error) {
 // get blocked with the last Pool.Submit() call once the current Pool
 // runs out of its capacity, and to avoid this, you should instantiate
 // a Pool with ants.WithNonblocking(true).
-func (p *Pool) Submit(task TaskFunc) error {
+func (p *Pool) Submit(ctx context.Context, task TaskFunc) error {
 	if p.IsClosed() {
 		return ErrPoolClosed
 	}
 
 	w, err := p.retrieveWorker()
 	if w != nil {
-		w.sendTask(task)
+		w.sendTask(ctx, task)
 	}
 
 	return err
@@ -298,7 +302,7 @@ func (p *Pool) Release() {
 	p.stopTicktock = nil
 
 	p.lock.Lock()
-	p.workers.reset()
+	p.workers.reset(p.ctx)
 	p.lock.Unlock()
 	// There might be some callers waiting in retrieveWorker(), so we need
 	// to wake them up to prevent those callers blocking infinitely.
@@ -346,7 +350,7 @@ func (p *Pool) addWaiting(delta int) {
 
 // retrieveWorker returns an available worker to run the tasks.
 func (p *Pool) retrieveWorker() (w worker, err error) {
-	p.lock.Lock()
+	p.lock.Lock() // why isn't the unlock just deferred?
 
 retry:
 	// First try to fetch the worker from the queue.

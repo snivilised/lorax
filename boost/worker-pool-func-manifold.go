@@ -1,32 +1,35 @@
 package boost
 
 import (
+	"context"
 	"sync"
 
 	"github.com/snivilised/lorax/internal/ants"
 )
 
-type manifoldFunc ants.PoolFunc
+type ManifoldFunc ants.PoolFunc
 
-type WorkerPoolManifold[I, O any] struct {
+type ManifoldFuncPool[I, O any] struct {
 	basePool
 	functionalPool
 	sourceJobsChIn JobStream[I]
 }
 
-func NewManifoldPool[I, O any](size int,
+func NewManifoldFuncPool[I, O any](ctx context.Context,
+	size int,
 	pf ants.PoolFunc,
 	wg *sync.WaitGroup,
 	options ...Option,
-) (*WorkerPoolManifold[I, O], error) {
-	pool, err := ants.NewPoolWithFunc(size, func(i ants.InputParam) {
+) (*ManifoldFuncPool[I, O], error) {
+	pool, err := ants.NewPoolWithFunc(ctx, size, func(i ants.InputParam) {
 		defer wg.Done()
 
 		pf(i)
 	}, options...)
 
-	return &WorkerPoolManifold[I, O]{
+	return &ManifoldFuncPool[I, O]{
 		basePool: basePool{
+			ctx:   ctx,
 			idGen: &Sequential{},
 			wg:    wg,
 		},
