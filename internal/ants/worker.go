@@ -23,6 +23,7 @@
 package ants
 
 import (
+	"context"
 	"runtime/debug"
 	"time"
 )
@@ -73,18 +74,24 @@ func (w *goWorker) run() {
 	}()
 }
 
-func (w *goWorker) finish() {
-	w.taskCh <- nil // ✨
+func (w *goWorker) finish(ctx context.Context) {
+	select {
+	case <-ctx.Done():
+	case w.taskCh <- nil: // ✨:
+	}
 }
 
 func (w *goWorker) lastUsedTime() time.Time {
 	return w.lastUsed
 }
 
-func (w *goWorker) sendTask(fn TaskFunc) {
-	w.taskCh <- fn
+func (w *goWorker) sendTask(ctx context.Context, fn TaskFunc) {
+	select {
+	case <-ctx.Done():
+	case w.taskCh <- fn:
+	}
 }
 
-func (w *goWorker) sendParam(InputParam) {
+func (w *goWorker) sendParam(context.Context, InputParam) {
 	panic("unreachable")
 }

@@ -23,46 +23,47 @@ package boost
 // ManifoldE: func[I, O any]() O, error
 //
 import (
+	"context"
 	"sync"
 
 	"github.com/snivilised/lorax/internal/ants"
 )
 
-type WorkerPool[I, O any] struct {
+type TaskPool[I, O any] struct {
 	basePool
-	generalPool
+	taskPool
 	sourceJobsChIn JobStream[I]
 }
 
-// NewSubmitterPool creates a new worker pool using the native ants interface; ie
+// NewTaskPool creates a new worker pool using the native ants interface; ie
 // new jobs are submitted with Submit(task TaskFunc)
-func NewSubmitterPool[I, O any](size int,
+func NewTaskPool[I, O any](ctx context.Context,
+	size int,
 	wg *sync.WaitGroup,
 	options ...Option,
-) (*WorkerPool[I, O], error) {
-	pool, err := ants.NewPool(size, options...)
+) (*TaskPool[I, O], error) {
+	pool, err := ants.NewPool(ctx, size, options...)
 
-	return &WorkerPool[I, O]{
+	return &TaskPool[I, O]{
 		basePool: basePool{
-			idGen: &Sequential{},
+			ctx:   ctx,
 			wg:    wg,
+			idGen: &Sequential{},
 		},
-		generalPool: generalPool{
+		taskPool: taskPool{
 			pool: pool,
 		},
 	}, err
 }
 
-func (p *WorkerPool[I, O]) Post(task ants.TaskFunc) error {
-	p.wg.Add(1)
-
-	return p.pool.Submit(func() {
-		defer p.wg.Done()
-
-		task()
-	})
+func (p *TaskPool[I, O]) Post(task ants.TaskFunc) error {
+	return p.pool.Submit(p.ctx, task)
 }
 
-func (p *WorkerPool[I, O]) Release() {
+func (p *TaskPool[I, O]) Running() int {
+	return p.pool.Running()
+}
+
+func (p *TaskPool[I, O]) Release() {
 	p.pool.Release()
 }

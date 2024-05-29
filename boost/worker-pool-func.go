@@ -1,12 +1,13 @@
 package boost
 
 import (
+	"context"
 	"sync"
 
 	"github.com/snivilised/lorax/internal/ants"
 )
 
-type WorkerPoolInvoker[I, O any] struct {
+type FuncPool[I, O any] struct {
 	basePool
 	functionalPool
 	sourceJobsChIn JobStream[I]
@@ -14,25 +15,24 @@ type WorkerPoolInvoker[I, O any] struct {
 
 // NewFuncPool creates a new worker pool using the native ants interface; ie
 // new jobs are submitted with Submit(task TaskFunc)
-func NewFuncPool[I, O any](size int,
+func NewFuncPool[I, O any](ctx context.Context,
+	size int,
 	pf ants.PoolFunc,
 	wg *sync.WaitGroup,
 	options ...Option,
-) (*WorkerPoolInvoker[I, O], error) {
+) (*FuncPool[I, O], error) {
 	// TODO: the automatic invocation of Add/Done might not
 	// be valid, need to confirm. I thought that each gr was
 	// allocated for each job, but this is not necessarily
 	// the case, because each worker has its own job queue.
 	//
-	pool, err := ants.NewPoolWithFunc(size, func(i ants.InputParam) {
-		defer wg.Done()
-		pf(i)
-	}, options...)
+	pool, err := ants.NewPoolWithFunc(ctx, size, pf, options...)
 
-	return &WorkerPoolInvoker[I, O]{
+	return &FuncPool[I, O]{
 		basePool: basePool{
-			idGen: &Sequential{},
+			ctx:   ctx,
 			wg:    wg,
+			idGen: &Sequential{},
 		},
 		functionalPool: functionalPool{
 			pool: pool,
@@ -40,16 +40,14 @@ func NewFuncPool[I, O any](size int,
 	}, err
 }
 
-func (p *WorkerPoolInvoker[I, O]) Post(job ants.InputParam) error {
-	p.wg.Add(1) // because the gr lifetime is tied to the job not the worker
-
+func (p *FuncPool[I, O]) Post(job ants.InputParam) error {
 	return p.pool.Invoke(job)
 }
 
-func (p *WorkerPoolInvoker[I, O]) Running() int {
+func (p *FuncPool[I, O]) Running() int {
 	return p.pool.Running()
 }
 
-func (p *WorkerPoolInvoker[I, O]) Release() {
+func (p *FuncPool[I, O]) Release() {
 	p.pool.Release()
 }

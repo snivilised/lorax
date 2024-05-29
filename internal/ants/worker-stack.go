@@ -23,6 +23,7 @@
 package ants
 
 import (
+	"context"
 	"time"
 )
 
@@ -70,7 +71,7 @@ func (wq *workerStack) refresh(duration time.Duration) []worker {
 	}
 
 	expiryTime := time.Now().Add(-duration)
-	index := wq.binarySearch(0, n-1, expiryTime)
+	index := wq.search(0, n-1, expiryTime)
 
 	wq.expiry = wq.expiry[:0]
 	if index != -1 {
@@ -84,7 +85,7 @@ func (wq *workerStack) refresh(duration time.Duration) []worker {
 	return wq.expiry
 }
 
-func (wq *workerStack) binarySearch(l, r int, expiryTime time.Time) int {
+func (wq *workerStack) search(l, r int, expiryTime time.Time) int {
 	for l <= r {
 		mid := l + ((r - l) >> 1) // avoid overflow when computing mid
 		if expiryTime.Before(wq.items[mid].lastUsedTime()) {
@@ -96,9 +97,9 @@ func (wq *workerStack) binarySearch(l, r int, expiryTime time.Time) int {
 	return r
 }
 
-func (wq *workerStack) reset() {
+func (wq *workerStack) reset(ctx context.Context) {
 	for i := 0; i < wq.len(); i++ {
-		wq.items[i].finish()
+		wq.items[i].finish(ctx)
 		wq.items[i] = nil
 	}
 	wq.items = wq.items[:0]

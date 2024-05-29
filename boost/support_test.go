@@ -49,6 +49,18 @@ func longRunningFunc() {
 	}
 }
 
+var stopLongRunningPoolFunc int32
+
+func longRunningPoolFunc(arg ants.InputParam) {
+	if ch, ok := arg.(chan struct{}); ok {
+		<-ch
+		return
+	}
+	for atomic.LoadInt32(&stopLongRunningPoolFunc) == 0 {
+		runtime.Gosched()
+	}
+}
+
 func ShowMemStats() {
 	mem := runtime.MemStats{}
 	runtime.ReadMemStats(&mem)

@@ -23,6 +23,7 @@
 package ants
 
 import (
+	"context"
 	"time"
 )
 
@@ -96,7 +97,7 @@ func (wq *loopQueue) detach() worker {
 
 func (wq *loopQueue) refresh(duration time.Duration) []worker {
 	expiryTime := time.Now().Add(-duration)
-	index := wq.binarySearch(expiryTime)
+	index := wq.search(expiryTime)
 	if index == -1 {
 		return nil
 	}
@@ -126,7 +127,7 @@ func (wq *loopQueue) refresh(duration time.Duration) []worker {
 	return wq.expiry
 }
 
-func (wq *loopQueue) binarySearch(expiryTime time.Time) int {
+func (wq *loopQueue) search(expiryTime time.Time) int {
 	var mid, nLen, basel, tMid int
 	nLen = len(wq.items)
 
@@ -163,14 +164,14 @@ func (wq *loopQueue) binarySearch(expiryTime time.Time) int {
 	return (r + basel + nLen) % nLen
 }
 
-func (wq *loopQueue) reset() {
+func (wq *loopQueue) reset(ctx context.Context) {
 	if wq.isEmpty() {
 		return
 	}
 
 retry:
 	if w := wq.detach(); w != nil {
-		w.finish()
+		w.finish(ctx)
 		goto retry
 	}
 	wq.items = wq.items[:0]

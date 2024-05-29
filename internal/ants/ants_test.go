@@ -1,6 +1,7 @@
 package ants_test
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -14,18 +15,20 @@ var _ = Describe("Ants", func() {
 	Context("NewPool", func() {
 		Context("Submit", func() {
 			When("non-blocking", func() {
-				It("🧪 should: not fail", func() {
+				It("🧪 should: not fail", func(specCtx SpecContext) {
 					// TestNonblockingSubmit
 					// ??? defer leaktest.Check(GinkgoT())()
+					ctx, cancel := context.WithCancel(specCtx)
+					defer cancel()
 
 					poolSize := 10
-					pool, err := ants.NewPool(poolSize, ants.WithNonblocking(true))
+					pool, err := ants.NewPool(ctx, poolSize, ants.WithNonblocking(true))
 					Expect(err).To(Succeed(), "create TimingPool failed")
 
 					defer pool.Release()
 
 					for i := 0; i < poolSize-1; i++ {
-						Expect(pool.Submit(longRunningFunc)).To(Succeed(),
+						Expect(pool.Submit(ctx, longRunningFunc)).To(Succeed(),
 							"nonblocking submit when pool is not full shouldn't return error",
 						)
 					}
@@ -36,35 +39,37 @@ var _ = Describe("Ants", func() {
 						close(secondCh)
 					}
 					// p is full now.
-					Expect(pool.Submit(fn)).To(Succeed(),
+					Expect(pool.Submit(ctx, fn)).To(Succeed(),
 						"nonblocking submit when pool is not full shouldn't return error",
 					)
-					Expect(pool.Submit(demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
+					Expect(pool.Submit(ctx, demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
 						"nonblocking submit when pool is full should get an ErrPoolOverload",
 					)
 
 					// interrupt fn to get an available worker
 					close(firstCh)
 					<-secondCh
-					Expect(pool.Submit(demoFunc)).To(Succeed(),
+					Expect(pool.Submit(ctx, demoFunc)).To(Succeed(),
 						"nonblocking submit when pool is not full shouldn't return error",
 					)
 				})
 			})
 
 			When("max blocking", func() {
-				It("🧪 should: not fail", func() {
+				It("🧪 should: not fail", func(specCtx SpecContext) {
 					// TestMaxBlockingSubmit
 					// ??? defer leaktest.Check(GinkgoT())()
+					ctx, cancel := context.WithCancel(specCtx)
+					defer cancel()
 
 					poolSize := 10
-					pool, err := ants.NewPool(poolSize, ants.WithMaxBlockingTasks(1))
+					pool, err := ants.NewPool(ctx, poolSize, ants.WithMaxBlockingTasks(1))
 					Expect(err).To(Succeed(), "create TimingPool failed")
 
 					defer pool.Release()
 
 					for i := 0; i < poolSize-1; i++ {
-						Expect(pool.Submit(longRunningFunc)).To(Succeed(),
+						Expect(pool.Submit(ctx, longRunningFunc)).To(Succeed(),
 							"blocking submit when pool is not full shouldn't return error",
 						)
 					}
@@ -73,7 +78,7 @@ var _ = Describe("Ants", func() {
 						<-ch
 					}
 					// p is full now.
-					Expect(pool.Submit(fn)).To(Succeed(),
+					Expect(pool.Submit(ctx, fn)).To(Succeed(),
 						"nonblocking submit when pool is not full shouldn't return error",
 					)
 
@@ -82,14 +87,14 @@ var _ = Describe("Ants", func() {
 					errCh := make(chan error, 1)
 					go func() {
 						// should be blocked. blocking num == 1
-						if err := pool.Submit(demoFunc); err != nil {
+						if err := pool.Submit(ctx, demoFunc); err != nil {
 							errCh <- err
 						}
 						wg.Done()
 					}()
 					time.Sleep(1 * time.Second)
 					// already reached max blocking limit
-					Expect(pool.Submit(demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
+					Expect(pool.Submit(ctx, demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
 						"blocking submit when pool reach max blocking submit should return ErrPoolOverload",
 					)
 
@@ -110,11 +115,14 @@ var _ = Describe("Ants", func() {
 	Context("NewPoolWithFunc", func() {
 		Context("Invoke", func() {
 			When("waiting to get worker", func() {
-				It("🧪 should: not fail", func() {
+				It("🧪 should: not fail", func(specCtx SpecContext) {
 					// TestAntsPoolWithFuncWaitToGetWorker
 
+					ctx, cancel := context.WithCancel(specCtx)
+					defer cancel()
+
 					var wg sync.WaitGroup
-					pool, _ := ants.NewPoolWithFunc(AntsSize, func(i ants.InputParam) {
+					pool, _ := ants.NewPoolWithFunc(ctx, AntsSize, func(i ants.InputParam) {
 						demoPoolFunc(i)
 						wg.Done()
 					})
@@ -133,11 +141,14 @@ var _ = Describe("Ants", func() {
 			})
 
 			When("waiting to get worker with pre malloc", func() {
-				It("🧪 should: not fail", func() {
+				It("🧪 should: not fail", func(specCtx SpecContext) {
 					// TestAntsPoolWithFuncWaitToGetWorkerPreMalloc
 
+					ctx, cancel := context.WithCancel(specCtx)
+					defer cancel()
+
 					var wg sync.WaitGroup
-					pool, _ := ants.NewPoolWithFunc(AntsSize, func(i ants.InputParam) {
+					pool, _ := ants.NewPoolWithFunc(ctx, AntsSize, func(i ants.InputParam) {
 						demoPoolFunc(i)
 						wg.Done()
 					}, ants.WithPreAlloc(true))
