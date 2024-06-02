@@ -70,7 +70,7 @@ func (p *Pool) purgeStaleWorkers(purgeCtx context.Context) {
 		// may be blocking and may consume a lot of time if many workers
 		// are located on non-local CPUs.
 		for i := range staleWorkers {
-			staleWorkers[i].finish(p.ctx)
+			staleWorkers[i].finish(purgeCtx)
 			staleWorkers[i] = nil
 		}
 
@@ -106,22 +106,22 @@ func (p *Pool) ticktock(ticktockCtx context.Context) {
 	}
 }
 
-func (p *Pool) goPurge() {
+func (p *Pool) goPurge(ctx context.Context) {
 	if p.o.DisablePurge {
 		return
 	}
 
 	// Start a goroutine to clean up expired workers periodically.
-	var ctx context.Context
-	ctx, p.stopPurge = context.WithCancel(p.ctx)
-	go p.purgeStaleWorkers(ctx)
+	var purgeCtx context.Context
+	purgeCtx, p.stopPurge = context.WithCancel(ctx)
+	go p.purgeStaleWorkers(purgeCtx)
 }
 
-func (p *Pool) goTicktock() {
+func (p *Pool) goTicktock(ctx context.Context) {
 	p.now.Store(time.Now())
-	var ctx context.Context
-	ctx, p.stopTicktock = context.WithCancel(p.ctx)
-	go p.ticktock(ctx)
+	var ticktockCtx context.Context
+	ticktockCtx, p.stopTicktock = context.WithCancel(ctx)
+	go p.ticktock(ticktockCtx)
 }
 
 func (p *Pool) nowTime() time.Time {
@@ -150,7 +150,6 @@ func NewPool(ctx context.Context, size int, options ...Option) (*Pool, error) {
 
 	p := &Pool{
 		workerPool: workerPool{
-			ctx:      ctx,
 			capacity: int32(size),
 			lock:     async.NewSpinLock(),
 			o:        opts,
@@ -175,8 +174,8 @@ func NewPool(ctx context.Context, size int, options ...Option) (*Pool, error) {
 
 	p.cond = sync.NewCond(p.lock)
 
-	p.goPurge()
-	p.goTicktock()
+	p.goPurge(ctx)
+	p.goTicktock(ctx)
 
 	return p, nil
 }
@@ -202,12 +201,12 @@ func (p *Pool) Submit(ctx context.Context, task TaskFunc) error {
 }
 
 // Reboot reboots a closed pool.
-func (p *Pool) Reboot() {
+func (p *Pool) Reboot(ctx context.Context) {
 	if atomic.CompareAndSwapInt32(&p.state, CLOSED, OPENED) {
 		atomic.StoreInt32(&p.purgeDone, 0)
-		p.goPurge()
+		p.goPurge(ctx)
 		atomic.StoreInt32(&p.ticktockDone, 0)
-		p.goTicktock()
+		p.goTicktock(ctx)
 	}
 }
 

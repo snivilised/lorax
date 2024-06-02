@@ -51,11 +51,11 @@ func main() {
 		time.Sleep(time.Second)
 	}, &wg, ants.WithNonblocking(false))
 
-	defer pool.Release()
+	defer pool.Release(ctx)
 
 	for i := 0; i < 30; i++ { // producer
 		fmt.Printf("PRE: <--- (n: %v) [%v] 🍋 \n", i, time.Now().Format(time.TimeOnly))
-		_ = pool.Post(i)
+		_ = pool.Post(ctx, i)
 		fmt.Printf("POST: <--- (n: %v) [%v] 🍊 \n", i, time.Now().Format(time.TimeOnly))
 	}
 

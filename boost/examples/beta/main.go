@@ -44,11 +44,11 @@ func main() {
 
 	pool, _ := boost.NewTaskPool[int, int](ctx, NoW, &wg)
 
-	defer pool.Release()
+	defer pool.Release(ctx)
 
 	for i := 0; i < 30; i++ { // producer
 		fmt.Printf("PRE: <--- (n: %v) [%v] 🍋 \n", i, time.Now().Format(time.TimeOnly))
-		_ = pool.Post(func() {
+		_ = pool.Post(ctx, func() {
 			fmt.Printf("=> running: '%v')\n", pool.Running())
 			fmt.Printf("<--- (n: %v)🍒 \n", i)
 			time.Sleep(time.Second)

@@ -105,21 +105,21 @@ func (p *PoolWithFunc) ticktock(ticktockCtx context.Context) {
 	}
 }
 
-func (p *PoolWithFunc) goPurge() {
+func (p *PoolWithFunc) goPurge(ctx context.Context) {
 	if p.o.DisablePurge {
 		return
 	}
 
 	// Start a goroutine to clean up expired workers periodically.
 	var purgeCtx context.Context
-	purgeCtx, p.stopPurge = context.WithCancel(p.ctx)
+	purgeCtx, p.stopPurge = context.WithCancel(ctx)
 	go p.purgeStaleWorkers(purgeCtx)
 }
 
-func (p *PoolWithFunc) goTicktock() {
+func (p *PoolWithFunc) goTicktock(ctx context.Context) {
 	p.now.Store(time.Now())
 	var ticktockCtx context.Context
-	ticktockCtx, p.stopTicktock = context.WithCancel(p.ctx)
+	ticktockCtx, p.stopTicktock = context.WithCancel(ctx)
 	go p.ticktock(ticktockCtx)
 }
 
@@ -157,7 +157,6 @@ func NewPoolWithFunc(ctx context.Context,
 
 	p := &PoolWithFunc{
 		workerPool: workerPool{
-			ctx:      ctx,
 			capacity: int32(size),
 			lock:     async.NewSpinLock(),
 			o:        opts,
@@ -181,8 +180,8 @@ func NewPoolWithFunc(ctx context.Context,
 
 	p.cond = sync.NewCond(p.lock)
 
-	p.goPurge()
-	p.goTicktock()
+	p.goPurge(ctx)
+	p.goTicktock(ctx)
 
 	return p, nil
 }
@@ -193,26 +192,26 @@ func NewPoolWithFunc(ctx context.Context,
 // but what calls for special attention is that you will get blocked with the last
 // Pool.Invoke() call once the current Pool runs out of its capacity, and to avoid this,
 // you should instantiate a PoolWithFunc with ants.WithNonblocking(true).
-func (p *PoolWithFunc) Invoke(job InputParam) error {
+func (p *PoolWithFunc) Invoke(ctx context.Context, job InputParam) error {
 	if p.IsClosed() {
 		return ErrPoolClosed
 	}
 
 	w, err := p.retrieveWorker()
 	if w != nil {
-		w.sendParam(p.ctx, job)
+		w.sendParam(ctx, job)
 	}
 
 	return err
 }
 
 // Reboot reboots a closed pool.
-func (p *PoolWithFunc) Reboot() {
+func (p *PoolWithFunc) Reboot(ctx context.Context) {
 	if atomic.CompareAndSwapInt32(&p.state, CLOSED, OPENED) {
 		atomic.StoreInt32(&p.purgeDone, 0)
-		p.goPurge()
+		p.goPurge(ctx)
 		atomic.StoreInt32(&p.ticktockDone, 0)
-		p.goTicktock()
+		p.goTicktock(ctx)
 	}
 }
 
