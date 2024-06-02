@@ -24,10 +24,10 @@ var _ = Describe("WorkerPoolFunc", func() {
 
 				pool, err := boost.NewFuncPool[int, int](ctx, AntsSize, demoPoolFunc, &wg)
 
-				defer pool.Release()
+				defer pool.Release(ctx)
 
 				for i := 0; i < n; i++ {
-					_ = pool.Post(Param)
+					_ = pool.Post(ctx, Param)
 				}
 				wg.Wait()
 				GinkgoWriter.Printf("pool with func, running workers number:%d\n",
@@ -48,10 +48,10 @@ var _ = Describe("WorkerPoolFunc", func() {
 
 					pool, err := boost.NewFuncPool[int, int](ctx, AntsSize, demoPoolFunc, &wg)
 
-					defer pool.Release()
+					defer pool.Release(ctx)
 
 					for i := 0; i < n; i++ {
-						_ = pool.Post(Param)
+						_ = pool.Post(ctx, Param)
 
 						if i > 10 {
 							cancel()
@@ -82,18 +82,18 @@ var _ = Describe("WorkerPoolFunc", func() {
 				)
 
 				Expect(err).To(Succeed(), "create TimingPool failed")
-				defer pool.Release()
+				defer pool.Release(ctx)
 
 				By("👾 POOL-CREATED\n")
 				for i := 0; i < PoolSize-1; i++ {
-					Expect(pool.Post(Param)).To(Succeed(),
+					Expect(pool.Post(ctx, Param)).To(Succeed(),
 						"submit when pool is not full shouldn't return error",
 					)
 				}
 
 				ch := make(chan struct{})
 				// pool is full now.
-				Expect(pool.Post(ch)).To(Succeed(),
+				Expect(pool.Post(ctx, ch)).To(Succeed(),
 					"submit when pool is not full shouldn't return error",
 				)
 
@@ -103,7 +103,7 @@ var _ = Describe("WorkerPoolFunc", func() {
 
 				go func() {
 					// should be blocked. blocking num == 1
-					if err := pool.Post(Param); err != nil {
+					if err := pool.Post(ctx, Param); err != nil {
 						errCh <- err
 					}
 					By("👾 Producer complete\n")
@@ -111,7 +111,7 @@ var _ = Describe("WorkerPoolFunc", func() {
 				}()
 				time.Sleep(1 * time.Second)
 				// already reached max blocking limit
-				Expect(pool.Post(Param)).To(MatchError(ants.ErrPoolOverload.Error()),
+				Expect(pool.Post(ctx, Param)).To(MatchError(ants.ErrPoolOverload.Error()),
 					"blocking submit when pool reach max blocking submit should return ErrPoolOverload",
 				)
 

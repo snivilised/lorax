@@ -46,7 +46,6 @@ func NewTaskPool[I, O any](ctx context.Context,
 
 	return &TaskPool[I, O]{
 		basePool: basePool{
-			ctx:   ctx,
 			wg:    wg,
 			idGen: &Sequential{},
 		},
@@ -56,14 +55,14 @@ func NewTaskPool[I, O any](ctx context.Context,
 	}, err
 }
 
-func (p *TaskPool[I, O]) Post(task ants.TaskFunc) error {
-	return p.pool.Submit(p.ctx, task)
+func (p *TaskPool[I, O]) Post(ctx context.Context, task ants.TaskFunc) error {
+	return p.pool.Submit(ctx, task)
 }
 
 func (p *TaskPool[I, O]) Running() int {
 	return p.pool.Running()
 }
 
-func (p *TaskPool[I, O]) Release() {
-	p.pool.Release()
+func (p *TaskPool[I, O]) Release(ctx context.Context) {
+	p.pool.Release(ctx)
 }

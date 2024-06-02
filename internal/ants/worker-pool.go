@@ -8,8 +8,6 @@ import (
 )
 
 type workerPool struct {
-	// client defined context
-	ctx context.Context
 	// capacity of the pool.
 	capacity int32
 
@@ -95,7 +93,7 @@ func (p *workerPool) IsClosed() bool {
 }
 
 // Release closes this pool and releases the worker queue.
-func (p *workerPool) Release() {
+func (p *workerPool) Release(ctx context.Context) {
 	if !atomic.CompareAndSwapInt32(&p.state, OPENED, CLOSED) {
 		return
 	}
@@ -108,7 +106,7 @@ func (p *workerPool) Release() {
 	p.stopTicktock = nil
 
 	p.lock.Lock()
-	p.workers.reset(p.ctx)
+	p.workers.reset(ctx)
 	p.lock.Unlock()
 	// There might be some callers waiting in retrieveWorker(), so we need to
 	// wake them up to prevent those callers blocking infinitely.
@@ -117,12 +115,12 @@ func (p *workerPool) Release() {
 
 // ReleaseTimeout is like Release but with a timeout, it waits all workers
 // to exit before timing out.
-func (p *workerPool) ReleaseTimeout(timeout time.Duration) error {
+func (p *workerPool) ReleaseTimeout(ctx context.Context, timeout time.Duration) error {
 	purge := (!p.o.DisablePurge && p.stopPurge == nil)
 	if p.IsClosed() || purge || p.stopTicktock == nil {
 		return ErrPoolClosed
 	}
-	p.Release()
+	p.Release(ctx)
 
 	endTime := time.Now().Add(timeout)
 	for time.Now().Before(endTime) {

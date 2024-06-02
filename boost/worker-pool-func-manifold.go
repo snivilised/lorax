@@ -29,7 +29,6 @@ func NewManifoldFuncPool[I, O any](ctx context.Context,
 
 	return &ManifoldFuncPool[I, O]{
 		basePool: basePool{
-			ctx:   ctx,
 			idGen: &Sequential{},
 			wg:    wg,
 		},

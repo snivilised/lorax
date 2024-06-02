@@ -25,7 +25,7 @@ var _ = Describe("Ants", func() {
 					pool, err := ants.NewPool(ctx, poolSize, ants.WithNonblocking(true))
 					Expect(err).To(Succeed(), "create TimingPool failed")
 
-					defer pool.Release()
+					defer pool.Release(ctx)
 
 					for i := 0; i < poolSize-1; i++ {
 						Expect(pool.Submit(ctx, longRunningFunc)).To(Succeed(),
@@ -66,7 +66,7 @@ var _ = Describe("Ants", func() {
 					pool, err := ants.NewPool(ctx, poolSize, ants.WithMaxBlockingTasks(1))
 					Expect(err).To(Succeed(), "create TimingPool failed")
 
-					defer pool.Release()
+					defer pool.Release(ctx)
 
 					for i := 0; i < poolSize-1; i++ {
 						Expect(pool.Submit(ctx, longRunningFunc)).To(Succeed(),
@@ -126,11 +126,11 @@ var _ = Describe("Ants", func() {
 						demoPoolFunc(i)
 						wg.Done()
 					})
-					defer pool.Release()
+					defer pool.Release(ctx)
 
 					for i := 0; i < n; i++ {
 						wg.Add(1)
-						_ = pool.Invoke(Param)
+						_ = pool.Invoke(ctx, Param)
 					}
 					wg.Wait()
 					GinkgoWriter.Printf("pool with func, running workers number:%d\n",
@@ -152,11 +152,11 @@ var _ = Describe("Ants", func() {
 						demoPoolFunc(i)
 						wg.Done()
 					}, ants.WithPreAlloc(true))
-					defer pool.Release()
+					defer pool.Release(ctx)
 
 					for i := 0; i < n; i++ {
 						wg.Add(1)
-						_ = pool.Invoke(Param)
+						_ = pool.Invoke(ctx, Param)
 					}
 					wg.Wait()
 					GinkgoWriter.Printf("pool with func, running workers number:%d\n",

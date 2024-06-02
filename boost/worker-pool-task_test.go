@@ -25,13 +25,13 @@ var _ = Describe("WorkerPoolTask", func() {
 				pool, err := boost.NewTaskPool[int, int](ctx, PoolSize, &wg,
 					boost.WithNonblocking(true),
 				)
-				defer pool.Release()
+				defer pool.Release(ctx)
 
 				Expect(err).To(Succeed())
 				Expect(pool).NotTo(BeNil())
 
 				for i := 0; i < PoolSize-1; i++ {
-					Expect(pool.Post(longRunningFunc)).To(Succeed(),
+					Expect(pool.Post(ctx, longRunningFunc)).To(Succeed(),
 						"nonblocking submit when pool is not full shouldn't return error",
 					)
 				}
@@ -43,16 +43,16 @@ var _ = Describe("WorkerPoolTask", func() {
 					close(secondCh)
 				}
 				// pool is full now.
-				Expect(pool.Post(fn)).To(Succeed(),
+				Expect(pool.Post(ctx, fn)).To(Succeed(),
 					"nonblocking submit when pool is not full shouldn't return error",
 				)
-				Expect(pool.Post(demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
+				Expect(pool.Post(ctx, demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
 					"nonblocking submit when pool is full should get an ErrPoolOverload",
 				)
 				// interrupt fn to get an available worker
 				close(firstCh)
 				<-secondCh
-				Expect(pool.Post(demoFunc)).To(Succeed(),
+				Expect(pool.Post(ctx, demoFunc)).To(Succeed(),
 					"nonblocking submit when pool is not full shouldn't return error",
 				)
 			})
@@ -70,11 +70,11 @@ var _ = Describe("WorkerPoolTask", func() {
 					boost.WithMaxBlockingTasks(1),
 				)
 				Expect(err).To(Succeed(), "create TimingPool failed")
-				defer pool.Release()
+				defer pool.Release(ctx)
 
 				By("👾 POOL-CREATED\n")
 				for i := 0; i < PoolSize-1; i++ {
-					Expect(pool.Post(longRunningFunc)).To(Succeed(),
+					Expect(pool.Post(ctx, longRunningFunc)).To(Succeed(),
 						"submit when pool is not full shouldn't return error",
 					)
 				}
@@ -83,7 +83,7 @@ var _ = Describe("WorkerPoolTask", func() {
 					<-ch
 				}
 				// pool is full now.
-				Expect(pool.Post(fn)).To(Succeed(),
+				Expect(pool.Post(ctx, fn)).To(Succeed(),
 					"submit when pool is not full shouldn't return error",
 				)
 
@@ -92,7 +92,7 @@ var _ = Describe("WorkerPoolTask", func() {
 				errCh := make(chan error, 1)
 				go func() {
 					// should be blocked. blocking num == 1
-					if err := pool.Post(demoFunc); err != nil {
+					if err := pool.Post(ctx, demoFunc); err != nil {
 						errCh <- err
 					}
 					By("👾 Producer complete\n")
@@ -103,7 +103,7 @@ var _ = Describe("WorkerPoolTask", func() {
 				time.Sleep(1 * time.Second)
 
 				// already reached max blocking limit
-				Expect(pool.Post(demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
+				Expect(pool.Post(ctx, demoFunc)).To(MatchError(ants.ErrPoolOverload.Error()),
 					"blocking submit when pool reach max blocking submit should return ErrPoolOverload",
 				)
 

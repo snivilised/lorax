@@ -30,7 +30,6 @@ func NewFuncPool[I, O any](ctx context.Context,
 
 	return &FuncPool[I, O]{
 		basePool: basePool{
-			ctx:   ctx,
 			wg:    wg,
 			idGen: &Sequential{},
 		},
@@ -40,14 +39,14 @@ func NewFuncPool[I, O any](ctx context.Context,
 	}, err
 }
 
-func (p *FuncPool[I, O]) Post(job ants.InputParam) error {
-	return p.pool.Invoke(job)
+func (p *FuncPool[I, O]) Post(ctx context.Context, job ants.InputParam) error {
+	return p.pool.Invoke(ctx, job)
 }
 
 func (p *FuncPool[I, O]) Running() int {
 	return p.pool.Running()
 }
 
-func (p *FuncPool[I, O]) Release() {
-	p.pool.Release()
+func (p *FuncPool[I, O]) Release(ctx context.Context) {
+	p.pool.Release(ctx)
 }

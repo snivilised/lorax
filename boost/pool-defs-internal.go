@@ -1,7 +1,6 @@
 package boost
 
 import (
-	"context"
 	"sync"
 
 	"github.com/snivilised/lorax/internal/ants"
@@ -32,7 +31,6 @@ type (
 	workersCollectionL[I, O any] map[workerID]*workerWrapperL[I, O]
 
 	basePool struct {
-		ctx   context.Context
 		wg    *sync.WaitGroup
 		idGen IDGenerator
 	}
