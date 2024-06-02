@@ -7,11 +7,12 @@ import (
 // Option represents the optional function.
 type Option func(opts *Options)
 
-func loadOptions(options ...Option) *Options {
+func LoadOptions(options ...Option) *Options {
 	opts := new(Options)
 	for _, option := range options {
 		option(opts)
 	}
+
 	return opts
 }
 
@@ -44,10 +45,21 @@ type Options struct {
 
 	// When DisablePurge is true, workers are not purged and are resident.
 	DisablePurge bool
+
+	// Generator used to generate job ids.
+	Generator IDGenerator
+
+	// Output options
+	Output *OutputOptions
+}
+
+type OutputOptions struct {
+	// BufferSize
+	BufferSize uint
 }
 
 // WithOptions accepts the whole options config.
-func WithOptions(options Options) Option {
+func WithOptions(options Options) Option { //nolint:gocritic // heavy options not important
 	return func(opts *Options) {
 		*opts = options
 	}
@@ -67,14 +79,16 @@ func WithPreAlloc(preAlloc bool) Option {
 	}
 }
 
-// WithMaxBlockingTasks sets up the maximum number of goroutines that are blocked when it reaches the capacity of pool.
+// WithMaxBlockingTasks sets up the maximum number of goroutines that are
+// blocked when it reaches the capacity of pool.
 func WithMaxBlockingTasks(maxBlockingTasks int) Option {
 	return func(opts *Options) {
 		opts.MaxBlockingTasks = maxBlockingTasks
 	}
 }
 
-// WithNonblocking indicates that pool will return nil when there is no available workers.
+// WithNonblocking indicates that pool will return nil when there is no
+// available workers.
 func WithNonblocking(nonblocking bool) Option {
 	return func(opts *Options) {
 		opts.Nonblocking = nonblocking
@@ -99,5 +113,24 @@ func WithLogger(logger Logger) Option {
 func WithDisablePurge(disable bool) Option {
 	return func(opts *Options) {
 		opts.DisablePurge = disable
+	}
+}
+
+// boost options ...
+
+// IDGenerator
+func WithGenerator(generator IDGenerator) Option {
+	return func(opts *Options) {
+		if generator != nil {
+			opts.Generator = generator
+		}
+	}
+}
+
+func WithOutput(size uint) Option {
+	return func(opts *Options) {
+		opts.Output = &OutputOptions{
+			BufferSize: size,
+		}
 	}
 }

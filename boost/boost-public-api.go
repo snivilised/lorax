@@ -7,12 +7,15 @@ const (
 type (
 	Job[I any] struct {
 		ID         string
-		Input      I
 		SequenceNo int
+		Input      I
 	}
 
 	JobOutput[O any] struct {
-		Payload O
+		ID         string
+		SequenceNo int
+		Payload    O
+		Error      error
 	}
 
 	JobStream[I any]  chan Job[I]
@@ -46,11 +49,6 @@ type (
 	PoolResultStream  = chan *PoolResult
 	PoolResultStreamR = <-chan *PoolResult
 	PoolResultStreamW = chan<- *PoolResult
-
-	// IDGenerator is a sequential unique id generator interface
-	IDGenerator interface {
-		Generate() string
-	}
 
 	// Next is a sequential unique id generator func type
 	Next func() string

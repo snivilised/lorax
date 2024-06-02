@@ -134,7 +134,7 @@ func NewPool(ctx context.Context, size int, options ...Option) (*Pool, error) {
 		size = -1
 	}
 
-	opts := loadOptions(options...)
+	opts := LoadOptions(options...)
 
 	if !opts.DisablePurge {
 		if expiry := opts.ExpiryDuration; expiry < 0 {

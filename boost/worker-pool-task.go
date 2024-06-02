@@ -30,7 +30,7 @@ import (
 )
 
 type TaskPool[I, O any] struct {
-	basePool
+	basePool[O]
 	taskPool
 	sourceJobsChIn JobStream[I]
 }
@@ -42,27 +42,14 @@ func NewTaskPool[I, O any](ctx context.Context,
 	wg *sync.WaitGroup,
 	options ...Option,
 ) (*TaskPool[I, O], error) {
-	pool, err := ants.NewPool(ctx, size, options...)
+	pool, err := ants.NewPool(ctx, size, withDefaults(options...)...)
 
 	return &TaskPool[I, O]{
-		basePool: basePool{
-			wg:    wg,
-			idGen: &Sequential{},
+		basePool: basePool[O]{
+			wg: wg,
 		},
 		taskPool: taskPool{
 			pool: pool,
 		},
 	}, err
-}
-
-func (p *TaskPool[I, O]) Post(ctx context.Context, task ants.TaskFunc) error {
-	return p.pool.Submit(ctx, task)
-}
-
-func (p *TaskPool[I, O]) Running() int {
-	return p.pool.Running()
-}
-
-func (p *TaskPool[I, O]) Release(ctx context.Context) {
-	p.pool.Release(ctx)
 }

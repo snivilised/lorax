@@ -2,15 +2,16 @@ package boost
 
 import (
 	"fmt"
+	"sync/atomic"
 )
 
 type Sequential struct {
 	Format string
-	id     int
+	id     int32
 }
 
 func (g *Sequential) Generate() string {
-	g.id++
+	n := atomic.AddInt32(&g.id, int32(1))
 
-	return fmt.Sprintf(g.Format, g.id)
+	return fmt.Sprintf(g.Format, n)
 }
