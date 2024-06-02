@@ -133,7 +133,7 @@ var _ = Describe("Ants", func() {
 						_ = pool.Invoke(ctx, Param)
 					}
 					wg.Wait()
-					GinkgoWriter.Printf("pool with func, running workers number:%d\n",
+					GinkgoWriter.Printf("pool with func, no of running workers:%d\n",
 						pool.Running(),
 					)
 					ShowMemStats()
@@ -159,7 +159,7 @@ var _ = Describe("Ants", func() {
 						_ = pool.Invoke(ctx, Param)
 					}
 					wg.Wait()
-					GinkgoWriter.Printf("pool with func, running workers number:%d\n",
+					GinkgoWriter.Printf("pool with func, no of running workers:%d\n",
 						pool.Running(),
 					)
 					ShowMemStats()

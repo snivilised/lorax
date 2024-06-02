@@ -45,8 +45,8 @@ func main() {
 
 	const NoW = 3
 
-	pool, _ := boost.NewFuncPool[int, int](ctx, NoW, func(inputCh ants.InputParam) {
-		n, _ := inputCh.(int)
+	pool, _ := boost.NewFuncPool[int, int](ctx, NoW, func(input ants.InputParam) {
+		n, _ := input.(int)
 		fmt.Printf("<--- (n: %v)🍒 \n", n)
 		time.Sleep(time.Second)
 	}, &wg, ants.WithNonblocking(false))
@@ -59,7 +59,7 @@ func main() {
 		fmt.Printf("POST: <--- (n: %v) [%v] 🍊 \n", i, time.Now().Format(time.TimeOnly))
 	}
 
-	fmt.Printf("pool with func, running workers number:%d\n",
+	fmt.Printf("pool with func, no of running workers:%d\n",
 		pool.Running(),
 	)
 	wg.Wait()

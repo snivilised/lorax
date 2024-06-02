@@ -8,7 +8,7 @@ import (
 )
 
 type FuncPool[I, O any] struct {
-	basePool
+	basePool[O]
 	functionalPool
 	sourceJobsChIn JobStream[I]
 }
@@ -26,27 +26,14 @@ func NewFuncPool[I, O any](ctx context.Context,
 	// allocated for each job, but this is not necessarily
 	// the case, because each worker has its own job queue.
 	//
-	pool, err := ants.NewPoolWithFunc(ctx, size, pf, options...)
+	pool, err := ants.NewPoolWithFunc(ctx, size, pf, withDefaults(options...)...)
 
 	return &FuncPool[I, O]{
-		basePool: basePool{
-			wg:    wg,
-			idGen: &Sequential{},
+		basePool: basePool[O]{
+			wg: wg,
 		},
 		functionalPool: functionalPool{
 			pool: pool,
 		},
 	}, err
-}
-
-func (p *FuncPool[I, O]) Post(ctx context.Context, job ants.InputParam) error {
-	return p.pool.Invoke(ctx, job)
-}
-
-func (p *FuncPool[I, O]) Running() int {
-	return p.pool.Running()
-}
-
-func (p *FuncPool[I, O]) Release(ctx context.Context) {
-	p.pool.Release(ctx)
 }

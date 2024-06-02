@@ -1,11 +1,5 @@
 package boost
 
-import (
-	"sync"
-
-	"github.com/snivilised/lorax/internal/ants"
-)
-
 const (
 	// TODO: This is just temporary, channel size definition still needs to be
 	// fine tuned
@@ -29,19 +23,6 @@ type (
 	}
 
 	workersCollectionL[I, O any] map[workerID]*workerWrapperL[I, O]
-
-	basePool struct {
-		wg    *sync.WaitGroup
-		idGen IDGenerator
-	}
-
-	taskPool struct {
-		pool *ants.Pool
-	}
-
-	functionalPool struct {
-		pool *ants.PoolWithFunc
-	}
 )
 
 // Worker pool types:

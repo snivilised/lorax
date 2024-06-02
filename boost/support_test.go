@@ -41,6 +41,12 @@ func demoPoolFunc(inputCh ants.InputParam) {
 	time.Sleep(time.Duration(n) * time.Millisecond)
 }
 
+func demoPoolManifoldFunc(input int) (int, error) {
+	time.Sleep(time.Duration(input) * time.Millisecond)
+
+	return n + 1, nil
+}
+
 var stopLongRunningFunc int32
 
 func longRunningFunc() {

@@ -56,7 +56,7 @@ func main() {
 		fmt.Printf("POST: <--- (n: %v) [%v] 🍊 \n", i, time.Now().Format(time.TimeOnly))
 	}
 
-	fmt.Printf("task pool, running workers number:%d\n",
+	fmt.Printf("task pool, no of running workers:%d\n",
 		pool.Running(),
 	)
 	wg.Wait()
