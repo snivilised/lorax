@@ -55,30 +55,23 @@ func produce(ctx context.Context,
 	pool.EndWork(ctx, interval)
 }
 
-func consume(ctx context.Context,
+func consume(_ context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
 	wg *sync.WaitGroup,
 ) {
 	defer wg.Done()
 
-	rch := pool.Observe()
-	for {
-		select {
-		case output, ok := <-rch:
-			if !ok {
-				return
-			} else {
-				fmt.Printf("🍒 payload: '%v', id: '%v', seq: '%v' (e: '%v')\n",
-					output.Payload, output.ID, output.SequenceNo, output.Error,
-				)
-			}
-		case <-time.After(OutputChTimeout):
-			fmt.Printf("⏱️ timeout!\n")
-			return
-		case <-ctx.Done():
-			fmt.Printf("❌ cancelled!\n")
-			return
-		}
+	// We don't need to use a timeout on the observe channel
+	// because our producer invokes EndWork, which results in
+	// the observe channel being closed, terminating the range.
+	// This aspect is specific to this example and clients may
+	// have to use different strategies depending on their use-case,
+	// eg support for context cancellation.
+	//
+	for output := range pool.Observe() {
+		fmt.Printf("🍒 payload: '%v', id: '%v', seq: '%v' (e: '%v')\n",
+			output.Payload, output.ID, output.SequenceNo, output.Error,
+		)
 	}
 }
 
