@@ -10,52 +10,36 @@ import (
 )
 
 // Demonstrates use of manifold func base worker pool where
-// the client manifold func returns an output and an error. An
-// output channel is created through which the client receives
-// all generated outputs.
+// the client manifold func returns an output and an error.
+// Submission to the pool occurs via an input channel as opposed
+// directly invoking Post on the pool.
 
 const (
 	AntsSize           = 1000
 	n                  = 100000
+	InputChSize        = 10
 	OutputChSize       = 10
 	Param              = 100
-	OutputChTimeout    = time.Second / 2 // do not use a value that is similar to CheckCloseInterval
+	OutputChTimeout    = time.Second / 2 // do not use a value that is similar to interval
 	CheckCloseInterval = time.Second / 10
 )
 
-func produce(ctx context.Context,
+func inject(ctx context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
 	wg *sync.WaitGroup,
 ) {
 	defer wg.Done()
 
-	// Only the producer (observable) knows when the workload is complete
-	// but clearly it has no idea when the worker-pool is complete. Initially,
-	// one might think that the worker-pool knows when work is complete
-	// but this is in correct. The pool only knows when the pool is dormant,
-	// not that no more jobs will be submitted.
-	// This poses a problem from the perspective of the consumer; it does
-	// not know when to exit its output processing loop.
-	// What this indicates to us is that the knowledge of end of workload is
-	// a combination of multiple events:
-	//
-	// 1) The producer knows when it will submit no more work
-	// 2) The pool knows when all it's workers are dormant
-	//
-	// A non deterministic way for the consumer to exit it's output processing
-	// loop, is to use a timeout. But what is a sensible value? Only the client
-	// knows this and even so, it can't really be sure no more outputs will
-	// arrive after the timeout; essentially its making an educated guess, which
-	// is not reliable.
-	//
+	inputCh := pool.Source(ctx, wg)
 	for i, n := 0, 100; i < n; i++ {
-		_ = pool.Post(ctx, Param)
+		inputCh <- Param
 	}
 
 	// required to inform the worker pool that no more jobs will be submitted.
-	// failure to invoke Conclude will result in a never ending worker pool.
+	// failure to close the input channel will result in a never ending
+	// worker pool.
 	//
-	pool.Conclude(ctx)
+	close(inputCh)
 }
 
 func consume(_ context.Context,
@@ -90,6 +74,7 @@ func main() {
 
 			return n + 1, nil
 		}, &wg,
+		boost.WithInput(InputChSize),
 		boost.WithOutput(OutputChSize, CheckCloseInterval),
 	)
 
@@ -101,7 +86,7 @@ func main() {
 	}
 
 	wg.Add(1)
-	go produce(ctx, pool, &wg) //nolint:wsl // pendant
+	go inject(ctx, pool, &wg) //nolint:wsl // pendant
 
 	wg.Add(1)
 	go consume(ctx, pool, &wg) //nolint:wsl // pendant

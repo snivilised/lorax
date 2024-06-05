@@ -5,6 +5,10 @@ const (
 )
 
 type (
+	SourceStream[I any]  chan I
+	SourceStreamR[I any] <-chan I
+	SourceStreamW[I any] chan<- I
+
 	Job[I any] struct {
 		ID         string
 		SequenceNo int

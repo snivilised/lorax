@@ -62,6 +62,9 @@ func main() {
 	fmt.Printf("pool with func, no of running workers:%d\n",
 		pool.Running(),
 	)
+
+	// Note, we don't need to inform the pool of the end of the workload
+	// since this pool is not emitting output.
 	wg.Wait()
 	fmt.Println("🏁 (func-pool) FINISHED")
 }

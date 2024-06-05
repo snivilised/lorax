@@ -8,7 +8,7 @@ import (
 )
 
 type FuncPool[I, O any] struct {
-	basePool[O]
+	basePool[I, O]
 	functionalPool
 	sourceJobsChIn JobStream[I]
 }
@@ -29,7 +29,7 @@ func NewFuncPool[I, O any](ctx context.Context,
 	pool, err := ants.NewPoolWithFunc(ctx, size, pf, withDefaults(options...)...)
 
 	return &FuncPool[I, O]{
-		basePool: basePool[O]{
+		basePool: basePool[I, O]{
 			wg: wg,
 		},
 		functionalPool: functionalPool{

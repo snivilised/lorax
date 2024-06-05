@@ -16,11 +16,12 @@ const (
 )
 
 const (
-	Param    = 100
-	AntsSize = 1000
-	TestSize = 10000
-	n        = 100000
-	PoolSize = 10
+	Param           = 100
+	AntsSize        = 1000
+	TestSize        = 10000
+	n               = 100000
+	PoolSize        = 10
+	InputBufferSize = 3
 )
 
 const (
@@ -28,6 +29,7 @@ const (
 	PoolCap            = 5e4
 	BenchParam         = 10
 	DefaultExpiredTime = 10 * time.Second
+	CheckCloseInterval = time.Second / 100
 )
 
 var curMem uint64

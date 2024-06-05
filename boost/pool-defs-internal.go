@@ -1,10 +1,21 @@
 package boost
 
+import (
+	"time"
+)
+
 const (
 	// TODO: This is just temporary, channel size definition still needs to be
 	// fine tuned
 	//
 	DefaultChSize = 100
+
+	// minimumCheckCloseInterval denotes the minimum duration of how long to wait
+	// in between successive attempts to check wether the output channel can be
+	// closed when the source of the workload indicates no more jobs will be
+	// submitted, either by closing the input stream or invoking Conclude on the pool.
+	//
+	minimumCheckCloseInterval = time.Millisecond * 10
 )
 
 type (
@@ -23,7 +34,34 @@ type (
 	}
 
 	workersCollectionL[I, O any] map[workerID]*workerWrapperL[I, O]
+
+	injectable[I any] interface {
+		inject(input I) error
+	}
+
+	closable interface {
+		terminate()
+	}
+
+	// generic represents the common characteristics of all worker
+	// pools
+	generic interface {
+		options() *Options
+		terminate()
+	}
 )
+
+type injector[I any] func(input I) error
+
+func (f injector[I]) inject(input I) error {
+	return f(input)
+}
+
+type terminator func()
+
+func (f terminator) terminate() {
+	f()
+}
 
 // Worker pool types:
 //
