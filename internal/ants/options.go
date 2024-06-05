@@ -49,13 +49,28 @@ type Options struct {
 	// Generator used to generate job ids.
 	Generator IDGenerator
 
+	// Input options
+	Input InputOptions
+
 	// Output options
 	Output *OutputOptions
+}
+
+type InputOptions struct {
+	// BufferSize
+	BufferSize uint
 }
 
 type OutputOptions struct {
 	// BufferSize
 	BufferSize uint
+
+	// Interval denotes how long to wait in between successive attempts
+	// to check wether the output channel can be closed when the source
+	// of the workload indicates no more jobs will be submitted, either
+	// by closing the input stream or invoking Conclude on the pool.
+	//
+	CheckCloseInterval time.Duration
 }
 
 // WithOptions accepts the whole options config.
@@ -127,10 +142,17 @@ func WithGenerator(generator IDGenerator) Option {
 	}
 }
 
-func WithOutput(size uint) Option {
+func WithInput(size uint) Option {
+	return func(opts *Options) {
+		opts.Input.BufferSize = size
+	}
+}
+
+func WithOutput(size uint, interval time.Duration) Option {
 	return func(opts *Options) {
 		opts.Output = &OutputOptions{
-			BufferSize: size,
+			BufferSize:         size,
+			CheckCloseInterval: interval,
 		}
 	}
 }

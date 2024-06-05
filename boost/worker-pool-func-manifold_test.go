@@ -11,8 +11,6 @@ import (
 	"github.com/snivilised/lorax/boost"
 )
 
-const interval = time.Second / 100
-
 func produce(ctx context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
 	wg *sync.WaitGroup,
@@ -23,7 +21,21 @@ func produce(ctx context.Context,
 		_ = pool.Post(ctx, Param)
 	}
 
-	pool.EndWork(ctx, interval)
+	pool.Conclude(ctx)
+}
+
+func inject(ctx context.Context,
+	pool *boost.ManifoldFuncPool[int, int],
+	wg *sync.WaitGroup,
+) {
+	defer wg.Done()
+
+	ch := pool.Source(ctx, wg)
+	for i, n := 0, 100; i < n; i++ {
+		ch <- Param
+	}
+
+	close(ch)
 }
 
 func consume(_ context.Context,
@@ -52,7 +64,7 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 
 					pool, err := boost.NewManifoldFuncPool(
 						ctx, AntsSize, demoPoolManifoldFunc, &wg,
-						boost.WithOutput(10),
+						boost.WithOutput(10, time.Second/100),
 					)
 
 					defer pool.Release(ctx)
@@ -90,7 +102,38 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 					wg.Add(1)
 					go produce(ctx, pool, &wg)
 
-					// tbd, create a consumer for the result channel
+					wg.Wait()
+					GinkgoWriter.Printf("pool with func, no of running workers:%d\n",
+						pool.Running(),
+					)
+					ShowMemStats()
+
+					Expect(err).To(Succeed())
+				})
+			})
+
+			Context("with input stream", func() {
+				It("🧪 should: not fail", func(specCtx SpecContext) {
+					// TestNonblockingSubmit
+					var wg sync.WaitGroup
+
+					ctx, cancel := context.WithCancel(specCtx)
+					defer cancel()
+
+					pool, err := boost.NewManifoldFuncPool(
+						ctx, AntsSize, demoPoolManifoldFunc, &wg,
+						boost.WithInput(InputBufferSize),
+						boost.WithOutput(10, CheckCloseInterval),
+					)
+
+					defer pool.Release(ctx)
+
+					wg.Add(1)
+					go inject(ctx, pool, &wg)
+
+					wg.Add(1)
+					go consume(ctx, pool, &wg)
+
 					wg.Wait()
 					GinkgoWriter.Printf("pool with func, no of running workers:%d\n",
 						pool.Running(),
@@ -131,7 +174,7 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 									break
 								}
 							}
-							pool.EndWork(ctx, interval)
+							pool.Conclude(ctx)
 						}(ctx, pool, &wg)
 
 						wg.Wait()

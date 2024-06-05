@@ -2,6 +2,7 @@ package boost
 
 import (
 	"context"
+	"sync"
 
 	"github.com/snivilised/lorax/internal/ants"
 )
@@ -46,4 +47,35 @@ func (p *taskPool) Running() int {
 
 func (p *taskPool) Waiting() int {
 	return p.pool.Waiting()
+}
+
+func source[I any](ctx context.Context,
+	wg *sync.WaitGroup, o *ants.Options,
+	injectable injectable[I],
+	closable closable,
+) *Duplex[I] {
+	inputDupCh := NewDuplex(make(SourceStream[I], o.Input.BufferSize))
+
+	wg.Add(1)
+	go func(ctx context.Context) { //nolint:wsl // pedant
+		defer func() {
+			closable.terminate()
+			wg.Done()
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case input, ok := <-inputDupCh.ReaderCh:
+				if !ok {
+					return
+				}
+
+				_ = injectable.inject(input)
+			}
+		}
+	}(ctx)
+
+	return inputDupCh
 }

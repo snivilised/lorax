@@ -30,7 +30,7 @@ import (
 )
 
 type TaskPool[I, O any] struct {
-	basePool[O]
+	basePool[I, O]
 	taskPool
 	sourceJobsChIn JobStream[I]
 }
@@ -45,7 +45,7 @@ func NewTaskPool[I, O any](ctx context.Context,
 	pool, err := ants.NewPool(ctx, size, withDefaults(options...)...)
 
 	return &TaskPool[I, O]{
-		basePool: basePool[O]{
+		basePool: basePool[I, O]{
 			wg: wg,
 		},
 		taskPool: taskPool{
