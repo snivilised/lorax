@@ -38,16 +38,16 @@ func main() {
 	}
 
 	wg.Add(1)
-	go inject(ctx, pool, &wg) 
+	go inject(ctx, pool, &wg)
 
 	wg.Add(1)
-	go consume(ctx, pool, &wg) 
+	go consume(ctx, pool, &wg)
 
 	fmt.Printf("pool with func, no of running workers:%d\n",
 		pool.Running(),
 	)
 	wg.Wait()
-	fmt.Println("🏁 (manifold-func-pool) FINISHED")
+	fmt.Println("🏁 (manifold-func-pool, input injected via channel) FINISHED")
 }
 
 const (

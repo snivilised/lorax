@@ -45,6 +45,7 @@ type privateWpInfoL[I, O any] struct {
 // WorkerPoolL owns the resultOut channel, because it is the only entity that knows
 // when all workers have completed their work due to the finished channel, which it also
 // owns.
+// Deprecated: use ants base worker-pool instead.
 type WorkerPoolL[I, O any] struct {
 	private         privateWpInfoL[I, O]
 	outputChTimeout time.Duration
@@ -57,6 +58,8 @@ type WorkerPoolL[I, O any] struct {
 	Logger          *slog.Logger
 }
 
+// NewWorkerPoolParamsL
+// Deprecated: use ants base worker-pool instead.
 type NewWorkerPoolParamsL[I, O any] struct {
 	NoWorkers       int
 	OutputChTimeout time.Duration
@@ -67,6 +70,8 @@ type NewWorkerPoolParamsL[I, O any] struct {
 	Logger          *slog.Logger
 }
 
+// NewWorkerPoolL
+// Deprecated: use ants base worker-pool instead.
 func NewWorkerPoolL[I, O any](params *NewWorkerPoolParamsL[I, O]) *WorkerPoolL[I, O] {
 	noWorkers := runtime.NumCPU()
 	if params.NoWorkers > 1 && params.NoWorkers <= MaxWorkers {

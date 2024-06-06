@@ -9,13 +9,6 @@ const (
 	// fine tuned
 	//
 	DefaultChSize = 100
-
-	// minimumCheckCloseInterval denotes the minimum duration of how long to wait
-	// in between successive attempts to check wether the output channel can be
-	// closed when the source of the workload indicates no more jobs will be
-	// submitted, either by closing the input stream or invoking Conclude on the pool.
-	//
-	minimumCheckCloseInterval = time.Millisecond * 10
 )
 
 type (
@@ -40,13 +33,6 @@ type (
 	}
 
 	closable interface {
-		terminate()
-	}
-
-	// generic represents the common characteristics of all worker
-	// pools
-	generic interface {
-		options() *Options
 		terminate()
 	}
 )

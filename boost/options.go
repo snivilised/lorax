@@ -7,7 +7,7 @@ func withDefaults(options ...Option) []Option {
 	)
 	o := make([]Option, 0, len(options)+noDefaults)
 	o = append(o, WithGenerator(&Sequential{
-		Format: "ID:%v",
+		Format: "ID:%08d",
 	}))
 	o = append(o, options...)
 
