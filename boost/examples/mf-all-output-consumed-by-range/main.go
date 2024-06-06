@@ -14,6 +14,41 @@ import (
 // output channel is created through which the client receives
 // all generated outputs.
 
+func main() {
+	var wg sync.WaitGroup
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	pool, err := boost.NewManifoldFuncPool(
+		ctx, AntsSize, func(input int) (int, error) {
+			time.Sleep(time.Duration(input) * time.Millisecond)
+
+			return n + 1, nil
+		}, &wg,
+		boost.WithOutput(OutputChSize, CheckCloseInterval, TimeoutOnSend),
+	)
+
+	defer pool.Release(ctx)
+
+	if err != nil {
+		fmt.Printf("🔥 error creating pool: '%v'\n", err)
+		return
+	}
+
+	wg.Add(1)
+	go produce(ctx, pool, &wg) 
+
+	wg.Add(1)
+	go consume(ctx, pool, &wg) 
+
+	fmt.Printf("pool with func, no of running workers:%d\n",
+		pool.Running(),
+	)
+	wg.Wait()
+	fmt.Println("🏁 (manifold-func-pool) FINISHED")
+}
+
 const (
 	AntsSize           = 1000
 	n                  = 100000
@@ -21,6 +56,7 @@ const (
 	Param              = 100
 	OutputChTimeout    = time.Second / 2 // do not use a value that is similar to CheckCloseInterval
 	CheckCloseInterval = time.Second / 10
+	TimeoutOnSend      = time.Second * 2
 )
 
 func produce(ctx context.Context,
@@ -76,39 +112,4 @@ func consume(_ context.Context,
 			output.Payload, output.ID, output.SequenceNo, output.Error,
 		)
 	}
-}
-
-func main() {
-	var wg sync.WaitGroup
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	pool, err := boost.NewManifoldFuncPool(
-		ctx, AntsSize, func(input int) (int, error) {
-			time.Sleep(time.Duration(input) * time.Millisecond)
-
-			return n + 1, nil
-		}, &wg,
-		boost.WithOutput(OutputChSize, CheckCloseInterval),
-	)
-
-	defer pool.Release(ctx)
-
-	if err != nil {
-		fmt.Printf("🔥 error creating pool: '%v'\n", err)
-		return
-	}
-
-	wg.Add(1)
-	go produce(ctx, pool, &wg) //nolint:wsl // pendant
-
-	wg.Add(1)
-	go consume(ctx, pool, &wg) //nolint:wsl // pendant
-
-	fmt.Printf("pool with func, no of running workers:%d\n",
-		pool.Running(),
-	)
-	wg.Wait()
-	fmt.Println("🏁 (manifold-func-pool) FINISHED")
 }

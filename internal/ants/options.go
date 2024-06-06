@@ -61,6 +61,22 @@ type InputOptions struct {
 	BufferSize uint
 }
 
+const (
+	// MinimumCheckCloseInterval denotes the minimum duration of how long to wait
+	// in between successive attempts to check wether the output channel can be
+	// closed when the source of the workload indicates no more jobs will be
+	// submitted, either by closing the input stream or invoking Conclude on the pool.
+	//
+	MinimumCheckCloseInterval = time.Millisecond * 10
+
+	// MinimumTimeoutOnSend denotes the minimum duration of how long to allow for
+	// when sending output. When this timeout occurs, the worker will send a
+	// cancellation request back to the client via the cancellation channel at which
+	// point it can cancel the whole worker pool.
+	//
+	MinimumTimeoutOnSend = time.Millisecond * 10
+)
+
 type OutputOptions struct {
 	// BufferSize
 	BufferSize uint
@@ -71,6 +87,13 @@ type OutputOptions struct {
 	// by closing the input stream or invoking Conclude on the pool.
 	//
 	CheckCloseInterval time.Duration
+
+	// TimeoutOnSend denotes how long to allow for when sending output.
+	// When this timeout occurs, the worker will send a cancellation
+	// request back to the client via the cancellation channel at which
+	// point it can cancel the whole worker pool.
+	//
+	TimeoutOnSend time.Duration
 }
 
 // WithOptions accepts the whole options config.
@@ -148,11 +171,12 @@ func WithInput(size uint) Option {
 	}
 }
 
-func WithOutput(size uint, interval time.Duration) Option {
+func WithOutput(size uint, interval, timeout time.Duration) Option {
 	return func(opts *Options) {
 		opts.Output = &OutputOptions{
 			BufferSize:         size,
-			CheckCloseInterval: interval,
+			CheckCloseInterval: max(interval, MinimumCheckCloseInterval),
+			TimeoutOnSend:      max(timeout, MinimumTimeoutOnSend),
 		}
 	}
 }

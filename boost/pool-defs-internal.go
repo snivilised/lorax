@@ -63,6 +63,17 @@ func (f terminator) terminate() {
 	f()
 }
 
+type outputInfo[O any] struct {
+	outputDupCh *Duplex[JobOutput[O]]
+	cancelDupCh *Duplex[CancelWorkSignal]
+}
+
+type outputInfoW[O any] struct {
+	outputCh      JobOutputStreamW[O]
+	cancelCh      CancelStreamW
+	timeoutOnSend time.Duration
+}
+
 // Worker pool types:
 //
 // 🍺 ManifoldFuncPool (to be used by traverse):

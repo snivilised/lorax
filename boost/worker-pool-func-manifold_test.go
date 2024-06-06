@@ -3,7 +3,6 @@ package boost_test
 import (
 	"context"
 	"sync"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
 	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
@@ -64,7 +63,7 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 
 					pool, err := boost.NewManifoldFuncPool(
 						ctx, AntsSize, demoPoolManifoldFunc, &wg,
-						boost.WithOutput(10, time.Second/100),
+						boost.WithOutput(10, CheckCloseInterval, TimeoutOnSend),
 					)
 
 					defer pool.Release(ctx)
@@ -123,7 +122,7 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 					pool, err := boost.NewManifoldFuncPool(
 						ctx, AntsSize, demoPoolManifoldFunc, &wg,
 						boost.WithInput(InputBufferSize),
-						boost.WithOutput(10, CheckCloseInterval),
+						boost.WithOutput(10, CheckCloseInterval, TimeoutOnSend),
 					)
 
 					defer pool.Release(ctx)
@@ -177,6 +176,43 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 							pool.Conclude(ctx)
 						}(ctx, pool, &wg)
 
+						wg.Wait()
+						GinkgoWriter.Printf("pool with func, no of running workers:%d\n",
+							pool.Running(),
+						)
+						ShowMemStats()
+
+						Expect(err).To(Succeed())
+					})
+				})
+			})
+
+			Context("timeout on send, with cancellation monitor", func() {
+				When("output requested, but accidentally not consumed by client", func() {
+					It("🧪 should: cancel context and terminate", func(specCtx SpecContext) {
+						// TestNonblockingSubmit
+						var wg sync.WaitGroup
+
+						ctx, cancel := context.WithCancel(specCtx)
+						defer cancel()
+
+						pool, err := boost.NewManifoldFuncPool(
+							ctx, AntsSize, demoPoolManifoldFunc, &wg,
+							boost.WithInput(InputBufferSize),
+							boost.WithOutput(10, CheckCloseInterval, TimeoutOnSend),
+						)
+
+						defer pool.Release(ctx)
+
+						wg.Add(1)
+						go inject(ctx, pool, &wg)
+
+						boost.StartCancellationMonitor(ctx,
+							cancel,
+							&wg,
+							pool.CancelCh(),
+							func() {},
+						)
 						wg.Wait()
 						GinkgoWriter.Printf("pool with func, no of running workers:%d\n",
 							pool.Running(),

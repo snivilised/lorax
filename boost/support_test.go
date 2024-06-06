@@ -30,6 +30,7 @@ const (
 	BenchParam         = 10
 	DefaultExpiredTime = 10 * time.Second
 	CheckCloseInterval = time.Second / 100
+	TimeoutOnSend      = time.Second
 )
 
 var curMem uint64

@@ -20,6 +20,9 @@ coverage.out
 ginkgo.report
 
 .task/
+.env
+.DS_Store
+thumbs.db
 
 i18n/out/en-US/active.en-GB.json
 

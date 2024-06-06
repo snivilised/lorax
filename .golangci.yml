@@ -68,6 +68,7 @@ issues:
   fix: true
   exclude:
     - "cuddle"
+    - "go statements can only invoke functions assigned on line above"
 
 run:
   issues-exit-code: 1
