@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/snivilised/lorax/internal/ants"
-	"github.com/snivilised/lorax/internal/lo"
 )
 
 type (
@@ -33,29 +32,24 @@ func NewManifoldFuncPool[I, O any](ctx context.Context,
 	wg *sync.WaitGroup,
 	options ...Option,
 ) (*ManifoldFuncPool[I, O], error) {
-	var outputDupCh *Duplex[JobOutput[O]]
-	o := ants.LoadOptions(withDefaults(options...)...)
-	if o.Output != nil {
-		outputDupCh = NewDuplex(make(JobOutputStream[O], o.Output.BufferSize))
+	var (
+		oi *outputInfo[O]
+		wi *outputInfoW[O]
+		o  = ants.LoadOptions(withDefaults(options...)...)
+	)
+
+	if oi = newOutputInfo[O](o); oi != nil {
+		wi = fromOutputInfo(o, oi)
 	}
 
 	pool, err := ants.NewPoolWithFunc(ctx, size, func(input ants.InputParam) {
-		wch := lo.TernaryF(outputDupCh != nil,
-			func() JobOutputStreamW[O] {
-				return outputDupCh.WriterCh
-			},
-			func() JobOutputStreamW[O] {
-				return nil
-			},
-		)
-
-		manifoldFuncResponse(ctx, mf, input, wch)
+		manifoldFuncResponse(ctx, mf, input, wi)
 	}, ants.WithOptions(*o))
 
 	return &ManifoldFuncPool[I, O]{
 		basePool: basePool[I, O]{
-			wg:          wg,
-			outputDupCh: outputDupCh,
+			wg: wg,
+			oi: oi,
 		},
 		functionalPool: functionalPool{
 			pool: pool,
@@ -98,21 +92,21 @@ func (p *ManifoldFuncPool[I, O]) Source(ctx context.Context,
 }
 
 // Conclude signifies to the worker pool that no more work will be
-// submitted to the pool. Submitting to the pool directly using the
+// submitted. When submitting to the pool directly using the
 // Post method, the client must call this method. Failure to do so
 // will result in a pool that never ends. When the client elects
-// to use an input channel, but invoking Source, then Conclude will
+// to use an input channel, by invoking Source, then Conclude will
 // be called automatically as long as the input channel has been closed.
 // Failure to close the channel will again result in a never ending
 // worker pool.
 func (p *ManifoldFuncPool[I, O]) Conclude(ctx context.Context) {
-	if p.outputDupCh != nil && !p.ending {
+	if p.oi != nil && !p.ending {
 		p.ending = true
 		o := p.pool.GetOptions()
-		interval := GetValidatedCheckCloseInterval(o)
+		interval := max(o.Output.CheckCloseInterval, ants.MinimumCheckCloseInterval)
 
 		p.wg.Add(1)
-		go func(ctx context.Context, //nolint:wsl // pendant
+		go func(ctx context.Context,
 			pool *ManifoldFuncPool[I, O],
 			wg *sync.WaitGroup,
 			interval time.Duration,
@@ -126,7 +120,7 @@ func (p *ManifoldFuncPool[I, O]) Conclude(ctx context.Context) {
 
 				case <-time.After(interval):
 					if pool.Running() == 0 && pool.Waiting() == 0 {
-						close(p.outputDupCh.Channel)
+						close(p.oi.outputDupCh.Channel)
 						return
 					}
 				}
@@ -136,8 +130,9 @@ func (p *ManifoldFuncPool[I, O]) Conclude(ctx context.Context) {
 }
 
 func manifoldFuncResponse[I, O any](ctx context.Context,
-	mf ManifoldFunc[I, O], input ants.InputParam,
-	outputCh JobOutputStreamW[O],
+	mf ManifoldFunc[I, O],
+	input ants.InputParam,
+	wi *outputInfoW[O],
 ) {
 	if job, ok := input.(Job[I]); ok {
 		payload, e := mf(job.Input)
@@ -149,12 +144,8 @@ func manifoldFuncResponse[I, O any](ctx context.Context,
 			Error:      e,
 		}
 
-		if outputCh != nil {
-			select {
-			case outputCh <- output:
-			// TODO: add a timeout case
-			case <-ctx.Done():
-			}
+		if wi != nil {
+			_ = respond(ctx, wi, &output)
 		}
 	}
 }

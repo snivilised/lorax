@@ -56,6 +56,8 @@ type (
 
 	// Next is a sequential unique id generator func type
 	Next func() string
+
+	OnCancel func()
 )
 
 type ExecutiveFunc[I, O any] func(j Job[I]) (JobOutput[O], error)
