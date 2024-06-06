@@ -68,7 +68,7 @@ func source[I any](ctx context.Context,
 	inputDupCh := NewDuplex(make(SourceStream[I], o.Input.BufferSize))
 
 	wg.Add(1)
-	go func(ctx context.Context) {
+	go func(ctx context.Context, inputCh SourceStreamR[I]) {
 		defer func() {
 			closable.terminate()
 			wg.Done()
@@ -78,7 +78,7 @@ func source[I any](ctx context.Context,
 			select {
 			case <-ctx.Done():
 				return
-			case input, ok := <-inputDupCh.ReaderCh:
+			case input, ok := <-inputCh:
 				if !ok {
 					return
 				}
@@ -86,7 +86,7 @@ func source[I any](ctx context.Context,
 				_ = injectable.inject(input)
 			}
 		}
-	}(ctx)
+	}(ctx, inputDupCh.ReaderCh)
 
 	return inputDupCh
 }

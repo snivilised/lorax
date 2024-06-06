@@ -26,6 +26,7 @@ type namesCollection map[GoRoutineName]string
 // that only allows adding to the wait group with the addition of being
 // able to specify the name representing the calling go routine. This interface
 // can be acquired from the wait group using a standard interface type query.
+// Deprecated: use ants base worker-pool instead.
 type AnnotatedWgAdder interface {
 	Add(delta int, name ...GoRoutineName)
 }
@@ -34,6 +35,7 @@ type AnnotatedWgAdder interface {
 // that only allows Done signalling on the wait group with the addition of being
 // able to specify the name representing the calling go routine. This interface
 // can be acquired from the wait group using a standard interface type query.
+// Deprecated: use ants base worker-pool instead.
 type AnnotatedWgQuitter interface {
 	Done(name ...GoRoutineName)
 }
@@ -42,6 +44,7 @@ type AnnotatedWgQuitter interface {
 // that allows adding to the wait group and Done signalling with the addition of being
 // able to specify the name representing the calling go routine. This interface
 // can be acquired from the wait group using a standard interface type query.
+// Deprecated: use ants base worker-pool instead.
 type AnnotatedWgAQ interface {
 	AnnotatedWgAdder
 	AnnotatedWgQuitter
@@ -51,6 +54,7 @@ type AnnotatedWgAQ interface {
 // that only allows waiting on the wait group with the addition of being
 // able to specify the name representing the calling go routine. This interface
 // can be acquired from the wait group using a standard interface type query.
+// Deprecated: use ants base worker-pool instead.
 type AnnotatedWgWaiter interface {
 	Wait(name ...GoRoutineName)
 }
@@ -58,11 +62,13 @@ type AnnotatedWgWaiter interface {
 // AnnotatedWgCounter is the interface that is a restricted view of a wait group
 // that only allows querying the wait group count. This interface
 // can be acquired from the wait group using a standard interface type query.
+// Deprecated: use ants base worker-pool instead.
 type AnnotatedWgCounter interface {
 	Count() int
 }
 
 // WaitGroupAn the extended WaitGroup
+// Deprecated: use ants base worker-pool instead.
 type WaitGroupAn interface {
 	AnnotatedWgAdder
 	AnnotatedWgQuitter
@@ -132,6 +138,7 @@ type AnnotatedWaitGroup struct {
 
 // NewAnnotatedWaitGroup creates a new AnnotatedWaitGroup instance containing
 // the core WaitGroup instance.
+// Deprecated: use ants base worker-pool instead.
 func NewAnnotatedWaitGroup(name string, log ...*slog.Logger) WaitGroupAn {
 	logger := lo.TernaryF(len(log) > 0,
 		func() *slog.Logger {
