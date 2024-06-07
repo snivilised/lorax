@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/snivilised/lorax/boost"
-	"github.com/snivilised/lorax/internal/ants"
 )
 
 // Demonstrates that when all workers are engaged and the pool is at capacity,
@@ -45,11 +44,14 @@ func main() {
 
 	const NoW = 3
 
-	pool, _ := boost.NewFuncPool[int, int](ctx, NoW, func(input ants.InputParam) {
+	pool, _ := boost.NewFuncPool[int, int](ctx, func(input boost.InputParam) {
 		n, _ := input.(int)
 		fmt.Printf("<--- (n: %v)🍒 \n", n)
 		time.Sleep(time.Second)
-	}, &wg, ants.WithNonblocking(false))
+	}, &wg,
+		boost.WithSize(NoW),
+		boost.WithNonblocking(false),
+	)
 
 	defer pool.Release(ctx)
 

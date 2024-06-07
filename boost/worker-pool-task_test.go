@@ -22,7 +22,8 @@ var _ = Describe("WorkerPoolTask", func() {
 				ctx, cancel := context.WithCancel(specCtx)
 				defer cancel()
 
-				pool, err := boost.NewTaskPool[int, int](ctx, PoolSize, &wg,
+				pool, err := boost.NewTaskPool[int, int](ctx, &wg,
+					boost.WithSize(PoolSize),
 					boost.WithNonblocking(true),
 				)
 				defer pool.Release(ctx)
@@ -66,7 +67,8 @@ var _ = Describe("WorkerPoolTask", func() {
 				ctx, cancel := context.WithCancel(specCtx)
 				defer cancel()
 
-				pool, err := boost.NewTaskPool[int, int](ctx, PoolSize, &wg,
+				pool, err := boost.NewTaskPool[int, int](ctx, &wg,
+					boost.WithSize(PoolSize),
 					boost.WithMaxBlockingTasks(1),
 				)
 				Expect(err).To(Succeed(), "create TimingPool failed")

@@ -22,4 +22,5 @@ var (
 	WithOutput           = ants.WithOutput
 	WithPanicHandler     = ants.WithPanicHandler
 	WithPreAlloc         = ants.WithPreAlloc
+	WithSize             = ants.WithSize
 )

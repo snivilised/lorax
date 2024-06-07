@@ -19,11 +19,12 @@ func main() {
 
 	fmt.Printf("⏱️ timeout on send: '%.2f's\n", TimeoutOnSend.Seconds())
 	pool, err := boost.NewManifoldFuncPool(
-		ctx, AntsSize, func(input int) (int, error) {
+		ctx, func(input int) (int, error) {
 			time.Sleep(time.Duration(input) * time.Millisecond)
 
 			return n + 1, nil
 		}, &wg,
+		boost.WithSize(AntsSize),
 		boost.WithOutput(OutputChSize, CheckCloseInterval, TimeoutOnSend),
 	)
 

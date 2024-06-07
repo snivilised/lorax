@@ -16,7 +16,6 @@ type FuncPool[I, O any] struct {
 // NewFuncPool creates a new worker pool using the native ants interface; ie
 // new jobs are submitted with Submit(task TaskFunc)
 func NewFuncPool[I, O any](ctx context.Context,
-	size int,
 	pf ants.PoolFunc,
 	wg *sync.WaitGroup,
 	options ...Option,
@@ -26,7 +25,7 @@ func NewFuncPool[I, O any](ctx context.Context,
 	// allocated for each job, but this is not necessarily
 	// the case, because each worker has its own job queue.
 	//
-	pool, err := ants.NewPoolWithFunc(ctx, size, pf, withDefaults(options...)...)
+	pool, err := ants.NewPoolWithFunc(ctx, pf, withDefaults(options...)...)
 
 	return &FuncPool[I, O]{
 		basePool: basePool[I, O]{

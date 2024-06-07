@@ -62,7 +62,8 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 					defer cancel()
 
 					pool, err := boost.NewManifoldFuncPool(
-						ctx, AntsSize, demoPoolManifoldFunc, &wg,
+						ctx, demoPoolManifoldFunc, &wg,
+						boost.WithSize(AntsSize),
 						boost.WithOutput(10, CheckCloseInterval, TimeoutOnSend),
 					)
 
@@ -93,7 +94,8 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 					defer cancel()
 
 					pool, err := boost.NewManifoldFuncPool(
-						ctx, AntsSize, demoPoolManifoldFunc, &wg,
+						ctx, demoPoolManifoldFunc, &wg,
+						boost.WithSize(AntsSize),
 					)
 
 					defer pool.Release(ctx)
@@ -120,7 +122,8 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 					defer cancel()
 
 					pool, err := boost.NewManifoldFuncPool(
-						ctx, AntsSize, demoPoolManifoldFunc, &wg,
+						ctx, demoPoolManifoldFunc, &wg,
+						boost.WithSize(AntsSize),
 						boost.WithInput(InputBufferSize),
 						boost.WithOutput(10, CheckCloseInterval, TimeoutOnSend),
 					)
@@ -153,7 +156,8 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 						defer cancel()
 
 						pool, err := boost.NewManifoldFuncPool(
-							ctx, AntsSize, demoPoolManifoldFunc, &wg,
+							ctx, demoPoolManifoldFunc, &wg,
+							boost.WithSize(AntsSize),
 						)
 
 						defer pool.Release(ctx)
@@ -197,7 +201,8 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 						defer cancel()
 
 						pool, err := boost.NewManifoldFuncPool(
-							ctx, AntsSize, demoPoolManifoldFunc, &wg,
+							ctx, demoPoolManifoldFunc, &wg,
+							boost.WithSize(AntsSize),
 							boost.WithInput(InputBufferSize),
 							boost.WithOutput(10, CheckCloseInterval, TimeoutOnSend),
 						)

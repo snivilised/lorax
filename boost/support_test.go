@@ -6,7 +6,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ok
-	"github.com/snivilised/lorax/internal/ants"
+	"github.com/snivilised/lorax/boost"
 )
 
 const (
@@ -39,7 +39,7 @@ func demoFunc() {
 	time.Sleep(time.Duration(BenchParam) * time.Millisecond)
 }
 
-func demoPoolFunc(inputCh ants.InputParam) {
+func demoPoolFunc(inputCh boost.InputParam) {
 	n, _ := inputCh.(int)
 	time.Sleep(time.Duration(n) * time.Millisecond)
 }
@@ -60,7 +60,7 @@ func longRunningFunc() {
 
 var stopLongRunningPoolFunc int32
 
-func longRunningPoolFunc(arg ants.InputParam) {
+func longRunningPoolFunc(arg boost.InputParam) {
 	if ch, ok := arg.(chan struct{}); ok {
 		<-ch
 		return

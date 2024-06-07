@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ok
 	. "github.com/onsi/gomega"    //nolint:revive // ok
 
+	"github.com/snivilised/lorax/boost"
 	"github.com/snivilised/lorax/internal/ants"
 )
 
@@ -21,8 +22,12 @@ var _ = Describe("Ants", func() {
 					ctx, cancel := context.WithCancel(specCtx)
 					defer cancel()
 
-					poolSize := 10
-					pool, err := ants.NewPool(ctx, poolSize, ants.WithNonblocking(true))
+					const poolSize = 10
+
+					pool, err := ants.NewPool(ctx,
+						ants.WithSize(poolSize),
+						ants.WithNonblocking(true),
+					)
 					Expect(err).To(Succeed(), "create TimingPool failed")
 
 					defer pool.Release(ctx)
@@ -62,8 +67,10 @@ var _ = Describe("Ants", func() {
 					ctx, cancel := context.WithCancel(specCtx)
 					defer cancel()
 
-					poolSize := 10
-					pool, err := ants.NewPool(ctx, poolSize, ants.WithMaxBlockingTasks(1))
+					const poolSize = 10
+					pool, err := ants.NewPool(ctx,
+						ants.WithMaxBlockingTasks(1),
+					)
 					Expect(err).To(Succeed(), "create TimingPool failed")
 
 					defer pool.Release(ctx)
@@ -122,7 +129,7 @@ var _ = Describe("Ants", func() {
 					defer cancel()
 
 					var wg sync.WaitGroup
-					pool, _ := ants.NewPoolWithFunc(ctx, AntsSize, func(i ants.InputParam) {
+					pool, _ := ants.NewPoolWithFunc(ctx, func(i boost.InputParam) {
 						demoPoolFunc(i)
 						wg.Done()
 					})
@@ -148,7 +155,7 @@ var _ = Describe("Ants", func() {
 					defer cancel()
 
 					var wg sync.WaitGroup
-					pool, _ := ants.NewPoolWithFunc(ctx, AntsSize, func(i ants.InputParam) {
+					pool, _ := ants.NewPoolWithFunc(ctx, func(i boost.InputParam) {
 						demoPoolFunc(i)
 						wg.Done()
 					}, ants.WithPreAlloc(true))

@@ -22,7 +22,9 @@ var _ = Describe("WorkerPoolFunc", func() {
 				ctx, cancel := context.WithCancel(specCtx)
 				defer cancel()
 
-				pool, err := boost.NewFuncPool[int, int](ctx, AntsSize, demoPoolFunc, &wg)
+				pool, err := boost.NewFuncPool[int, int](ctx, demoPoolFunc, &wg,
+					boost.WithSize(AntsSize),
+				)
 
 				defer pool.Release(ctx)
 
@@ -46,7 +48,9 @@ var _ = Describe("WorkerPoolFunc", func() {
 					ctx, cancel := context.WithCancel(specCtx)
 					defer cancel()
 
-					pool, err := boost.NewFuncPool[int, int](ctx, AntsSize, demoPoolFunc, &wg)
+					pool, err := boost.NewFuncPool[int, int](ctx, demoPoolFunc, &wg,
+						boost.WithSize(AntsSize),
+					)
 
 					defer pool.Release(ctx)
 
@@ -77,7 +81,8 @@ var _ = Describe("WorkerPoolFunc", func() {
 				ctx, cancel := context.WithCancel(specCtx)
 				defer cancel()
 
-				pool, err := boost.NewFuncPool[int, int](ctx, PoolSize, longRunningPoolFunc, &wg,
+				pool, err := boost.NewFuncPool[int, int](ctx, longRunningPoolFunc, &wg,
+					boost.WithSize(PoolSize),
 					boost.WithMaxBlockingTasks(1),
 				)
 

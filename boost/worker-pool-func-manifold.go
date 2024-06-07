@@ -27,7 +27,6 @@ type ManifoldFuncPool[I, O any] struct {
 
 // NewManifoldFuncPool creates a new manifold function based worker pool.
 func NewManifoldFuncPool[I, O any](ctx context.Context,
-	size int,
 	mf ManifoldFunc[I, O],
 	wg *sync.WaitGroup,
 	options ...Option,
@@ -42,7 +41,7 @@ func NewManifoldFuncPool[I, O any](ctx context.Context,
 		wi = fromOutputInfo(o, oi)
 	}
 
-	pool, err := ants.NewPoolWithFunc(ctx, size, func(input ants.InputParam) {
+	pool, err := ants.NewPoolWithFunc(ctx, func(input InputParam) {
 		manifoldFuncResponse(ctx, mf, input, wi)
 	}, ants.WithOptions(*o))
 
@@ -131,7 +130,7 @@ func (p *ManifoldFuncPool[I, O]) Conclude(ctx context.Context) {
 
 func manifoldFuncResponse[I, O any](ctx context.Context,
 	mf ManifoldFunc[I, O],
-	input ants.InputParam,
+	input InputParam,
 	wi *outputInfoW[O],
 ) {
 	if job, ok := input.(Job[I]); ok {
