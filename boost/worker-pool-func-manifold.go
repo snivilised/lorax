@@ -136,15 +136,13 @@ func manifoldFuncResponse[I, O any](ctx context.Context,
 	if job, ok := input.(Job[I]); ok {
 		payload, e := mf(job.Input)
 
-		output := JobOutput[O]{
-			ID:         job.ID,
-			SequenceNo: job.SequenceNo,
-			Payload:    payload,
-			Error:      e,
-		}
-
 		if wi != nil {
-			_ = respond(ctx, wi, &output)
+			_ = respond(ctx, wi, &JobOutput[O]{
+				ID:         job.ID,
+				SequenceNo: job.SequenceNo,
+				Payload:    payload,
+				Error:      e,
+			})
 		}
 	}
 }
