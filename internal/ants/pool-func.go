@@ -24,6 +24,7 @@ package ants
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -129,19 +130,19 @@ func (p *PoolWithFunc) nowTime() time.Time {
 
 // NewPoolWithFunc instantiates a PoolWithFunc with customized options.
 func NewPoolWithFunc(ctx context.Context,
-	size int,
 	pf PoolFunc,
 	options ...Option,
 ) (*PoolWithFunc, error) {
-	if size <= 0 {
-		size = -1
-	}
-
 	if pf == nil {
 		return nil, ErrLackPoolFunc
 	}
 
 	opts := LoadOptions(options...)
+	size := opts.Size
+
+	if size == 0 {
+		size = uint(runtime.NumCPU())
+	}
 
 	if !opts.DisablePurge {
 		if expiry := opts.ExpiryDuration; expiry < 0 {
@@ -170,10 +171,7 @@ func NewPoolWithFunc(ctx context.Context,
 		}
 	}
 	if p.o.PreAlloc {
-		if size == -1 {
-			return nil, ErrInvalidPreAllocSize
-		}
-		p.workers = newWorkerQueue(queueTypeLoopQueue, size)
+		p.workers = newWorkerQueue(queueTypeLoopQueue, int(size))
 	} else {
 		p.workers = newWorkerQueue(queueTypeStack, 0)
 	}

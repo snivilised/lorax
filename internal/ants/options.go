@@ -46,6 +46,10 @@ type Options struct {
 	// When DisablePurge is true, workers are not purged and are resident.
 	DisablePurge bool
 
+	// Size denotes the number of workers in the pool. Defaults
+	// to number of CPUs available, if not specified.
+	Size uint
+
 	// Generator used to generate job ids.
 	Generator IDGenerator
 
@@ -156,7 +160,12 @@ func WithDisablePurge(disable bool) Option {
 
 // boost options ...
 
-// IDGenerator
+func WithSize(size uint) Option {
+	return func(opts *Options) {
+		opts.Size = size
+	}
+}
+
 func WithGenerator(generator IDGenerator) Option {
 	return func(opts *Options) {
 		if generator != nil {

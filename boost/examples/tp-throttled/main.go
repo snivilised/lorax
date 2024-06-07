@@ -42,7 +42,10 @@ func main() {
 
 	const NoW = 3
 
-	pool, _ := boost.NewTaskPool[int, int](ctx, NoW, &wg)
+	pool, _ := boost.NewTaskPool[int, int](ctx,
+		&wg,
+		boost.WithSize(NoW),
+	)
 
 	defer pool.Release(ctx)
 

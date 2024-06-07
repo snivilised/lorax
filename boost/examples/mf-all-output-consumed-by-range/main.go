@@ -21,11 +21,12 @@ func main() {
 	defer cancel()
 
 	pool, err := boost.NewManifoldFuncPool(
-		ctx, AntsSize, func(input int) (int, error) {
+		ctx, func(input int) (int, error) {
 			time.Sleep(time.Duration(input) * time.Millisecond)
 
 			return n + 1, nil
 		}, &wg,
+		boost.WithSize(AntsSize),
 		boost.WithOutput(OutputChSize, CheckCloseInterval, TimeoutOnSend),
 	)
 
@@ -37,10 +38,10 @@ func main() {
 	}
 
 	wg.Add(1)
-	go produce(ctx, pool, &wg) 
+	go produce(ctx, pool, &wg)
 
 	wg.Add(1)
-	go consume(ctx, pool, &wg) 
+	go consume(ctx, pool, &wg)
 
 	fmt.Printf("pool with func, no of running workers:%d\n",
 		pool.Running(),

@@ -21,11 +21,12 @@ func main() {
 	defer cancel()
 
 	pool, err := boost.NewManifoldFuncPool(
-		ctx, AntsSize, func(input int) (int, error) {
+		ctx, func(input int) (int, error) {
 			time.Sleep(time.Duration(input) * time.Millisecond)
 
 			return n + 1, nil
 		}, &wg,
+		boost.WithSize(AntsSize),
 		boost.WithInput(InputChSize),
 		boost.WithOutput(OutputChSize, CheckCloseInterval, TimeoutOnSend),
 	)
