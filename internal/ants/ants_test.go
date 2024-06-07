@@ -69,6 +69,7 @@ var _ = Describe("Ants", func() {
 
 					const poolSize = 10
 					pool, err := ants.NewPool(ctx,
+						ants.WithSize(poolSize),
 						ants.WithMaxBlockingTasks(1),
 					)
 					Expect(err).To(Succeed(), "create TimingPool failed")
@@ -132,7 +133,9 @@ var _ = Describe("Ants", func() {
 					pool, _ := ants.NewPoolWithFunc(ctx, func(i boost.InputParam) {
 						demoPoolFunc(i)
 						wg.Done()
-					})
+					},
+						ants.WithSize(AntsSize),
+					)
 					defer pool.Release(ctx)
 
 					for i := 0; i < n; i++ {
@@ -158,7 +161,10 @@ var _ = Describe("Ants", func() {
 					pool, _ := ants.NewPoolWithFunc(ctx, func(i boost.InputParam) {
 						demoPoolFunc(i)
 						wg.Done()
-					}, ants.WithPreAlloc(true))
+					},
+						ants.WithSize(AntsSize),
+						ants.WithPreAlloc(true),
+					)
 					defer pool.Release(ctx)
 
 					for i := 0; i < n; i++ {
