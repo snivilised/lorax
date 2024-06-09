@@ -3,7 +3,6 @@ package boost
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/snivilised/lorax/internal/ants"
@@ -61,7 +60,7 @@ func (p *taskPool) Waiting() int {
 }
 
 func source[I any](ctx context.Context,
-	wg *sync.WaitGroup, o *ants.Options,
+	wg WaitGroup, o *ants.Options,
 	injectable injectable[I],
 	closable closable,
 ) *Duplex[I] {

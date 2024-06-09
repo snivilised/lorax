@@ -54,10 +54,16 @@ type (
 	PoolResultStreamR = <-chan *PoolResult
 	PoolResultStreamW = chan<- *PoolResult
 
-	// Next is a sequential unique id generator func type
-	Next func() string
-
+	// OnCancel is the callback required by StartCancellationMonitor
 	OnCancel func()
+
+	// WaitGroup allows the core sync.WaitGroup to be decorated by the client
+	// for debugging purposes.
+	WaitGroup interface {
+		Add(delta int)
+		Done()
+		Wait()
+	}
 )
 
 type ExecutiveFunc[I, O any] func(j Job[I]) (JobOutput[O], error)

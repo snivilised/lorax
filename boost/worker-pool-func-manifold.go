@@ -2,7 +2,6 @@ package boost
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/snivilised/lorax/internal/ants"
@@ -28,7 +27,7 @@ type ManifoldFuncPool[I, O any] struct {
 // NewManifoldFuncPool creates a new manifold function based worker pool.
 func NewManifoldFuncPool[I, O any](ctx context.Context,
 	mf ManifoldFunc[I, O],
-	wg *sync.WaitGroup,
+	wg WaitGroup,
 	options ...Option,
 ) (*ManifoldFuncPool[I, O], error) {
 	var (
@@ -74,7 +73,7 @@ func (p *ManifoldFuncPool[I, O]) Post(ctx context.Context, input I) error {
 // mutually exclusive; that is to say, if Source is called, then Post
 // must not be called; any such invocations will be ignored.
 func (p *ManifoldFuncPool[I, O]) Source(ctx context.Context,
-	wg *sync.WaitGroup,
+	wg WaitGroup,
 ) SourceStreamW[I] {
 	o := p.pool.GetOptions()
 
@@ -107,7 +106,7 @@ func (p *ManifoldFuncPool[I, O]) Conclude(ctx context.Context) {
 		p.wg.Add(1)
 		go func(ctx context.Context,
 			pool *ManifoldFuncPool[I, O],
-			wg *sync.WaitGroup,
+			wg WaitGroup,
 			interval time.Duration,
 		) {
 			defer wg.Done()

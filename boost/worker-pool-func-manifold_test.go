@@ -12,7 +12,7 @@ import (
 
 func produce(ctx context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
-	wg *sync.WaitGroup,
+	wg boost.WaitGroup,
 ) {
 	defer wg.Done()
 
@@ -25,7 +25,7 @@ func produce(ctx context.Context,
 
 func inject(ctx context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
-	wg *sync.WaitGroup,
+	wg boost.WaitGroup,
 ) {
 	defer wg.Done()
 
@@ -39,7 +39,7 @@ func inject(ctx context.Context,
 
 func consume(_ context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
-	wg *sync.WaitGroup,
+	wg boost.WaitGroup,
 ) {
 	defer wg.Done()
 
@@ -165,7 +165,7 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 						wg.Add(1)
 						go func(ctx context.Context,
 							pool *boost.ManifoldFuncPool[int, int],
-							wg *sync.WaitGroup,
+							wg boost.WaitGroup,
 						) {
 							defer wg.Done()
 
