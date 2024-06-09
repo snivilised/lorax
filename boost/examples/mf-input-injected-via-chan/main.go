@@ -64,7 +64,7 @@ const (
 
 func inject(ctx context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
-	wg *sync.WaitGroup,
+	wg boost.WaitGroup,
 ) {
 	defer wg.Done()
 
@@ -82,7 +82,7 @@ func inject(ctx context.Context,
 
 func consume(_ context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
-	wg *sync.WaitGroup,
+	wg boost.WaitGroup,
 ) {
 	defer wg.Done()
 

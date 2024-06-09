@@ -2,7 +2,6 @@ package boost
 
 import (
 	"context"
-	"sync"
 
 	"github.com/snivilised/lorax/internal/ants"
 )
@@ -17,7 +16,7 @@ type FuncPool[I, O any] struct {
 // new jobs are submitted with Submit(task TaskFunc)
 func NewFuncPool[I, O any](ctx context.Context,
 	pf ants.PoolFunc,
-	wg *sync.WaitGroup,
+	wg WaitGroup,
 	options ...Option,
 ) (*FuncPool[I, O], error) {
 	// TODO: the automatic invocation of Add/Done might not

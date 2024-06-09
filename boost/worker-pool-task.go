@@ -24,7 +24,6 @@ package boost
 //
 import (
 	"context"
-	"sync"
 
 	"github.com/snivilised/lorax/internal/ants"
 )
@@ -38,7 +37,7 @@ type TaskPool[I, O any] struct {
 // NewTaskPool creates a new worker pool using the native ants interface; ie
 // new jobs are submitted with Submit(task TaskFunc)
 func NewTaskPool[I, O any](ctx context.Context,
-	wg *sync.WaitGroup,
+	wg WaitGroup,
 	options ...Option,
 ) (*TaskPool[I, O], error) {
 	pool, err := ants.NewPool(ctx, withDefaults(options...)...)

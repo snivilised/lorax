@@ -64,7 +64,7 @@ const (
 
 func produce(ctx context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
-	wg *sync.WaitGroup,
+	wg boost.WaitGroup,
 ) {
 	defer wg.Done()
 
@@ -80,7 +80,7 @@ func produce(ctx context.Context,
 
 func consume(ctx context.Context,
 	pool *boost.ManifoldFuncPool[int, int],
-	wg *sync.WaitGroup,
+	wg boost.WaitGroup,
 ) {
 	defer wg.Done()
 

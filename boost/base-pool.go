@@ -1,13 +1,12 @@
 package boost
 
 import (
-	"sync"
 	"sync/atomic"
 )
 
 type (
 	basePool[I, O any] struct {
-		wg         *sync.WaitGroup
+		wg         WaitGroup
 		sequence   int32
 		inputDupCh *Duplex[I]
 		oi         *outputInfo[O]
