@@ -40,7 +40,7 @@ func NewTaskPool[I, O any](ctx context.Context,
 	wg WaitGroup,
 	options ...Option,
 ) (*TaskPool[I, O], error) {
-	pool, err := ants.NewPool(ctx, withDefaults(options...)...)
+	pool, err := ants.NewPool(ctx, options...)
 
 	return &TaskPool[I, O]{
 		basePool: basePool[I, O]{

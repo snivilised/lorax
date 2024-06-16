@@ -8,6 +8,7 @@ type (
 	Option      = ants.Option
 	Options     = ants.Options
 	PoolFunc    = ants.PoolFunc
+	Sequential  = ants.Sequential
 	TaskFunc    = ants.TaskFunc
 )
 

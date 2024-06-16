@@ -1,4 +1,4 @@
-package boost
+package ants
 
 import (
 	"fmt"

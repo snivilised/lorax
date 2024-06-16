@@ -2,6 +2,7 @@ package ants_test
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"time"
 
@@ -28,6 +29,7 @@ var _ = Describe("Ants", func() {
 						ants.WithSize(poolSize),
 						ants.WithNonblocking(true),
 					)
+
 					Expect(err).To(Succeed(), "create TimingPool failed")
 
 					defer pool.Release(ctx)
@@ -115,6 +117,46 @@ var _ = Describe("Ants", func() {
 						Fail("blocking submit when pool is full should not return error")
 					default:
 					}
+				})
+			})
+		})
+
+		Context("IfOption", func() {
+			When("true", func() {
+				It("🧪 should: use option", func(specCtx SpecContext) {
+					ctx, cancel := context.WithCancel(specCtx)
+					defer cancel()
+
+					const (
+						poolSize = 10
+					)
+
+					pool, _ := ants.NewPool(ctx,
+						ants.If(true, ants.WithSize(poolSize)),
+						ants.WithNonblocking(true),
+					)
+
+					options := pool.GetOptions()
+					Expect(options.Size).To(BeEquivalentTo(poolSize))
+				})
+			})
+
+			When("false", func() {
+				It("🧪 should: use option", func(specCtx SpecContext) {
+					ctx, cancel := context.WithCancel(specCtx)
+					defer cancel()
+
+					const (
+						poolSize = 10
+					)
+
+					pool, _ := ants.NewPool(ctx,
+						ants.If(false, ants.WithSize(poolSize)),
+						ants.WithNonblocking(true),
+					)
+
+					options := pool.GetOptions()
+					Expect(options.Size).To(BeEquivalentTo(runtime.NumCPU()))
 				})
 			})
 		})
