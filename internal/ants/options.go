@@ -23,7 +23,7 @@ func NewOptions(options ...Option) *Options {
 	return opts
 }
 
-// If enables options to be conditional. If ifo evaluates to true
+// If enables options to be conditional. If condition evaluates to true
 // then the option is returned, otherwise nil.
 func If(condition bool, option Option) Option {
 	if condition {
@@ -34,15 +34,16 @@ func If(condition bool, option Option) Option {
 }
 
 func withDefaults(options ...Option) []Option {
-	const (
-		noDefaults = 1
-	)
-	o := make([]Option, 0, len(options)+noDefaults)
-	o = append(o,
+	defaults := []Option{
 		WithGenerator(&Sequential{
 			Format: "ID:%08d",
 		}),
 		WithSize(uint(runtime.NumCPU())),
+	}
+
+	o := make([]Option, 0, len(options)+len(defaults))
+	o = append(o,
+		defaults...,
 	)
 	o = append(o, options...)
 
