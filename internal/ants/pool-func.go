@@ -137,7 +137,7 @@ func NewPoolWithFunc(ctx context.Context,
 		return nil, ErrLackPoolFunc
 	}
 
-	opts := LoadOptions(options...)
+	opts := NewOptions(options...)
 	size := opts.Size
 
 	if size == 0 {

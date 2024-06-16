@@ -24,7 +24,7 @@ func NewFuncPool[I, O any](ctx context.Context,
 	// allocated for each job, but this is not necessarily
 	// the case, because each worker has its own job queue.
 	//
-	pool, err := ants.NewPoolWithFunc(ctx, pf, withDefaults(options...)...)
+	pool, err := ants.NewPoolWithFunc(ctx, pf, options...)
 
 	return &FuncPool[I, O]{
 		basePool: basePool[I, O]{

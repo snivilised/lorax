@@ -2,12 +2,14 @@ package boost_test
 
 import (
 	"context"
+	"runtime"
 	"sync"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
 	. "github.com/onsi/gomega"    //nolint:revive // gomega ok
 
 	"github.com/snivilised/lorax/boost"
+	"github.com/snivilised/lorax/internal/ants"
 )
 
 func produce(ctx context.Context,
@@ -226,6 +228,54 @@ var _ = Describe("WorkerPoolFuncManifold", func() {
 
 						Expect(err).To(Succeed())
 					})
+				})
+			})
+		})
+
+		Context("IfOption", func() {
+			When("true", func() {
+				It("🧪 should: use option", func(specCtx SpecContext) {
+					ctx, cancel := context.WithCancel(specCtx)
+					defer cancel()
+
+					var wg sync.WaitGroup
+
+					const (
+						poolSize = 10
+					)
+
+					pool, _ := boost.NewManifoldFuncPool(
+						ctx, demoPoolManifoldFunc, &wg,
+						ants.If(true, ants.WithSize(poolSize)),
+						boost.WithInput(InputBufferSize),
+						boost.WithOutput(10, CheckCloseInterval, TimeoutOnSend),
+					)
+
+					options := pool.GetOptions()
+					Expect(options.Size).To(BeEquivalentTo(poolSize))
+				})
+			})
+
+			When("false", func() {
+				It("🧪 should: use option", func(specCtx SpecContext) {
+					ctx, cancel := context.WithCancel(specCtx)
+					defer cancel()
+
+					var wg sync.WaitGroup
+
+					const (
+						poolSize = 10
+					)
+
+					pool, _ := boost.NewManifoldFuncPool(
+						ctx, demoPoolManifoldFunc, &wg,
+						ants.If(false, ants.WithSize(poolSize)),
+						boost.WithInput(InputBufferSize),
+						boost.WithOutput(10, CheckCloseInterval, TimeoutOnSend),
+					)
+
+					options := pool.GetOptions()
+					Expect(options.Size).To(BeEquivalentTo(runtime.NumCPU()))
 				})
 			})
 		})

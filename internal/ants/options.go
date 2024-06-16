@@ -1,19 +1,52 @@
 package ants
 
 import (
+	"runtime"
 	"time"
 )
 
-// Option represents the optional function.
+// Option represents the functional option.
 type Option func(opts *Options)
 
-func LoadOptions(options ...Option) *Options {
+// NewOptions creates new options instance with defaults
+// applied.
+func NewOptions(options ...Option) *Options {
 	opts := new(Options)
-	for _, option := range options {
-		option(opts)
+	combined := withDefaults(options...)
+
+	for _, option := range combined {
+		if option != nil { // nil check supports conditional options
+			option(opts)
+		}
 	}
 
 	return opts
+}
+
+// If enables options to be conditional. If ifo evaluates to true
+// then the option is returned, otherwise nil.
+func If(condition bool, option Option) Option {
+	if condition {
+		return option
+	}
+
+	return nil
+}
+
+func withDefaults(options ...Option) []Option {
+	const (
+		noDefaults = 1
+	)
+	o := make([]Option, 0, len(options)+noDefaults)
+	o = append(o,
+		WithGenerator(&Sequential{
+			Format: "ID:%08d",
+		}),
+		WithSize(uint(runtime.NumCPU())),
+	)
+	o = append(o, options...)
+
+	return o
 }
 
 // Options contains all options which will be applied when instantiating an ants pool.

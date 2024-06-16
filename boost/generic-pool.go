@@ -34,6 +34,10 @@ func (p *functionalPool) Waiting() int {
 	return p.pool.Waiting()
 }
 
+func (p *functionalPool) GetOptions() *Options {
+	return p.pool.GetOptions()
+}
+
 // taskPool
 type taskPool struct {
 	pool *ants.Pool
@@ -57,6 +61,10 @@ func (p *taskPool) Running() int {
 // Waiting returns the number of tasks waiting to be executed.
 func (p *taskPool) Waiting() int {
 	return p.pool.Waiting()
+}
+
+func (p *taskPool) GetOptions() *Options {
+	return p.pool.GetOptions()
 }
 
 func source[I any](ctx context.Context,

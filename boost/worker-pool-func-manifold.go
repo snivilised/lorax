@@ -33,7 +33,7 @@ func NewManifoldFuncPool[I, O any](ctx context.Context,
 	var (
 		oi *outputInfo[O]
 		wi *outputInfoW[O]
-		o  = ants.LoadOptions(withDefaults(options...)...)
+		o  = ants.NewOptions(options...)
 	)
 
 	if oi = newOutputInfo[O](o); oi != nil {

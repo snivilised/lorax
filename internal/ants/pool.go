@@ -131,7 +131,7 @@ func (p *Pool) nowTime() time.Time {
 
 // NewPool instantiates a Pool with customized options.
 func NewPool(ctx context.Context, options ...Option) (*Pool, error) {
-	opts := LoadOptions(options...)
+	opts := NewOptions(options...)
 	size := opts.Size
 
 	if size == 0 {
