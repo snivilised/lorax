@@ -28,7 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/samber/lo"
+	"github.com/snivilised/lorax/internal/lo"
 )
 
 // Amb takes several Observables, emit all of the items from only the first of these Observables

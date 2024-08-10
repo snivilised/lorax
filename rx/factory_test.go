@@ -31,7 +31,7 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:revive // ginkgo ok
 	"github.com/onsi/ginkgo/v2/dsl/decorators"
 	. "github.com/onsi/gomega" //nolint:revive // gomega ok
-	"github.com/samber/lo"
+	"github.com/snivilised/lorax/internal/lo"
 
 	"github.com/snivilised/lorax/enums"
 	"github.com/snivilised/lorax/rx"

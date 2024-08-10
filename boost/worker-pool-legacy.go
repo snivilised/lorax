@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
+	"github.com/snivilised/lorax/internal/lo"
 	"go.uber.org/zap/exp/zapslog"
 	"go.uber.org/zap/zapcore"
 )
