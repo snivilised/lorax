@@ -27,7 +27,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/samber/lo"
+	"github.com/snivilised/lorax/internal/lo"
 	"github.com/snivilised/lorax/rx"
 )
 
